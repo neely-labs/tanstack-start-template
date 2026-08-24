@@ -94,3 +94,5 @@ The starter does not choose authentication, persistence, analytics, state manage
 ## License
 
 Original template code is available under the [MIT License](LICENSE). Vendored source remains under the upstream licenses recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+<!-- ci verification probe -->
