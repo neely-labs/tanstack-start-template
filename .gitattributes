@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.ico binary
+*.png binary
+*.woff2 binary
+
+src/routeTree.gen.ts linguist-generated=true
+.agents/skills/** linguist-vendored=true
+.claude/skills/** linguist-vendored=true
+.cursor/agents/** linguist-vendored=true
+.cursor/skills/** linguist-vendored=true
+tools/oxlint/anti-slop/** linguist-vendored=true

@@ -2,6 +2,14 @@ packages: []
 
 allowBuilds:
   esbuild: true
+  lefthook: true
   lightningcss: true
-  unrs-resolver: true
   msw: false
+  unrs-resolver: true
+
+# Tooling releases frequently and never ships in the application bundle.
+minimumReleaseAgeExclude:
+  - "@oxfmt/*"
+  - "@oxlint/*"
+  - oxfmt
+  - oxlint

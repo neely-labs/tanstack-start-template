@@ -1,17 +1,23 @@
 {
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "eslint.config.js",
-    "prettier.config.js",
-    "vite.config.ts"
+  "include": ["**/*.ts", "**/*.tsx", "**/*.mjs"],
+  "exclude": [
+    "node_modules",
+    ".agents",
+    ".claude",
+    ".codex",
+    ".cursor",
+    ".impeccable",
+    ".output",
+    "dist",
+    "tools/oxlint/anti-slop"
   ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    "types": ["node", "vite/client"],
+    "allowJs": true,
     "paths": {
       "@/*": ["./src/*"]
     },

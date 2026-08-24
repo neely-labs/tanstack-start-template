@@ -1,0 +1,28 @@
+pre-commit:
+  jobs:
+    - name: format staged files
+      run: pnpm exec oxfmt --write --no-error-on-unmatched-pattern '{staged_files}'
+      glob: "*.{js,cjs,mjs,jsx,ts,tsx,json,jsonc,css,scss,html,md,mdx,yml,yaml}"
+      exclude: &generated-and-vendored
+        - "src/routeTree.gen.ts"
+        - ".agents/**/*"
+        - ".claude/**/*"
+        - ".codex/**/*"
+        - ".cursor/**/*"
+        - ".impeccable/**/*"
+        - "tools/oxlint/anti-slop/**/*"
+      stage_fixed: true
+      fail_text: Run `pnpm fix`, review the changes, and stage them again.
+
+    - name: lint staged code
+      run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern '{staged_files}'
+      glob: "*.{js,cjs,mjs,jsx,ts,tsx}"
+      exclude: *generated-and-vendored
+      stage_fixed: true
+      fail_text: Resolve the reported Oxlint errors and stage the files again.
+
+pre-push:
+  jobs:
+    - name: validate repository
+      run: pnpm validate
+      fail_text: Run `pnpm validate` and resolve the failing gate before pushing.
