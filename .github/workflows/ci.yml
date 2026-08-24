@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   validate:
@@ -20,13 +21,71 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up pnpm and Node.js
+
+      # `validate` is a required status check, so this job always has to report a
+      # conclusion. Skipping the workflow with `paths-ignore` would leave
+      # documentation-only pull requests waiting on a check that never arrives,
+      # so narrow the work inside the job instead.
+      - name: Detect documentation-only changes
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "${{ github.event_name }}" in
+            pull_request)
+              changed=$(gh api --paginate \
+                "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+                --jq '.[].filename')
+              ;;
+            push)
+              # A branch's first push reports an all-zero "before" that cannot be compared.
+              case "${{ github.event.before }}" in
+                0000000000000000000000000000000000000000) changed="" ;;
+                *)
+                  changed=$(gh api --paginate \
+                    "repos/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}" \
+                    --jq '.files[].filename')
+                  ;;
+              esac
+              ;;
+            *)
+              changed=""
+              ;;
+          esac
+
+          # An empty list means "could not determine", never "nothing changed",
+          # so fall through to the full run.
+          if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qvE '^(docs/|[^/]*\.md$)'; then
+            echo "docs-only=true" >>"$GITHUB_OUTPUT"
+            printf 'Documentation-only change:\n%s\n' "$changed"
+          else
+            echo "docs-only=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      # Reuses the runner's preinstalled Node instead of letting pnpm fetch a
+      # 57 MB tarball on every run, which it did before the store cache restored
+      # and so could never be served from it.
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Set up pnpm
         uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
         with:
-          runtime: node@24
           cache: true
           install: false
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Formatting and linting cover Markdown too, so documentation still gets
+      # checked; only the type, test, and build gates are skipped. `pnpm check`
+      # is the first stage of `pnpm validate`, so the two cannot drift apart.
+      - name: Check documentation
+        if: steps.scope.outputs.docs-only == 'true'
+        run: pnpm check
+
       - name: Validate
+        if: steps.scope.outputs.docs-only != 'true'
         run: pnpm validate
