@@ -32,7 +32,7 @@ The template combines a deliberately small application surface with a complete p
 
 - The baseline uses TanStack Start, React, Nitro, Tailwind CSS, shadcn/ui on Base UI, TypeScript, Vitest, Ultracite, Oxlint, Oxfmt, Lefthook, and pnpm.
 - Node.js 24 and the pinned pnpm 12 release candidate are repository constraints until intentionally upgraded.
-- The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, production build output, CI, and agent-assisted development tooling.
+- The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and agent-assisted development tooling.
 - Authentication, persistence, analytics, domain models, product copy, deployment credentials, and application-specific state management are deliberately undecided.
 - The canonical origin, manifest identity, social image, robots policy, example routes, and product guidance must be replaced by each adopted application.
 - Original template code is distributed under the MIT License; vendored source remains under its upstream license.

@@ -12,7 +12,7 @@ Repository files are only part of a dependable template. Complete this checklist
 ## Repository protections
 
 - Add a branch ruleset that requires the `validate` job before merging.
-- Enable CodeQL default setup for JavaScript and TypeScript.
+- Keep CodeQL on advanced setup. `.github/workflows/codeql.yml` is the tracked configuration and travels with every repository created from this template. GitHub refuses an advanced-setup upload wherever default setup is enabled, so a repository covered by an enforced organization configuration has to be allowed to override it before this workflow can report.
 - Enable Dependabot alerts and security updates.
 - Enable secret scanning and push protection when the repository plan supports them.
 - Keep GitHub Actions restricted to the permissions each workflow needs.

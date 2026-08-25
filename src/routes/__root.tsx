@@ -22,12 +22,13 @@ export const Route = createRootRoute({
     links: [
       { href: appCss, rel: "stylesheet" },
       { href: "/manifest.json", rel: "manifest" },
-      { href: "/favicon.ico", rel: "icon", sizes: "any" },
+      { href: "/favicon.ico", rel: "icon", sizes: "32x32" },
+      { href: siteConfig.icon.path, rel: "icon", type: siteConfig.icon.type },
     ],
     meta: [
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1", name: "viewport" },
-      { content: "#f7f9f9", name: "theme-color" },
+      { content: siteConfig.themeColor, name: "theme-color" },
       { content: siteConfig.name, name: "application-name" },
       { content: siteConfig.name, property: "og:site_name" },
       { content: siteConfig.locale, property: "og:locale" },

@@ -22,6 +22,7 @@ import {
   createSeoHead,
   createWebPageSchema,
   createWebsiteSchema,
+  pageTitle,
 } from "@/lib/seo.ts";
 import { siteConfig } from "@/lib/site-config.ts";
 
@@ -66,7 +67,7 @@ export const Route = createFileRoute("/")({
           path: "/",
         }),
       ]),
-      title: siteConfig.name,
+      title: pageTitle(),
     }),
 });
 

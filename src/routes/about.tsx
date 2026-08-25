@@ -6,6 +6,7 @@ import {
   createSeoHead,
   createWebPageSchema,
   createWebsiteSchema,
+  pageTitle,
 } from "@/lib/seo.ts";
 
 const description =
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/about")({
           type: "AboutPage",
         }),
       ]),
-      title: "About | TanStack Start Template",
+      title: pageTitle("About"),
     }),
 });
 

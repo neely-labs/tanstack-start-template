@@ -32,6 +32,15 @@ export function absoluteUrl(path: string): string {
   return new URL(path, `${siteConfig.origin}/`).toString();
 }
 
+/**
+ * Composes a document title from the configured site name, so renaming the
+ * project in `site-config.ts` renames every page with it. Called without a page
+ * name it returns the site name alone, which is what the home route wants.
+ */
+export function pageTitle(page?: string): string {
+  return page === undefined ? siteConfig.name : `${page} | ${siteConfig.name}`;
+}
+
 export function createSeoHead({
   canonicalPath,
   description,

@@ -154,6 +154,9 @@ importers:
       shadcn:
         specifier: ^4.19.0
         version: 4.19.0(typescript@7.0.2)
+      srvx:
+        specifier: ^0.11.22
+        version: 0.11.22
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
