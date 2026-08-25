@@ -109,7 +109,7 @@ Add each public route to `src/lib/public-routes.ts`. The Nitro build prerenders 
 
 - **Server functions** in `src/lib/server-runtime.ts`. `getRenderSnapshot` is a `GET` function called from a route loader. `analyzeText` is a `POST` function whose `.validator` stage rejects input before the handler runs. Handler bodies never reach the client bundle.
 - **Isomorphic code**. `createIsomorphicFn` keeps a server branch and a client branch behind one call, and each branch is stripped from the bundle it does not belong to.
-- **Request middleware** in `src/start.ts`, which runs for every request the server handles, including server routes and server functions. It sets conservative security headers. A Content-Security-Policy is deliberately absent because a useful one depends on the application.
+- **Request middleware** in `src/start.ts`, which runs for every request the server handles, including server routes and server functions. It sets conservative security headers and rejects cross-site requests to server functions. A Content-Security-Policy is deliberately absent because a useful one depends on the application.
 - **Server routes** in `src/routes/api/health.ts`, which answer with JSON rather than a document and are classified `private`.
 
 Two behaviors are worth knowing before copying the pattern:
