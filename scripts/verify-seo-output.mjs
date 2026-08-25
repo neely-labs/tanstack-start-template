@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { publicPaths } from "../src/lib/public-routes.ts";
 import { siteConfig } from "../src/lib/site-config.ts";
+import { generatedSiteFiles } from "../src/lib/site-files.ts";
 
 const pageTitles = new Set();
 const pageDescriptions = new Set();
@@ -109,6 +110,17 @@ for (const routePath of publicPaths) {
 
 const robots = readFileSync(".output/public/robots.txt", "utf-8");
 assert.ok(robots.includes(`Sitemap: ${siteConfig.origin}/sitemap.xml`));
+
+// The manifest and robots.txt are generated from `site-config.ts` at build
+// time. Compare the emitted bytes with what the config produces now, so a
+// stale or missing emission fails here rather than reaching production.
+for (const [fileName, file] of Object.entries(generatedSiteFiles)) {
+  assert.equal(
+    readFileSync(path.resolve(".output/public", fileName), "utf-8"),
+    file.source,
+    `${fileName} must match site-config.ts`
+  );
+}
 
 const socialImagePath = path.resolve(
   ".output/public",

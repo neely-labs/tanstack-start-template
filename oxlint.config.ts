@@ -76,6 +76,13 @@ export default defineConfig({
       files: ["scripts/**/*.mjs"],
       rules: { "anti-slop/no-runtime-typeof": "off" },
     },
+    {
+      // TanStack Start middleware awaits `next()` to obtain the downstream
+      // result and then modifies it. It is a chain continuation, not a Node
+      // error-first callback that must be returned immediately.
+      files: ["src/start.ts"],
+      rules: { "node/callback-return": "off" },
+    },
   ],
   rules: {
     "anti-slop/no-chained-type-assertions": "error",

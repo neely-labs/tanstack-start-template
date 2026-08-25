@@ -1,4 +1,3 @@
-import { IconStack2 } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 
 import { siteConfig } from "@/lib/site-config.ts";
@@ -9,11 +8,18 @@ export function SiteHeader() {
       <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-6 px-5 sm:px-8">
         <Link
           aria-label={`${siteConfig.name} home`}
-          className="inline-flex items-center gap-2 font-semibold tracking-tight"
+          className="inline-flex items-center gap-2.5 font-semibold tracking-tight"
           to="/"
         >
-          <IconStack2 aria-hidden="true" className="size-5" stroke={1.7} />
-          <span>Start / TS</span>
+          {/* Decorative: the link is already named by its aria-label. */}
+          <img
+            alt=""
+            className="size-6 shrink-0"
+            height={24}
+            src={siteConfig.icon.path}
+            width={24}
+          />
+          <span className="hidden sm:inline">{siteConfig.name}</span>
         </Link>
         <nav aria-label="Primary navigation">
           <ul className="flex items-center gap-1">

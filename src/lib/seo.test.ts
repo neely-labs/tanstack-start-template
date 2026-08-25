@@ -6,7 +6,18 @@ import {
   createSeoHead,
   createWebPageSchema,
   createWebsiteSchema,
+  pageTitle,
 } from "./seo.ts";
+
+describe(pageTitle, () => {
+  it("suffixes a page name with the configured site name", () => {
+    expect(pageTitle("About")).toBe("About | TanStack Start Template");
+  });
+
+  it("returns the site name alone when no page name is given", () => {
+    expect(pageTitle()).toBe("TanStack Start Template");
+  });
+});
 
 describe("SEO helpers", () => {
   it("builds canonical URLs from the configured public origin", () => {
@@ -17,7 +28,7 @@ describe("SEO helpers", () => {
     const head = createSeoHead({
       canonicalPath: "/about",
       description: "Template decisions and replacement points.",
-      title: "About | TanStack Start Template",
+      title: pageTitle("About"),
     });
 
     expect(head.links).toContainEqual({
@@ -25,7 +36,7 @@ describe("SEO helpers", () => {
       rel: "canonical",
     });
     expect(head.meta).toContainEqual({
-      content: "About | TanStack Start Template",
+      content: pageTitle("About"),
       property: "og:title",
     });
     expect(head.meta).toContainEqual({

@@ -1,0 +1,51 @@
+name: CodeQL
+
+on:
+  workflow_dispatch:
+  pull_request:
+    # Unlike `validate`, this job is not a required status check, so skipping it
+    # for documentation-only changes leaves nothing waiting on a conclusion.
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  schedule:
+    # Catch advisories published after a pull request merged.
+    - cron: "23 5 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
+        with:
+          languages: javascript-typescript
+          # CodeQL reads the sources directly; this repository needs no build
+          # step to be analyzed.
+          build-mode: none
+          queries: security-and-quality
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
+        with:
+          category: /language:javascript-typescript
