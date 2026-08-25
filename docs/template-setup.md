@@ -38,7 +38,7 @@ To remove them, delete the route file and its supporting modules together:
 - `/runtime`: `src/routes/runtime.tsx`, `src/lib/server-runtime.ts`, `src/lib/text-stats.ts`, `src/lib/text-stats.test.ts`
 - `/api/health`: `src/routes/api/health.ts`
 
-Then drop the matching entries from `routeVisibility` in `src/lib/public-routes.ts` and from `navigation` in `src/lib/site-config.ts`. Keep `src/start.ts` and `src/server.ts`: they carry the security headers and the Node response optimization, not the examples.
+Then drop the matching entries from `routeVisibility` in `src/lib/public-routes.ts` and from `navigation` in `src/lib/site-config.ts`. Keep `src/start.ts` and `src/server.ts`: they carry the security headers, the CSRF protection for server functions, and the Node response optimization, not the examples.
 
 Ends when `pnpm typecheck` passes, which is the compiler confirming every remaining route is classified.
 
