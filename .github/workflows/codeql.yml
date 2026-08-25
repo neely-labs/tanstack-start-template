@@ -23,9 +23,17 @@ concurrency:
 
 jobs:
   analyze:
-    name: Analyze JavaScript and TypeScript
+    name: Analyze ${{ matrix.language }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # `actions` scans the workflow files themselves, which the pinned-SHA
+        # policy depends on. Both languages need analyzing for the coverage the
+        # organization's default setup used to provide.
+        language: [actions, javascript-typescript]
 
     permissions:
       actions: read
@@ -39,7 +47,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
         with:
-          languages: javascript-typescript
+          languages: ${{ matrix.language }}
           # CodeQL reads the sources directly; this repository needs no build
           # step to be analyzed.
           build-mode: none
@@ -48,4 +56,4 @@ jobs:
       - name: Analyze
         uses: github/codeql-action/analyze@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
         with:
-          category: /language:javascript-typescript
+          category: /language:${{ matrix.language }}
