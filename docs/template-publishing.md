@@ -11,7 +11,8 @@ Repository files are only part of a dependable template. Complete this checklist
 
 ## Repository protections
 
-- Add a branch ruleset that requires the `validate` job before merging.
+- The files under `.github/rulesets` are importable repository-level policies; GitHub does not copy active settings through the template flow. Import `default-branch.json` into this source repository and rehearse the same command in a generated repository. It protects the default branch and requires the `validate` check without requiring an approval, which keeps a single-maintainer template usable.
+- Do not import the optional `vercel-preview.json` until a connected Vercel project has emitted a successful `Preview` deployment in GitHub. Change the environment name first when a project uses a suffix or custom environment.
 - Keep CodeQL on advanced setup. `.github/workflows/codeql.yml` is the tracked configuration and travels with every repository created from this template. GitHub refuses an advanced-setup upload wherever default setup is enabled, so a repository covered by an enforced organization configuration has to be allowed to override it before this workflow can report.
 - Enable Dependabot alerts and security updates.
 - Enable secret scanning and push protection when the repository plan supports them.
@@ -32,8 +33,10 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI and CodeQL can be started.
 3. Install the pinned package manager with `npx get-pnpm 11.24.0` if needed.
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
-5. Start the application and inspect the home, about, and not-found states on desktop and mobile. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
-6. Confirm the generated repository has its own unrelated Git history.
-7. Remove the temporary rehearsal repository when the check is complete.
+5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` is required. If the generated repository is intentionally left unprotected, record that as an explicit exception.
+6. If the host is Vercel, connect the project, create a preview from a pull request, and verify the deployment environment name before optionally importing `vercel-preview.json`. Do not enable a deployment rule with no matching deployment.
+7. Start the application and inspect the home, about, and not-found states on desktop and mobile. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
+8. Confirm the generated repository has its own unrelated Git history.
+9. Remove the temporary rehearsal repository when the check is complete.
 
-Repository secrets, Vercel links, branch rulesets, and security settings do not travel with the template files. Configure them for every repository created from this template.
+Repository secrets, Vercel links, active branch rulesets, and security settings do not travel with the template files. Configure them for every repository created from this template. Keep the JSON policy files when a project wants future changes to remain reviewable; an organization-managed ruleset can be the source of truth instead.
