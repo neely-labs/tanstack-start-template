@@ -15,12 +15,12 @@ A production-minded TanStack Start foundation for new applications. It supplies 
 
 ## Start a project
 
-Requirements: Node.js 24 and pnpm 12.0.0-rc.10. [pnpm documents the v12 release candidate and its installation separately](https://pnpm.io/installation#installing-the-pnpm-12-rc).
+Requirements: Node.js 24 and pnpm 11.24.0.
 
 If pnpm is not installed yet, use [pnpm's documented npm installer](https://pnpm.io/installation#using-npm) with the repository's exact pinned version:
 
 ```bash
-npx get-pnpm 12.0.0-rc.10
+npx get-pnpm 11.24.0
 ```
 
 ```bash

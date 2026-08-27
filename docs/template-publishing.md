@@ -17,7 +17,7 @@ Repository files are only part of a dependable template. Complete this checklist
 - Enable secret scanning and push protection when the repository plan supports them.
 - Keep GitHub Actions restricted to the permissions each workflow needs.
 
-The tracked Dependabot configuration updates GitHub Actions only. [GitHub currently documents pnpm version updates through v10](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories), so application dependency updates remain a reviewed local task while this template uses pnpm 12.
+The tracked Dependabot configuration updates GitHub Actions only. [GitHub currently documents pnpm version updates through v10](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories), so application dependency updates remain a reviewed local task while this template uses pnpm 11.
 
 ## Vercel
 
@@ -30,7 +30,7 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 
 1. Create a temporary repository through GitHub's **Use this template** flow.
 2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI and CodeQL can be started.
-3. Install the pinned package manager with `npx get-pnpm 12.0.0-rc.10` if needed.
+3. Install the pinned package manager with `npx get-pnpm 11.24.0` if needed.
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
 5. Start the application and inspect the home, about, and not-found states on desktop and mobile. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
 6. Confirm the generated repository has its own unrelated Git history.
