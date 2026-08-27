@@ -34,6 +34,8 @@ Then work through [the setup guide](docs/template-setup.md). It lists every valu
 
 After GitHub creates a repository from this template, open its **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository** before expecting the tracked CI and CodeQL workflows to appear on pull requests. GitHub does not replay earlier repository events, so run the workflows manually or push another commit after enabling them.
 
+GitHub does not copy repository settings from a template. This repository ships importable branch rulesets under `.github/rulesets`; apply them after the new repository exists and you have decided which deployment, if any, should gate merges.
+
 ### Set up with a coding agent
 
 The setup guide is written to be executed. Send this to your agent:
@@ -45,14 +47,15 @@ Set up this repository as my new project by following docs/template-setup.md. St
 <details>
 <summary>What the agent will do</summary>
 
-1. Ask six questions in one batch: project and package name, a one-sentence description, the production origin, the host, whether to keep the example routes, and whether brand assets are ready.
+1. Ask seven questions in one batch: project and package name, a one-sentence description, the production origin, the host, whether to keep the example routes, whether brand assets are ready, and whether to apply the GitHub branch ruleset (including an optional deployment gate).
 2. Apply that identity to `package.json`, `src/lib/site-config.ts`, `public/manifest.json`, and `public/robots.txt`.
 3. Keep or remove the example routes, then reconcile the route inventory and navigation.
 4. Replace the logo, favicon, and social card, and retire the trademark notice.
 5. Set the Nitro preset when the host is not Vercel.
-6. Rewrite `PRODUCT.md`, `DESIGN.md`, `AGENTS.md`, and this README for the product.
-7. Delete the template-only documents.
-8. Run `pnpm validate`, start the server, and confirm the new identity renders.
+6. If explicitly authorized, apply `.github/rulesets/default-branch.json`; if the host is Vercel, apply `.github/rulesets/vercel-preview.json` only after a successful preview deployment and an exact environment-name check.
+7. Rewrite `PRODUCT.md`, `DESIGN.md`, `AGENTS.md`, and this README for the product.
+8. Delete the template-only documents while keeping any adopted repository policy files.
+9. Run `pnpm validate`, start the server, and confirm the new identity renders and any selected repository ruleset reports correctly.
 
 Each step ends on a stated result, and most are checked by a command rather than by inspection, so the work is verifiable as it goes.
 
@@ -96,6 +99,22 @@ Ultracite is the quality entry point. Oxlint owns linting and Oxfmt owns formatt
 
 Lefthook formats and lints staged files before commit, then runs `pnpm validate` before push. Claude Code and Cursor format and lint the edited file after each edit. The tracked Impeccable skill adds UI-specific guidance and hooks for Codex, Claude Code, and Cursor. Vendored skill and plug-in source are excluded from application quality gates.
 
+## GitHub repository protection
+
+The files in `.github/rulesets` are policy artifacts, not active settings. A repository created from this template must import them separately. The baseline protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` check. It starts with zero required approvals so a solo maintainer can use it; add an approval and code-owner review when the project has a review team.
+
+With GitHub CLI authenticated as a repository administrator, run this once in the new repository:
+
+```bash
+repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+gh api --method POST \
+  -H "Accept: application/vnd.github+json" \
+  "repos/$repo/rulesets" \
+  --input .github/rulesets/default-branch.json
+```
+
+The optional Vercel ruleset requires a successful deployment in the exact `Preview` environment. Apply it only after Vercel has produced that deployment; for a project-suffixed or custom environment, edit the environment name first. Other hosts should keep the baseline until their integration emits a stable GitHub deployment environment. See [the ruleset notes](.github/rulesets/README.md) for the full procedure and caveats.
+
 ## SEO and public routes
 
 The example uses `https://example.com` so a fresh clone builds successfully without pretending to own a production domain. Replace it before deployment in:
@@ -131,6 +150,8 @@ Run `pnpm validate` before the first deployment and after changing public route 
 
 Import the repository and set **Framework Preset** to **TanStack Start**. The `nitro()` plugin is the server build layer underneath that preset and detects Vercel automatically. Keep the generated build command and output directory, leave the root directory at `./` for a root-level application, and confirm the project uses Node.js 24. No `vercel.json` is needed.
 
+Vercel creates Preview deployments for pull requests. If merging should wait for that deployment, import the optional ruleset described in [GitHub repository protection](#github-repository-protection) after the first preview succeeds. Confirm the deployment environment name in GitHub first; multi-project and custom-environment setups may use a different name.
+
 ### Cloudflare Workers
 
 Set the preset on the Nitro plugin in `vite.config.ts`:
@@ -147,6 +168,8 @@ cd .output/server && npx wrangler deploy
 ```
 
 Cloudflare is also a TanStack Start official partner with a [dedicated path](https://tanstack.com/start/latest/docs/framework/react/guide/hosting) that replaces Nitro with `@cloudflare/vite-plugin` and a tracked `wrangler.jsonc`. That is a different build layer rather than an addition to this one, so the template stays on Nitro and keeps one build path for every host.
+
+Cloudflare does not provide a template-wide deployment check name. Keep the baseline ruleset and add a required deployment only after the selected Cloudflare integration emits a stable GitHub deployment environment.
 
 Before publishing this repository as a GitHub template, complete the [template publishing checklist](docs/template-publishing.md).
 

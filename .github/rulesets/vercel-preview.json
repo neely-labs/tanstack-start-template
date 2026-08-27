@@ -1,0 +1,26 @@
+{
+  "name": "Require Vercel preview deployment",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": ["~DEFAULT_BRANCH"]
+    }
+  },
+  "rules": [
+    {
+      "type": "required_deployments",
+      "parameters": {
+        "required_deployment_environments": ["Preview"]
+      }
+    }
+  ],
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ]
+}
