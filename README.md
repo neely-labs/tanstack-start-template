@@ -32,6 +32,8 @@ Open `http://localhost:3000`.
 
 Then work through [the setup guide](docs/template-setup.md). It lists every value to replace, in order, and ends at a running application with no placeholder text.
 
+After GitHub creates a repository from this template, open its **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository** before expecting the tracked CI and CodeQL workflows to appear on pull requests. GitHub does not replay earlier repository events, so run the workflows manually or push another commit after enabling them.
+
 ### Set up with a coding agent
 
 The setup guide is written to be executed. Send this to your agent:
@@ -127,7 +129,7 @@ Run `pnpm validate` before the first deployment and after changing public route 
 
 ### Vercel
 
-Import the repository and keep the detected TanStack Start settings. Nitro detects Vercel, so no build command, output directory, or `vercel.json` is needed. Confirm the project uses Node.js 24.
+Import the repository and set **Framework Preset** to **TanStack Start**. The `nitro()` plugin is the server build layer underneath that preset and detects Vercel automatically. Keep the generated build command and output directory, leave the root directory at `./` for a root-level application, and confirm the project uses Node.js 24. No `vercel.json` is needed.
 
 ### Cloudflare Workers
 

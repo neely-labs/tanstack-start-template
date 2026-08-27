@@ -52,7 +52,9 @@ Ends when `pnpm build && pnpm seo:verify` passes, which checks the rendered soci
 
 ## 5. Set the host preset
 
-Vercel needs no change. For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, as the Hosting section of `README.md` describes.
+For Vercel, make no code change. During import, set Vercel's **Framework Preset** to **TanStack Start** and keep its generated build and output settings. The `nitro()` plugin in `vite.config.ts` produces the Vercel server output.
+
+For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, as the Hosting section of `README.md` describes.
 
 Ends when `pnpm build` succeeds under the chosen preset.
 
@@ -81,4 +83,6 @@ pnpm dev
 
 Open `http://localhost:3000` and confirm the header, the page titles, and the footer show the new identity.
 
-Ends when `pnpm validate` passes and the running application shows no placeholder text.
+For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI and CodeQL manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled.
+
+Ends when `pnpm validate` passes, the running application shows no placeholder text, and GitHub lists the CI and CodeQL workflows.

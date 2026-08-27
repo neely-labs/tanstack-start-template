@@ -21,7 +21,7 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 
 ## Vercel
 
-- Import the repository without adding a `vercel.json` or overriding the detected build settings.
+- Import the repository with **TanStack Start** as the Framework Preset. Keep the detected build and output settings; Nitro supplies the server build layer through `vite.config.ts`.
 - Confirm the project uses Node.js 24.
 - Configure the production domain and any application-specific environment variables.
 - Run `pnpm validate`, deploy a preview, and verify the real public routes, metadata, social image, and error path before promoting it.
@@ -29,10 +29,11 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 ## Rehearse the template
 
 1. Create a temporary repository through GitHub's **Use this template** flow.
-2. Install the pinned package manager with `npx get-pnpm 12.0.0-rc.10` if needed.
-3. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
-4. Start the application and inspect the home, about, and not-found states on desktop and mobile. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
-5. Confirm the generated repository has its own unrelated Git history.
-6. Remove the temporary rehearsal repository when the check is complete.
+2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI and CodeQL can be started.
+3. Install the pinned package manager with `npx get-pnpm 12.0.0-rc.10` if needed.
+4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
+5. Start the application and inspect the home, about, and not-found states on desktop and mobile. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
+6. Confirm the generated repository has its own unrelated Git history.
+7. Remove the temporary rehearsal repository when the check is complete.
 
 Repository secrets, Vercel links, branch rulesets, and security settings do not travel with the template files. Configure them for every repository created from this template.
