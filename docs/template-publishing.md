@@ -13,7 +13,7 @@ Repository files are only part of a dependable template. Complete this checklist
 
 - The files under `.github/rulesets` are importable repository-level policies; GitHub does not copy active settings through the template flow. Import `default-branch.json` into this source repository and rehearse the same command in a generated repository. It protects the default branch and requires the `validate` check without requiring an approval, which keeps a single-maintainer template usable.
 - Do not import the optional `vercel-preview.json` until a connected Vercel project has emitted a successful `Preview` deployment in GitHub. Change the environment name first when a project uses a suffix or custom environment.
-- Keep CodeQL on advanced setup. `.github/workflows/codeql.yml` is the tracked configuration and travels with every repository created from this template. GitHub refuses an advanced-setup upload wherever default setup is enabled, so a repository covered by an enforced organization configuration has to be allowed to override it before this workflow can report.
+- Keep paid GitHub Code Security and default CodeQL setup disabled for private projects. The template has no CodeQL workflow, so generated private projects do not require a paid security product. Public projects can retain free organization-managed scanning.
 - Enable Dependabot alerts and security updates.
 - Enable secret scanning and push protection when the repository plan supports them.
 - Keep GitHub Actions restricted to the permissions each workflow needs.
@@ -30,7 +30,7 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 ## Rehearse the template
 
 1. Create a temporary repository through GitHub's **Use this template** flow.
-2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI and CodeQL can be started.
+2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI can be started.
 3. Install the pinned package manager with `npx get-pnpm 11.24.0` if needed.
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
 5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` is required. If the generated repository is intentionally left unprotected, record that as an explicit exception.

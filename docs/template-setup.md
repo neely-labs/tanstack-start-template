@@ -131,8 +131,8 @@ pnpm dev
 
 Open `http://localhost:3000` and confirm the header, the page titles, and the footer show the new identity.
 
-For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI and CodeQL manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled.
+For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
 If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
-Ends when `pnpm validate` passes, the running application shows no placeholder text, and GitHub lists the CI and CodeQL workflows. If protection was deferred, leave that deferral visible to the project owner rather than claiming it was configured.
+Ends when `pnpm validate` passes, the running application shows no placeholder text, and GitHub lists the CI workflow. If protection was deferred, leave that deferral visible to the project owner rather than claiming it was configured.

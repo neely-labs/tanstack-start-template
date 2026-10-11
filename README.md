@@ -32,7 +32,7 @@ Open `http://localhost:3000`.
 
 Then work through [the setup guide](docs/template-setup.md). It lists every value to replace, in order, and ends at a running application with no placeholder text.
 
-After GitHub creates a repository from this template, open its **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository** before expecting the tracked CI and CodeQL workflows to appear on pull requests. GitHub does not replay earlier repository events, so run the workflows manually or push another commit after enabling them.
+After GitHub creates a repository from this template, open its **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository** before expecting the tracked CI workflow to appear on pull requests. GitHub does not replay earlier repository events, so run CI manually or push another commit after enabling it. The template does not enable GitHub Code Security or CodeQL; private projects need no paid security add-on.
 
 GitHub does not copy repository settings from a template. This repository ships importable branch rulesets under `.github/rulesets`; apply them after the new repository exists and you have decided which deployment, if any, should gate merges.
 
