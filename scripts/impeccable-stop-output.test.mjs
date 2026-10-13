@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { adaptImpeccableStopOutput } from "./impeccable-stop-output.mjs";
 
-describe("adaptImpeccableStopOutput", () => {
+describe(adaptImpeccableStopOutput, () => {
   it("turns Impeccable additional context into a Codex continuation", () => {
     const output = adaptImpeccableStopOutput(
       JSON.stringify({
@@ -13,7 +13,7 @@ describe("adaptImpeccableStopOutput", () => {
       })
     );
 
-    expect(JSON.parse(output)).toEqual({
+    expect(JSON.parse(output)).toStrictEqual({
       decision: "block",
       reason: "Fix the remaining UI issue.",
     });

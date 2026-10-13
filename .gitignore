@@ -24,3 +24,10 @@ todos.json
 
 # Local browser and authentication state
 .auth/
+
+# Vitest artifacts
+.vitest
+
+# Playwright artifacts
+playwright-report
+test-results

@@ -89,3 +89,11 @@ jobs:
       - name: Validate
         if: steps.scope.outputs.docs-only != 'true'
         run: pnpm validate
+
+      - name: Install browser for smoke tests
+        if: steps.scope.outputs.docs-only != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke test production app
+        if: steps.scope.outputs.docs-only != 'true'
+        run: pnpm test:e2e

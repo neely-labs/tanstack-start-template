@@ -7,7 +7,7 @@ import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 
 import { publicPaths } from "./src/lib/public-routes.ts";
-import { siteConfig } from "./src/lib/site-config.ts";
+import { securityHeaders } from "./src/lib/security-headers.ts";
 import { generatedSiteFiles } from "./src/lib/site-files.ts";
 
 /**
@@ -57,19 +57,17 @@ const config = defineConfig({
   plugins: [
     devtools(),
     tailwindcss(),
-    tanstackStart({
-      pages: publicPaths.map((path) => ({ path })),
+    tanstackStart(),
+    nitro({
+      routeRules: { "/**": { headers: securityHeaders } },
+      // Nitro must prerender before it freezes its public-asset manifest.
+      // Start's later prerender step leaves these files unserved on Node.
       prerender: {
         crawlLinks: false,
-        enabled: true,
         failOnError: true,
-      },
-      sitemap: {
-        enabled: true,
-        host: siteConfig.origin,
+        routes: publicPaths,
       },
     }),
-    nitro(),
     viteReact(),
     siteFiles(),
   ],

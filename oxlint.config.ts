@@ -43,12 +43,21 @@ const selectedJsPlugins = {
   ),
 };
 
+// Playwright uses its own test globals and asynchronous assertions.
+const unitTestRules = {
+  ...vitest,
+  overrides: vitest.overrides?.map((override) => ({
+    ...override,
+    files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs"],
+  })),
+};
+
 export default defineConfig({
   extends: [
     core,
     react,
     tanstack,
-    vitest,
+    unitTestRules,
     tanstackJsPlugins,
     selectedJsPlugins,
   ],
@@ -60,6 +69,7 @@ export default defineConfig({
   jsPlugins: [
     { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
   ],
+  options: { typeAware: true },
   overrides: [
     {
       files: ["src/routes/**/*.tsx"],

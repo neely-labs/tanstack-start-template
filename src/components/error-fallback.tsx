@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button.tsx";
 
 interface ErrorFallbackProps {
-  error: Error;
+  /** Router errors can now contain any thrown value, including null. */
+  error: unknown;
   onRetry: () => void;
   showDetails?: boolean;
 }
@@ -63,7 +64,9 @@ export function ErrorFallback({
               Technical details
             </summary>
             <pre className="mt-3 overflow-auto rounded-xl bg-muted p-4 font-mono text-xs whitespace-pre-wrap">
-              {error.message}
+              {error instanceof Error
+                ? error.message
+                : "An unexpected error occurred."}
             </pre>
           </details>
         ) : null}

@@ -5,6 +5,17 @@ import process from "node:process";
 
 import { adaptImpeccableStopOutput } from "./impeccable-stop-output.mjs";
 
+async function readStdin() {
+  if (process.stdin.isTTY) {
+    return "";
+  }
+  const chunks = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf-8");
+}
+
 const input = await readStdin();
 const result = spawnSync(
   process.execPath,
@@ -30,14 +41,3 @@ if (output) {
   process.stdout.write(output);
 }
 process.exit(result.status ?? 0);
-
-async function readStdin() {
-  if (process.stdin.isTTY) {
-    return "";
-  }
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf-8");
-}

@@ -111,8 +111,8 @@ for (const routePath of publicPaths) {
 const robots = readFileSync(".output/public/robots.txt", "utf-8");
 assert.ok(robots.includes(`Sitemap: ${siteConfig.origin}/sitemap.xml`));
 
-// The manifest and robots.txt are generated from `site-config.ts` at build
-// time. Compare the emitted bytes with what the config produces now, so a
+// The manifest, robots.txt, and sitemap are generated from site identity and
+// public route visibility at build time. Compare the emitted bytes with what the config produces now, so a
 // stale or missing emission fails here rather than reaching production.
 for (const [fileName, file] of Object.entries(generatedSiteFiles)) {
   assert.equal(
