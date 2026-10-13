@@ -75,7 +75,7 @@ pnpm test:e2e   # Smoke test an existing production build in desktop/mobile Chro
 pnpm build      # Build the Nitro production output and prerender public routes
 pnpm seo:verify # Inspect built metadata, schema, sitemap, robots, and SSR headings
 pnpm start      # Run an existing production build locally
-pnpm validate   # Run every CI and pre-push gate
+pnpm validate   # Run core quality, build, and pre-push gates
 ```
 
 The browser suite verifies the built server, navigation, hydration, server-function validation and CSRF protection, static assets, and 404 recovery. Install Chromium once with `pnpm exec playwright install chromium`, then run `pnpm build && pnpm test:e2e`. CI installs the browser and runs this suite after `pnpm validate`.
