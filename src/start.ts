@@ -4,17 +4,7 @@ import {
   createStart,
 } from "@tanstack/react-start";
 
-/**
- * Response headers that are safe for any application built from this template.
- *
- * A Content-Security-Policy is deliberately absent: a useful one depends on the
- * scripts, styles, and third-party origins the adopting application chooses.
- */
-const securityHeaders = [
-  ["Referrer-Policy", "strict-origin-when-cross-origin"],
-  ["X-Content-Type-Options", "nosniff"],
-  ["X-Frame-Options", "DENY"],
-] as const;
+import { securityHeaders } from "./lib/security-headers.ts";
 
 /**
  * Request middleware runs for every request the server handles: document
@@ -24,7 +14,7 @@ const securityHeadersMiddleware = createMiddleware().server(
   async ({ next }) => {
     const result = await next();
 
-    for (const [header, value] of securityHeaders) {
+    for (const [header, value] of Object.entries(securityHeaders)) {
       result.response.headers.set(header, value);
     }
 

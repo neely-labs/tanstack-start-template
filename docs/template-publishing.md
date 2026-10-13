@@ -23,7 +23,7 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 ## Vercel
 
 - Import the repository with **TanStack Start** as the Framework Preset. Keep the detected build and output settings; Nitro supplies the server build layer through `vite.config.ts`.
-- Confirm the project uses Node.js 24.
+- Confirm the project uses Node.js 24.15 or newer in the 24.x LTS line.
 - Configure the production domain and any application-specific environment variables.
 - Run `pnpm validate`, deploy a preview, and verify the real public routes, metadata, social image, and error path before promoting it.
 
@@ -31,7 +31,7 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 
 1. Create a temporary repository through GitHub's **Use this template** flow.
 2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI can be started.
-3. Install the pinned package manager with `npx get-pnpm 11.24.0` if needed.
+3. Install the pinned package manager with `npx get-pnpm 12.11.2` if needed.
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
 5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` is required. If the generated repository is intentionally left unprotected, record that as an explicit exception.
 6. If the host is Vercel, connect the project, create a preview from a pull request, and verify the deployment environment name before optionally importing `vercel-preview.json`. Do not enable a deployment rule with no matching deployment.

@@ -13,14 +13,16 @@ A production-minded TanStack Start foundation for new applications. It supplies 
 - pnpm and Lefthook
 - Impeccable skill support for Codex, Claude Code, and Cursor
 
+TanStack Start is on the stable v1 line. Nitro's Vite integration is still a pre-release, so its exact beta version is pinned.
+
 ## Start a project
 
-Requirements: Node.js 24 and pnpm 11.24.0.
+Requirements: Node.js 24.15 or newer in the 24.x LTS line and pnpm 12.11.2.
 
 If pnpm is not installed yet, use [pnpm's documented npm installer](https://pnpm.io/installation#using-npm) with the repository's exact pinned version:
 
 ```bash
-npx get-pnpm 11.24.0
+npx get-pnpm 12.11.2
 ```
 
 ```bash
@@ -69,11 +71,14 @@ pnpm fix        # Apply safe Oxlint and Oxfmt fixes
 pnpm check      # Check lint, formatting, and type-aware rules
 pnpm typecheck  # Run TypeScript without emitting files
 pnpm test       # Run the Vitest suite once
+pnpm test:e2e   # Smoke test an existing production build in desktop/mobile Chromium
 pnpm build      # Build the Nitro production output and prerender public routes
 pnpm seo:verify # Inspect built metadata, schema, sitemap, robots, and SSR headings
 pnpm start      # Run an existing production build locally
 pnpm validate   # Run every CI and pre-push gate
 ```
+
+The browser suite verifies the built server, navigation, hydration, server-function validation and CSRF protection, static assets, and 404 recovery. Install Chromium once with `pnpm exec playwright install chromium`, then run `pnpm build && pnpm test:e2e`. CI installs the browser and runs this suite after `pnpm validate`.
 
 ## Project shape
 
@@ -81,10 +86,10 @@ pnpm validate   # Run every CI and pre-push gate
 - `src/components/ui` contains shadcn primitives. Add more with `pnpm dlx shadcn@latest add <component>`.
 - `src/lib/site-config.ts` is the single seam for public identity and canonical origin.
 - `src/lib/seo.ts` builds consistent page metadata and JSON-LD from that config.
-- `src/lib/site-files.ts` generates `robots.txt` and `manifest.json` from the same config, so no file under `public/` restates the project's identity.
+- `src/lib/site-files.ts` generates `robots.txt`, `manifest.json`, and `sitemap.xml` from the same config and public route inventory, so no file under `public/` restates the project's identity.
 - `src/lib/public-routes.ts` classifies every route as `public` or `private`. It is the prerender and sitemap inventory, and it is checked against the generated route tree at compile time.
 - `src/lib/server-runtime.ts` holds the example server functions and the isomorphic environment helper.
-- `src/start.ts` registers global request middleware through `createStart`.
+- `src/start.ts` registers global request middleware through `createStart`. `src/lib/security-headers.ts` shares the same headers with Nitro, so prerendered and static responses retain them too.
 - `src/server.ts` is the server entry. It swaps in srvx's `FastResponse`, which is roughly a 5% throughput gain on Node hosts and a no-op on runtimes where srvx exports the platform `Response`.
 - `src/routes/api/health.ts` is an example server route that answers with JSON.
 - `scripts/verify-seo-output.mjs` verifies the rendered production artifacts instead of trusting source configuration alone.
@@ -122,7 +127,7 @@ The example uses `https://example.com` so a fresh clone builds successfully with
 - `src/lib/site-config.ts`
 - `public/robots.txt`
 
-Add each public route to `src/lib/public-routes.ts`. The Nitro build prerenders that inventory and generates `sitemap.xml`; `pnpm seo:verify` checks the finished HTML for unique titles, descriptions, canonical URLs, social metadata, JSON-LD, and server-rendered headings.
+Add each public route to `src/lib/public-routes.ts`. The site-files Vite plugin emits `sitemap.xml` from that inventory before Nitro builds its static-asset manifest, and Nitro prerenders the same routes; `pnpm seo:verify` checks the finished HTML for unique titles, descriptions, canonical URLs, social metadata, JSON-LD, and server-rendered headings.
 
 ## Execution model
 
@@ -154,11 +159,12 @@ Vercel creates Preview deployments for pull requests. If merging should wait for
 
 ### Cloudflare Workers
 
-Set the preset on the Nitro plugin in `vite.config.ts`:
+Add the preset to the existing Nitro configuration in `vite.config.ts`, keeping its route rules and prerender options:
 
 ```diff
--    nitro(),
-+    nitro({ preset: "cloudflare-module" }),
+     nitro({
++      preset: "cloudflare-module",
+       routeRules: { "/**": { headers: securityHeaders } },
 ```
 
 `pnpm build` prerenders through Wrangler and writes `.output/server/wrangler.json` with `nodejs_compat` and the static-asset binding already configured, so no Cloudflare config is tracked here. Deploy the build output:

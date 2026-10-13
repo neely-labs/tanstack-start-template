@@ -1,4 +1,12 @@
 /**
+ * @param {unknown} value Candidate object.
+ * @returns {value is Record<string, unknown>} Whether the value is a record.
+ */
+function isRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+
+/**
  * Adapts Impeccable's Claude-style Stop envelope to Codex's Stop contract.
  * Unknown output is preserved so the hook runtime can report it as invalid.
  *
@@ -32,12 +40,4 @@ export function adaptImpeccableStopOutput(stdout) {
   }
 
   return JSON.stringify({ decision: "block", reason: context });
-}
-
-/**
- * @param {unknown} value Candidate object.
- * @returns {value is Record<string, unknown>} Whether the value is a record.
- */
-function isRecord(value) {
-  return typeof value === "object" && value !== null;
 }

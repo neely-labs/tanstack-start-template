@@ -39,4 +39,18 @@ describe(ErrorFallback, () => {
 
     expect(screen.getByText("Loader failed")).toBeDefined();
   });
+
+  it.each([null, undefined, false, "Failure", { message: "Unsafe detail" }])(
+    "handles a non-Error thrown value (%j) without exposing it",
+    (thrownValue) => {
+      render(
+        <ErrorFallback error={thrownValue} onRetry={() => {}} showDetails />
+      );
+
+      expect(screen.getByRole("alert")).toBeDefined();
+      expect(screen.getByText("An unexpected error occurred.")).toBeDefined();
+      expect(screen.queryByText("Unsafe detail")).toBeNull();
+      expect(screen.queryByText("Failure")).toBeNull();
+    }
+  );
 });
