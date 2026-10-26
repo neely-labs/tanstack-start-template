@@ -18,7 +18,7 @@ Repository files are only part of a dependable template. Complete this checklist
 - Enable secret scanning and push protection when the repository plan supports them.
 - Keep GitHub Actions restricted to the permissions each workflow needs.
 
-The tracked Dependabot configuration updates GitHub Actions only. [GitHub currently documents pnpm version updates through v10](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories), so application dependency updates remain a reviewed local task while this template uses pnpm 11.
+The tracked Dependabot configuration updates GitHub Actions only. Review application dependency updates locally with the package manager pinned in `package.json`. Confirm [GitHub's supported ecosystems and versions](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) before extending Dependabot to application packages.
 
 ## Vercel
 
@@ -35,8 +35,10 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
 5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` is required. If the generated repository is intentionally left unprotected, record that as an explicit exception.
 6. If the host is Vercel, connect the project, create a preview from a pull request, and verify the deployment environment name before optionally importing `vercel-preview.json`. Do not enable a deployment rule with no matching deployment.
-7. Start the application and inspect the home, setup, runtime, and not-found states on desktop and mobile, in light and dark themes. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
+7. Install Chromium with `pnpm exec playwright install chromium` and run `pnpm test:e2e`. This verifies desktop/mobile serving, keyboard navigation and skip links, theme hydration, example form validation, and loader-failure retry against the real server. Inspect the home, setup, runtime, and not-found states in light and dark themes too.
 8. Confirm the generated repository has its own unrelated Git history.
 9. Remove the temporary rehearsal repository when the check is complete.
 
 Repository secrets, Vercel links, active branch rulesets, and security settings do not travel with the template files. Configure them for every repository created from this template. Keep the JSON policy files when a project wants future changes to remain reviewable; an organization-managed ruleset can be the source of truth instead.
+
+For local maintenance, also rehearse a renamed copy with examples retained and a renamed copy with both example pages removed, following `docs/template-setup.md`. Both must pass core validation and their applicable browser suites. Run the copies on separate development and E2E ports and verify each serves its own identity. The evaluation tasks in [the assessment](agent-friendliness-assessment.md#representative-evaluation-tasks) make repeat runs comparable without adding a custom environment manager.

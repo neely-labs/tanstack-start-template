@@ -49,14 +49,14 @@ Set up this repository as my new project by following docs/template-setup.md. St
 <summary>What the agent will do</summary>
 
 1. Ask seven questions in one batch: project and package name, a one-sentence description, the production origin, the host, whether to keep the example routes, whether brand assets are ready, and whether to apply the GitHub branch ruleset (including an optional deployment gate).
-2. Apply that identity to `package.json`, `src/lib/site-config.ts`, `public/manifest.json`, and `public/robots.txt`.
-3. Keep or remove the example routes, then reconcile the route inventory and navigation.
+2. Apply that identity to `package.json` and `src/lib/site-config.ts`; manifest, robots, and sitemap files are generated.
+3. Keep or remove `/setup` and `/runtime`, then reconcile route generation, inventory, inbound links, navigation, and example tests. Keep `/api/health` for readiness.
 4. Replace the logo, favicon, and social card, and retire the trademark notice.
 5. Set the Nitro preset when the host is not Vercel.
 6. If explicitly authorized, apply `.github/rulesets/default-branch.json`; if the host is Vercel, apply `.github/rulesets/vercel-preview.json` only after a successful preview deployment and an exact environment-name check.
-7. Rewrite `PRODUCT.md`, `DESIGN.md`, `AGENTS.md`, and this README for the product.
+7. Rewrite `PRODUCT.md`, `DESIGN.md`, `AGENTS.md`, and this README for the product, retaining the development workflow and quality gates.
 8. Delete the template-only documents while keeping any adopted repository policy files.
-9. Run `pnpm validate`, start the server, and confirm the new identity renders and any selected repository ruleset reports correctly.
+9. Run `pnpm validate` and the applicable production browser suite, inspect the new identity, and confirm any selected repository ruleset reports correctly.
 
 Each step ends on a stated result, and most are checked by a command rather than by inspection, so the work is verifiable as it goes.
 
@@ -79,6 +79,50 @@ pnpm validate   # Run core quality, build, and pre-push gates
 
 The browser suite verifies the built server, navigation, hydration, server-function validation and CSRF protection, static assets, and 404 recovery. Install Chromium once with `pnpm exec playwright install chromium`, then run `pnpm build && pnpm test:e2e`. CI installs the browser and runs this suite after `pnpm validate`.
 
+## Development workflow
+
+Keep this section when adopting the template. Read `PRODUCT.md` for product intent and `DESIGN.md` for interface constraints; update those decisions alongside the feature that changes them.
+
+### Find the smallest change
+
+| Task | Start here | Observable check |
+| --- | --- | --- |
+| Public identity or origin | `src/lib/site-config.ts`; generated files in `src/lib/site-files.ts` | Unit tests, built manifest/robots/sitemap, rendered page metadata |
+| Add or remove a page | `src/routes`, `src/lib/public-routes.ts`, navigation and inbound links | Regenerate routes, `pnpm validate`, affected browser journey |
+| Server action | Input parser/calculation, server function, page calling it | Unit acceptance/rejection plus a real browser-to-server request |
+| Headers or production serving | `src/start.ts`, `src/lib/security-headers.ts`, `vite.config.ts` | Production build and served page/API/static-response checks |
+
+Route types are generated when Vite runs. After changing route files and their visibility entries, reuse this checkout's running development server, or run `pnpm build` from a stopped checkout before `pnpm validate`. That refreshes `src/routeTree.gen.ts` before lint and TypeScript consume it. Reconcile navigation, inbound links, metadata, and affected browser tests too. Edit route sources rather than the generated tree.
+
+Use focused tests while editing, for example `pnpm test src/lib/text-stats.test.ts`, then run `pnpm fix` and `pnpm validate` for handoff. For runtime or interface changes, run `pnpm test:e2e` against that build as a separate gate. `tests/e2e/smoke.spec.ts` covers retained infrastructure; `tests/e2e/examples.spec.ts` belongs to the removable example pages. Missing expected behavior fails a test rather than conditionally skipping it.
+
+### Concurrent checkouts
+
+Worktrees isolate source and build output, but share network ports. Reuse a development server only after checking that its process belongs to this checkout and its rendered identity is correct. A healthy response alone does not identify a checkout.
+
+`pnpm dev` binds port 3000 strictly. For another task, choose an unused port explicitly:
+
+```bash
+pnpm exec vite dev --port 3101 --strictPort
+E2E_PORT=4181 pnpm test:e2e
+```
+
+`E2E_PORT` defaults to 4173 and controls the browser URL, Nitro listener, and readiness probe together. Each browser run starts its own production server and refuses an occupied port. Give simultaneous checkouts different E2E ports, and stop only the processes your task started. The current application needs no accounts, database, or environment file for local work.
+
+### Inspect and recover
+
+Use `/api/health` to check that the server responds. The browser console, network panel, and development-only TanStack devtools expose navigation, hydration, and server requests. Check the terminal for build/prerender failures and `pnpm seo:verify` for the exact route or artifact whose metadata failed.
+
+Browser failures leave screenshots, error context, and traces under `test-results/`. CI uploads them as `browser-failure-evidence` for seven days when the browser step fails. Download the artifact and open its trace locally:
+
+```bash
+pnpm exec playwright show-trace path/to/trace.zip
+```
+
+The example retry test injects a failed loader request inside its browser, then retries the real server. No production fault endpoint is needed. Keep traces local until reviewed when a product adds authenticated or sensitive workflows.
+
+For a failed approach, inspect `git diff` and revert only the task's changes; retain unrelated edits and other tasks' processes. In a handoff, name the route/action exercised, actual check results, and any unavailable prerequisite. When adding persistence or an external integration, supply its local fixtures, reset and cleanup procedure, credential separation, and failure/recovery checks with the feature. Keep those instructions next to the owning module or in this operating section until their size warrants a separate document.
+
 ## Project shape
 
 - `src/routes` owns file-based routes and route-level metadata.
@@ -89,8 +133,8 @@ The browser suite verifies the built server, navigation, hydration, server-funct
 - `src/lib/public-routes.ts` classifies every route as `public` or `private`. It is the prerender and sitemap inventory, and it is checked against the generated route tree at compile time.
 - `src/lib/server-runtime.ts` holds the example server functions and the isomorphic environment helper.
 - `src/start.ts` registers global request middleware through `createStart`. `src/lib/security-headers.ts` shares the same headers with Nitro, so prerendered and static responses retain them too.
-- `src/server.ts` is the server entry. It swaps in srvx's `FastResponse`, which is roughly a 5% throughput gain on Node hosts and a no-op on runtimes where srvx exports the platform `Response`.
-- `src/routes/api/health.ts` is an example server route that answers with JSON.
+- `src/server.ts` is the server entry. It uses srvx's `FastResponse` on Node and the platform `Response` on runtimes where srvx exports it.
+- `src/routes/api/health.ts` is the retained JSON readiness route, including after optional example pages are removed.
 - `scripts/verify-seo-output.mjs` verifies the rendered production artifacts instead of trusting source configuration alone.
 - `docs/template-publishing.md` records the repository settings and rehearsal steps that cannot live in application code.
 - `tools/oxlint/anti-slop` is vendored lint plug-in source from [`dmmulroy/anti-slop`](https://github.com/dmmulroy/anti-slop).
@@ -123,10 +167,7 @@ The optional Vercel ruleset requires a successful deployment in the exact `Previ
 
 ## SEO and public routes
 
-The example uses `https://example.com` so a fresh clone builds successfully without pretending to own a production domain. Replace it before deployment in:
-
-- `src/lib/site-config.ts`
-- `public/robots.txt`
+The example uses `https://example.com` so a fresh clone builds successfully without pretending to own a production domain. Replace it in `src/lib/site-config.ts` before deployment. Manifest, robots, and sitemap files are generated; their emitted copies belong in build output.
 
 Add each public route to `src/lib/public-routes.ts`. The site-files Vite plugin emits `sitemap.xml` from that inventory before Nitro builds its static-asset manifest, and Nitro prerenders the same routes; `pnpm seo:verify` checks the finished HTML for unique titles, descriptions, canonical URLs, social metadata, JSON-LD, and server-rendered headings.
 
@@ -138,6 +179,8 @@ Add each public route to `src/lib/public-routes.ts`. The site-files Vite plugin 
 - **Isomorphic code**. `createIsomorphicFn` keeps a server branch and a client branch behind one call, and each branch is stripped from the bundle it does not belong to.
 - **Request middleware** in `src/start.ts`, which runs for every request the server handles, including server routes and server functions. It sets conservative security headers and rejects cross-site requests to server functions. A Content-Security-Policy is deliberately absent because a useful one depends on the application.
 - **Server routes** in `src/routes/api/health.ts`, which answer with JSON rather than a document and are classified `private`.
+
+`public` and `private` in this inventory control prerendering, sitemap inclusion, and SEO checks. They do not enforce authentication or authorize requests.
 
 Two behaviors are worth knowing before copying the pattern:
 

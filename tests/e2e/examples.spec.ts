@@ -1,60 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-import { publicPaths } from "../../src/lib/public-routes.ts";
-import { securityHeaders } from "../../src/lib/security-headers.ts";
-import { siteConfig } from "../../src/lib/site-config.ts";
-import { generatedSiteFiles } from "../../src/lib/site-files.ts";
-
-// Exercise the built server: files on disk alone do not prove Nitro serves them.
-test("serves prerendered pages, identity files, and secured API responses", async ({
-  request,
-}) => {
-  await Promise.all(
-    publicPaths.map(async (routePath) => {
-      const response = await request.get(routePath);
-      expect(response.status()).toBe(200);
-      for (const [name, value] of Object.entries(securityHeaders)) {
-        expect(response.headers()[name.toLowerCase()]).toBe(value);
-      }
-      const html = await response.text();
-      expect(html).toContain("<h1");
-      expect(html).toContain(`href="${siteConfig.origin}${routePath}"`);
-    })
-  );
-
-  await Promise.all(
-    Object.entries(generatedSiteFiles).map(async ([fileName, file]) => {
-      const response = await request.get(`/${fileName}`);
-      expect(response.status()).toBe(200);
-      expect(await response.text()).toBe(file.source);
-    })
-  );
-
-  const health = await request.get("/api/health");
-  expect(health.status()).toBe(200);
-  expect(await health.json()).toMatchObject({ status: "ok" });
-  expect(health.headers()).toMatchObject({
-    "referrer-policy": "strict-origin-when-cross-origin",
-    "x-content-type-options": "nosniff",
-    "x-frame-options": "DENY",
-  });
-  const malformed = await request.get("/%E0%A4%A");
-  expect(malformed.status()).toBe(400);
-
-  const image = await request.get(siteConfig.socialImage.path);
-  expect(image.status()).toBe(200);
-  const { etag } = image.headers();
-  expect(etag).toBeDefined();
-  const conditional = await request.get(siteConfig.socialImage.path, {
-    headers: { "if-none-match": etag ?? "" },
-  });
-  expect(conditional.status()).toBe(304);
-  const head = await request.head(siteConfig.socialImage.path);
-  expect(head.status()).toBe(200);
-  expect(await head.body()).toHaveLength(0);
-});
-
-test("hydrates, navigates, validates server functions, and recovers", async ({
+// Remove this file with the optional /setup and /runtime example pages.
+test("navigates the examples and validates real server functions", async ({
   page,
   request,
   baseURL,
@@ -76,20 +23,6 @@ test("hydrates, navigates, validates server functions, and recovers", async ({
   await expect(page).toHaveURL(`${baseURL}/`);
   await page.goForward();
   await expect(page).toHaveURL(`${baseURL}/setup`);
-
-  // The theme choice applies immediately and survives a full reload.
-  const isDark = async () =>
-    await page.evaluate(() =>
-      document.documentElement.classList.contains("dark")
-    );
-  const themeToggle = page.getByRole("button", { name: "Dark theme" });
-  const startedDark = await isDark();
-  await themeToggle.click();
-  await expect(themeToggle).toHaveAttribute("aria-pressed", `${!startedDark}`);
-  await page.reload();
-  expect(await isDark()).toBe(!startedDark);
-  await themeToggle.click();
-  await expect(themeToggle).toHaveAttribute("aria-pressed", `${startedDark}`);
 
   await navigation.getByRole("link", { exact: true, name: "Runtime" }).click();
   await expect(page.getByText(/^client ·/u)).toBeVisible();
@@ -153,12 +86,80 @@ test("hydrates, navigates, validates server functions, and recovers", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth
     )
   ).toBeTruthy();
-  const missing = await page.goto("/missing-upgrade-route");
-  expect(missing?.status()).toBe(404);
-  await expect(
-    page.getByRole("heading", { name: "Page not found" })
-  ).toBeVisible();
-  await page.getByRole("link", { exact: true, name: "Return home" }).click();
-  await expect(page).toHaveURL(`${baseURL}/`);
   expect(browserErrors).toStrictEqual([]);
+});
+
+test("submits and corrects the example form with the keyboard", async ({
+  page,
+}) => {
+  await page.goto("/runtime");
+  await expect(page.getByText(/^client ·/u)).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Text to analyze" });
+  const submit = page.getByRole("button", { name: "Analyze on the server" });
+  await input.focus();
+  await page.keyboard.type("   ");
+  await page.keyboard.press("Tab");
+  await expect(submit).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(input).toHaveAttribute("aria-describedby", "analyzer-error");
+  await expect(page.getByText("Enter some text to analyze.")).toBeVisible();
+
+  await input.focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("Keyboard submission works");
+  await page.keyboard.press("Tab");
+  await expect(submit).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("dd").first()).toHaveText("3");
+  await expect(input).toHaveAttribute("aria-invalid", "false");
+  await expect(input).toHaveValue("Keyboard submission works");
+});
+
+test("recovers from a loader failure by retrying the real server", async ({
+  page,
+}) => {
+  let failLoader = true;
+  let failedRequests = 0;
+  let retriedRequests = 0;
+  // Fault injection stays in this browser. Retry reaches the built server.
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+    } else if (failLoader) {
+      failedRequests += 1;
+      await route.fulfill({
+        status: 503,
+        contentType: "text/plain",
+        body: "Temporary loader failure",
+      });
+    } else {
+      retriedRequests += 1;
+      await route.continue();
+    }
+  });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Dark theme" })
+  ).toHaveAttribute("aria-pressed", /^(?:true|false)$/u);
+  await page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .getByRole("link", { name: "Runtime", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "This page couldn't finish loading." })
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toBeFocused();
+  await expect(page.getByText("Technical details")).toHaveCount(0);
+  expect(failedRequests).toBeGreaterThan(0);
+
+  failLoader = false;
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Try again" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Code that knows where it runs." })
+  ).toBeVisible();
+  await expect(page.getByText(/^client ·/u)).toBeVisible();
+  expect(retriedRequests).toBeGreaterThan(0);
 });

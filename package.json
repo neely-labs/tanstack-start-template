@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "check": "ultracite check --type-aware --type-check",
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --port 3000 --strictPort",
     "fix": "ultracite fix --type-aware --type-check",
     "seo:verify": "node --experimental-strip-types scripts/verify-seo-output.mjs",
     "start": "node .output/server/index.mjs",

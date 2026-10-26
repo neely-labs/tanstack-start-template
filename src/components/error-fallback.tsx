@@ -25,6 +25,7 @@ export function ErrorFallback({
     <main
       className="mx-auto flex w-full max-w-4xl flex-1 items-center px-5 py-20 sm:px-8 sm:py-28"
       id="main-content"
+      tabIndex={-1}
     >
       <section
         aria-labelledby="error-heading"

@@ -8,20 +8,21 @@ import {
   createWebsiteSchema,
   pageTitle,
 } from "./seo.ts";
+import { siteConfig } from "./site-config.ts";
 
 describe(pageTitle, () => {
   it("suffixes a page name with the configured site name", () => {
-    expect(pageTitle("About")).toBe("About | TanStack Start Template");
+    expect(pageTitle("About")).toBe(`About | ${siteConfig.name}`);
   });
 
   it("returns the site name alone when no page name is given", () => {
-    expect(pageTitle()).toBe("TanStack Start Template");
+    expect(pageTitle()).toBe(siteConfig.name);
   });
 });
 
 describe("SEO helpers", () => {
   it("builds canonical URLs from the configured public origin", () => {
-    expect(absoluteUrl("/about")).toBe("https://example.com/about");
+    expect(absoluteUrl("/about")).toBe(`${siteConfig.origin}/about`);
   });
 
   it("keeps visible and social metadata aligned", () => {
@@ -32,7 +33,7 @@ describe("SEO helpers", () => {
     });
 
     expect(head.links).toContainEqual({
-      href: "https://example.com/about",
+      href: `${siteConfig.origin}/about`,
       rel: "canonical",
     });
     expect(head.meta).toContainEqual({
@@ -40,11 +41,11 @@ describe("SEO helpers", () => {
       property: "og:title",
     });
     expect(head.meta).toContainEqual({
-      content: "https://example.com/social-card.png",
+      content: `${siteConfig.origin}${siteConfig.socialImage.path}`,
       property: "og:image",
     });
     expect(head.meta).toContainEqual({
-      content: "1200",
+      content: `${siteConfig.socialImage.width}`,
       property: "og:image:width",
     });
   });

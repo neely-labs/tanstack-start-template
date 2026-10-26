@@ -75,7 +75,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   return (
-    <main className="flex-1" id="main-content">
+    <main className="flex-1" id="main-content" tabIndex={-1}>
       <section className="relative isolate overflow-hidden">
         {/* Decorative backdrop: a faint dot grid that fades out at the edges. */}
         <div

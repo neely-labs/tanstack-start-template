@@ -56,6 +56,7 @@ function RuntimePage() {
     <main
       className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28"
       id="main-content"
+      tabIndex={-1}
     >
       <Badge variant="secondary">Execution model</Badge>
       <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
