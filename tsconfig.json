@@ -6,7 +6,6 @@
     ".claude",
     ".codex",
     ".cursor",
-    ".impeccable",
     ".output",
     "dist",
     "tools/oxlint/anti-slop"

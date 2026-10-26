@@ -4,7 +4,6 @@ export const agentToolingIgnorePatterns = [
   "**/.claude",
   "**/.codex",
   "**/.cursor",
-  "**/.impeccable",
 ];
 
 /** Vendored Oxlint plug-in source, loaded by Oxlint but not authored here. */

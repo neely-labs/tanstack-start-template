@@ -9,7 +9,6 @@ pre-commit:
         - ".claude/**/*"
         - ".codex/**/*"
         - ".cursor/**/*"
-        - ".impeccable/**/*"
         - "tools/oxlint/anti-slop/**/*"
       stage_fixed: true
       fail_text: Run `pnpm fix`, review the changes, and stage them again.
