@@ -138,7 +138,7 @@
   }
   /* Inline code in running text; block code keeps its own styling. */
   :where(p, li, dd) > code {
-    @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.875em] text-foreground;
+    @apply rounded-md bg-foreground/6 px-1 py-px font-mono text-[0.875em] text-foreground;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

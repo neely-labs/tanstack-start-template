@@ -10,7 +10,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { CopyCommand } from "@/components/copy-command.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { buttonVariants } from "@/components/ui/button.tsx";
 import {
   Card,
   CardContent,
@@ -26,6 +26,7 @@ import {
   pageTitle,
 } from "@/lib/seo.ts";
 import { siteConfig } from "@/lib/site-config.ts";
+import { cn } from "@/lib/utils.ts";
 
 const foundation = [
   {
@@ -108,22 +109,21 @@ function HomePage() {
               in.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button
-                nativeButton={false}
-                render={<Link to="/runtime" />}
-                size="lg"
+              <Link
+                className={cn(buttonVariants({ size: "lg" }))}
+                to="/runtime"
               >
                 See it run
                 <IconArrowRight aria-hidden="true" data-icon="inline-end" />
-              </Button>
-              <Button
-                nativeButton={false}
-                render={<a aria-label="What is included" href="#included" />}
-                size="lg"
-                variant="outline"
+              </Link>
+              <a
+                className={cn(
+                  buttonVariants({ size: "lg", variant: "outline" })
+                )}
+                href="#included"
               >
                 What is included
-              </Button>
+              </a>
             </div>
           </div>
 

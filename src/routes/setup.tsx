@@ -1,7 +1,7 @@
 import { IconArrowUpRight } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Button } from "@/components/ui/button.tsx";
+import { buttonVariants } from "@/components/ui/button.tsx";
 import {
   createGraph,
   createSeoHead,
@@ -10,6 +10,7 @@ import {
   pageTitle,
 } from "@/lib/seo.ts";
 import { siteConfig } from "@/lib/site-config.ts";
+import { cn } from "@/lib/utils.ts";
 
 const description =
   "The first replacement points for turning this TanStack Start template into your own application.";
@@ -108,20 +109,15 @@ function SetupPage() {
             </li>
           ))}
         </ol>
-        <Button
-          className="mt-8"
-          nativeButton={false}
-          render={
-            <a
-              aria-label="Read the full setup guide"
-              href={`${siteConfig.templateUrl}/blob/main/docs/template-setup.md`}
-            />
-          }
-          variant="outline"
+        <a
+          className={cn(
+            buttonVariants({ className: "mt-8", variant: "outline" })
+          )}
+          href={`${siteConfig.templateUrl}/blob/main/docs/template-setup.md`}
         >
           Read the full setup guide
           <IconArrowUpRight aria-hidden="true" data-icon="inline-end" />
-        </Button>
+        </a>
       </section>
     </main>
   );

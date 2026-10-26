@@ -14,9 +14,10 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ErrorFallback } from "@/components/error-fallback.tsx";
 import { SiteFooter } from "@/components/site-footer.tsx";
 import { SiteHeader } from "@/components/site-header.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { buttonVariants } from "@/components/ui/button.tsx";
 import { siteConfig } from "@/lib/site-config.ts";
 import { themeScript } from "@/lib/theme.ts";
+import { cn } from "@/lib/utils.ts";
 
 import appCss from "../styles.css?url";
 
@@ -51,15 +52,13 @@ export const Route = createRootRoute({
         This route does not exist. Check the address, or head back to the home
         page.
       </p>
-      <Button
-        className="mt-8"
-        nativeButton={false}
-        render={<Link to="/" />}
-        size="lg"
+      <Link
+        className={cn(buttonVariants({ className: "mt-8", size: "lg" }))}
+        to="/"
       >
         <IconArrowLeft aria-hidden="true" data-icon="inline-start" />
         Return home
-      </Button>
+      </Link>
     </main>
   ),
   shellComponent: RootDocument,
