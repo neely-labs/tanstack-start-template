@@ -5,13 +5,14 @@ const storageKey = "theme";
  * flashes the light theme. Prerendered HTML cannot know the visitor's choice.
  */
 export const themeScript = `(() => {
+  let stored = null;
   try {
-    const stored = localStorage.getItem("${storageKey}");
-    const dark = stored === null
-      ? matchMedia("(prefers-color-scheme: dark)").matches
-      : stored === "dark";
-    document.documentElement.classList.toggle("dark", dark);
+    stored = localStorage.getItem("${storageKey}");
   } catch {}
+  const dark = stored === null
+    ? matchMedia("(prefers-color-scheme: dark)").matches
+    : stored === "dark";
+  document.documentElement.classList.toggle("dark", dark);
 })()`;
 
 export function isDarkTheme() {
