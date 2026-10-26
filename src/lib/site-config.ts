@@ -8,8 +8,8 @@ export const siteConfig = {
   name: "TanStack Start Template",
   navigation: [
     { href: "/", label: "Home" },
-    { href: "/about", label: "About" },
     { href: "/runtime", label: "Runtime" },
+    { href: "/setup", label: "Setup" },
   ],
   origin: "https://example.com",
   /** Installed-application name. Keep it short enough to sit under an icon. */
@@ -21,6 +21,8 @@ export const siteConfig = {
     type: "image/png",
     width: 1200,
   },
+  /** Footer credit for the template this project started from. Keep or drop. */
+  templateUrl: "https://github.com/neely-labs/tanstack-start-template",
   /** Browser UI colour. Match the `--background` token in `src/styles.css`. */
   themeColor: "#f7f9f9",
 } as const;

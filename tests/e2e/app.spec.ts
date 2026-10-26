@@ -65,14 +65,32 @@ test("hydrates, navigates, validates server functions, and recovers", async ({
   const navigation = page.getByRole("navigation", {
     name: "Primary navigation",
   });
-  await navigation.getByRole("link", { exact: true, name: "About" }).click();
+  await navigation.getByRole("link", { exact: true, name: "Setup" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Infrastructure first. Product assumptions last."
+    "Make it yours."
   );
+  await expect(
+    navigation.getByRole("link", { exact: true, name: "Setup" })
+  ).toHaveAttribute("aria-current", "page");
   await page.goBack();
   await expect(page).toHaveURL(`${baseURL}/`);
   await page.goForward();
-  await expect(page).toHaveURL(`${baseURL}/about`);
+  await expect(page).toHaveURL(`${baseURL}/setup`);
+
+  // The theme choice applies immediately and survives a full reload.
+  const isDark = async () =>
+    await page.evaluate(() =>
+      document.documentElement.classList.contains("dark")
+    );
+  const themeToggle = page.getByRole("button", { name: "Dark theme" });
+  const startedDark = await isDark();
+  await themeToggle.click();
+  await expect(themeToggle).toHaveAttribute("aria-pressed", `${!startedDark}`);
+  await page.reload();
+  expect(await isDark()).toBe(!startedDark);
+  await themeToggle.click();
+  await expect(themeToggle).toHaveAttribute("aria-pressed", `${startedDark}`);
+
   await navigation.getByRole("link", { exact: true, name: "Runtime" }).click();
   await expect(page.getByText(/^client ·/u)).toBeVisible();
   await expect(page.getByText(/^server · Node/u)).toBeVisible();

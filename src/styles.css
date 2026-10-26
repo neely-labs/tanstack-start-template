@@ -21,6 +21,8 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -49,6 +51,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: oklch(0.987 0.002 197.1);
   --foreground: oklch(0.148 0.004 228.8);
   --card: oklch(1 0 0);
@@ -64,9 +67,12 @@
   --accent: oklch(0.963 0.002 197.1);
   --accent-foreground: oklch(0.218 0.008 223.9);
   --destructive: oklch(0.577 0.245 27.325);
+  /* The one accent. Change these two values to rebrand the starter. */
+  --brand: oklch(0.52 0.1 192);
+  --brand-foreground: oklch(0.987 0.002 197.1);
   --border: oklch(0.925 0.005 214.3);
   --input: oklch(0.925 0.005 214.3);
-  --ring: oklch(0.723 0.014 214.4);
+  --ring: var(--brand);
   --chart-1: oklch(0.872 0.007 219.6);
   --chart-2: oklch(0.56 0.021 213.5);
   --chart-3: oklch(0.45 0.017 213.2);
@@ -84,6 +90,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.148 0.004 228.8);
   --foreground: oklch(0.987 0.002 197.1);
   --card: oklch(0.218 0.008 223.9);
@@ -99,9 +106,11 @@
   --accent: oklch(0.275 0.011 216.9);
   --accent-foreground: oklch(0.987 0.002 197.1);
   --destructive: oklch(0.704 0.191 22.216);
+  --brand: oklch(0.8 0.11 188);
+  --brand-foreground: oklch(0.218 0.008 223.9);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.56 0.021 213.5);
+  --ring: var(--brand);
   --chart-1: oklch(0.872 0.007 219.6);
   --chart-2: oklch(0.56 0.021 213.5);
   --chart-3: oklch(0.45 0.017 213.2);
@@ -109,7 +118,7 @@
   --chart-5: oklch(0.275 0.011 216.9);
   --sidebar: oklch(0.218 0.008 223.9);
   --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: oklch(0.925 0.005 214.3);
   --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
   --sidebar-accent: oklch(0.275 0.011 216.9);
   --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
@@ -126,6 +135,10 @@
   }
   html {
     @apply scroll-smooth font-sans;
+  }
+  /* Inline code in running text; block code keeps its own styling. */
+  :where(p, li, dd) > code {
+    @apply rounded-md bg-foreground/6 px-1 py-px font-mono text-[0.875em] text-foreground;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
