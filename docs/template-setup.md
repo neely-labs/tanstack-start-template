@@ -12,7 +12,7 @@ Ask all seven questions in one message, then wait for the reply. Every later ste
 2. **One sentence** describing the product. It becomes the meta description and the manifest description.
 3. **Production origin**, such as `https://app.example.com`. "Not decided yet" is a valid answer that keeps `https://example.com` until it is.
 4. **Host**: Vercel, Cloudflare Workers, or undecided.
-5. **The example surface**: keep `/about`, `/runtime`, and `/api/health` as working references, or remove them.
+5. **The example surface**: keep `/setup`, `/runtime`, and `/api/health` as working references, or remove them.
 6. **Brand assets**: paths to a logo, favicon source, and social image, or keep the placeholders for now.
 7. **Repository protection**: apply the baseline GitHub ruleset after the repository exists, and should merges also require a successful deployment? For Vercel, the standard answer is the `Preview` environment after the first preview succeeds. For another host, provide its exact GitHub deployment environment or defer the deployment gate.
 
@@ -35,7 +35,7 @@ Keeping the examples is the safe default while the product is still being shaped
 
 To remove them, delete the route file and its supporting modules together:
 
-- `/about`: `src/routes/about.tsx`
+- `/setup`: `src/routes/setup.tsx`
 - `/runtime`: `src/routes/runtime.tsx`, `src/lib/server-runtime.ts`, `src/lib/text-stats.ts`, `src/lib/text-stats.test.ts`
 - `/api/health`: `src/routes/api/health.ts`
 

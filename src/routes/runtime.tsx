@@ -136,9 +136,17 @@ function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="font-mono text-sm break-all">
-              {clientEnvironment ?? "Waiting for hydration"}
-            </p>
+            {clientEnvironment === null ? (
+              <p className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
+                <span
+                  aria-hidden="true"
+                  className="size-2 animate-pulse rounded-full bg-brand motion-reduce:animate-none"
+                />
+                Waiting for hydration
+              </p>
+            ) : (
+              <p className="font-mono text-sm break-all">{clientEnvironment}</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -221,34 +229,34 @@ function AnalyzerSection() {
           maxLength={maxTextLength}
           name="text"
         />
-        <p className="mt-2 text-xs text-muted-foreground" id="analyzer-hint">
-          Up to {maxTextLength} characters. Validation runs on the server.
-        </p>
-
-        <Button className="mt-4" disabled={isPending} type="submit">
-          {isPending ? "Analyzing…" : "Analyze on the server"}
-        </Button>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground" id="analyzer-hint">
+            Up to {maxTextLength} characters. Validation runs on the server.
+          </p>
+          <Button disabled={isPending} type="submit">
+            {isPending ? "Analyzing…" : "Analyze on the server"}
+          </Button>
+        </div>
       </form>
 
       <output aria-live="polite" className="mt-6 block">
         {state.errorMessage === null ? null : (
-          <p className="text-sm text-destructive" id="analyzer-error">
+          <p className="mb-4 text-sm text-destructive" id="analyzer-error">
             {state.errorMessage}
           </p>
         )}
-        {state.analysis === null ? null : (
-          <AnalysisResult analysis={state.analysis} />
-        )}
+        <AnalysisResult analysis={state.analysis} />
       </output>
     </section>
   );
 }
 
-function AnalysisResult({ analysis }: { analysis: TextAnalysis }) {
+/** Before the first result, the same layout previews what will be measured. */
+function AnalysisResult({ analysis }: { analysis: TextAnalysis | null }) {
   const measures = [
-    { label: "Words", value: analysis.stats.words },
-    { label: "Characters", value: analysis.stats.characters },
-    { label: "Reading minutes", value: analysis.stats.readingMinutes },
+    { label: "Words", value: analysis?.stats.words },
+    { label: "Characters", value: analysis?.stats.characters },
+    { label: "Reading minutes", value: analysis?.stats.readingMinutes },
   ] as const;
 
   return (
@@ -259,13 +267,17 @@ function AnalysisResult({ analysis }: { analysis: TextAnalysis }) {
             <div key={measure.label}>
               <dt className="text-xs text-muted-foreground">{measure.label}</dt>
               <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                {measure.value}
+                {measure.value ?? (
+                  <span className="text-muted-foreground/50">-</span>
+                )}
               </dd>
             </div>
           ))}
         </dl>
         <p className="mt-4 text-xs text-muted-foreground">
-          Computed by {analysis.environment} at {analysis.computedAt}.
+          {analysis === null
+            ? "Submit some text to measure it on the server."
+            : `Computed by ${analysis.environment} at ${analysis.computedAt}.`}
         </p>
       </CardContent>
     </Card>

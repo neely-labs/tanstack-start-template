@@ -15,11 +15,11 @@ type RoutePath = FileRouteTypes["fullPaths"];
  */
 const routeVisibility = {
   "/": "public",
-  "/about": "public",
   // A server route renders no document, so there is nothing to prerender,
   // list in the sitemap, or verify with `pnpm seo:verify`.
   "/api/health": "private",
   "/runtime": "public",
+  "/setup": "public",
 } as const satisfies Record<RoutePath, "private" | "public">;
 
 export const publicPaths = Object.entries(routeVisibility).flatMap(

@@ -35,7 +35,7 @@ The tracked Dependabot configuration updates GitHub Actions only. [GitHub curren
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
 5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` is required. If the generated repository is intentionally left unprotected, record that as an explicit exception.
 6. If the host is Vercel, connect the project, create a preview from a pull request, and verify the deployment environment name before optionally importing `vercel-preview.json`. Do not enable a deployment rule with no matching deployment.
-7. Start the application and inspect the home, about, and not-found states on desktop and mobile. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
+7. Start the application and inspect the home, setup, runtime, and not-found states on desktop and mobile, in light and dark themes. Temporarily throw an error from an example route to verify the global recovery state, then revert that throw.
 8. Confirm the generated repository has its own unrelated Git history.
 9. Remove the temporary rehearsal repository when the check is complete.
 
