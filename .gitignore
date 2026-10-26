@@ -17,10 +17,6 @@ todos.json
 
 # Agent tooling local state
 .claude/settings.local.json
-.impeccable/*
-!.impeccable/live/
-.impeccable/live/*
-!.impeccable/live/config.json
 
 # Local browser and authentication state
 .auth/

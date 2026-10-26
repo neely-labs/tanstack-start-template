@@ -4,12 +4,6 @@
       {
         "command": "node scripts/fix-edited-file.mjs"
       }
-    ],
-    "preToolUse": [
-      {
-        "command": "[ ! -f \".cursor/skills/impeccable/scripts/hook-before-edit.mjs\" ] || node \".cursor/skills/impeccable/scripts/hook-before-edit.mjs\"",
-        "timeout": 5
-      }
     ]
   },
   "version": 1

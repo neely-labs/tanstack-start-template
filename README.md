@@ -11,7 +11,6 @@ A production-minded TanStack Start foundation for new applications. It supplies 
 - TypeScript and Vitest
 - Ultracite with type-aware Oxlint, Oxfmt, React Doctor, TanStack rules, and the vendored anti-slop Oxlint plug-in
 - pnpm and Lefthook
-- Impeccable skill support for Codex, Claude Code, and Cursor
 
 TanStack Start is on the stable v1 line. Nitro's Vite integration is still a pre-release, so its exact beta version is pinned.
 
@@ -102,7 +101,9 @@ TanStack Router generates `src/routeTree.gen.ts`. Do not edit it by hand.
 
 Ultracite is the quality entry point. Oxlint owns linting and Oxfmt owns formatting and Tailwind class ordering. ESLint and Prettier are intentionally absent.
 
-Lefthook formats and lints staged files before commit, then runs `pnpm validate` before push. Claude Code and Cursor format and lint the edited file after each edit. The tracked Impeccable skill adds UI-specific guidance and hooks for Codex, Claude Code, and Cursor. Vendored skill and plug-in source are excluded from application quality gates.
+Lefthook formats and lints staged files before commit, then runs `pnpm validate` before push. Claude Code and Cursor format and lint the edited file after each edit. Agent tooling and vendored plug-in source are excluded from application quality gates.
+
+Agent skills are optional and chosen by each project. Add the skills that fit your team's workflow; for example, [Impeccable](https://github.com/pbakaus/impeccable) provides UI/UX design guidance. This template ships without design skills or their hooks.
 
 ## GitHub repository protection
 
