@@ -17,12 +17,12 @@ TanStack Start is on the stable v1 line. Nitro's Vite integration is still a pre
 
 ## Start a project
 
-Requirements: Node.js 24.15 or newer in the 24.x LTS line and pnpm 12.11.2.
+Requirements: Node.js 24.15 or newer in the 24.x LTS line and pnpm 12.15.0.
 
 If pnpm is not installed yet, use [pnpm's documented npm installer](https://pnpm.io/installation#using-npm) with the repository's exact pinned version:
 
 ```bash
-npx get-pnpm 12.11.2
+npx get-pnpm 12.15.0
 ```
 
 ```bash
