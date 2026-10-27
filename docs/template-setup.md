@@ -59,7 +59,7 @@ Ends when `pnpm build && pnpm seo:verify` passes, which checks the rendered soci
 
 For Vercel, make no code change. During import, set Vercel's **Framework Preset** to **TanStack Start** and keep its generated build and output settings. The `nitro()` plugin in `vite.config.ts` produces the Vercel server output.
 
-For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, as the Hosting section of `README.md` describes.
+For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, following [the deployment guide](deployment.md#cloudflare-workers).
 
 Ends when `pnpm build` succeeds under the chosen preset.
 
@@ -116,13 +116,13 @@ Ends when the selected ruleset is visible in `gh ruleset check --default` and, w
 
 Keep `AGENTS.md` concise: decisions, constraints, reasons, and conditional pointers to the relevant product and operating guidance. Preserve generated-file ownership, the quality gates, route visibility's SEO-only meaning, process ownership, and the requirement to document local fixtures and recovery when adding integrations.
 
-Replace product copy in `README.md` while retaining its Development workflow: task map, route regeneration, commands, concurrent ports, debugging, failure artifacts, and recovery. Keep the chosen hosting instructions. Update the map as the product gains modules rather than preserving obsolete example file paths.
+Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, and the relevant host instructions in `docs/deployment.md`. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 
 Ends when product guidance describes the new application and a fresh agent can still discover how to run, change, verify, and recover it.
 
 ## 8. Remove the template-only files
 
-`docs/template-publishing.md`, `docs/agent-friendliness-assessment.md`, and this file describe publishing, assessing, and adopting the template. Delete these template-only documents once the project has its own history. Keep `.github/rulesets` if the project wants its repository policy to remain reviewable and repeatable.
+`docs/template-publishing.md` and this file describe publishing and adopting the template. Delete both once the project has its own history. Keep `.github/rulesets` if the project wants its repository policy to remain reviewable and repeatable.
 
 Ends when `docs/` holds only documents about the product.
 
@@ -137,7 +137,7 @@ pnpm dev
 
 Open `http://localhost:3000` and confirm the header, the page titles, and the footer show the new identity.
 
-For concurrent tasks, use the explicit development and `E2E_PORT` commands in the README instead of stopping another checkout's listener. A failed browser run retains screenshots and traces under `test-results/`; the README explains local inspection and CI artifacts.
+For concurrent tasks, use the explicit development and `E2E_PORT` commands in [the development guide](development.md#use-concurrent-checkouts) instead of stopping another checkout's listener. A failed browser run retains screenshots and traces under `test-results/`; the same guide explains local inspection and CI artifacts.
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 

@@ -41,7 +41,7 @@ The source repository is named TanStack Start Template. Its voice is concise, ca
 
 ## Evidence on Hand
 
-- `README.md` documents setup, replacement points, commands, deliberate omissions, and the production path.
+- `README.md` introduces the project and links setup, development, architecture, and deployment guidance.
 - `src/routes` contains working example surfaces and global not-found and error recovery behavior.
 - `scripts/verify-seo-output.mjs` checks rendered production metadata, structured data, public routes, and the social image.
 - `.github/workflows/ci.yml` runs the same validation gate used locally.
