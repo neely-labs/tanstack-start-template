@@ -29,7 +29,7 @@ The template combines a deliberately small application surface with a complete p
 ## Capabilities and Constraints
 
 - The baseline uses TanStack Start, React, Nitro, Tailwind CSS, shadcn/ui on Base UI, TypeScript, Vitest, Ultracite, Oxlint, Oxfmt, Lefthook, and pnpm.
-- Node.js 24 and the pinned pnpm 12 release candidate are repository constraints until intentionally upgraded.
+- Node.js 24 and the package manager pinned in `package.json` are repository constraints until intentionally upgraded.
 - The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and agent-assisted development tooling.
 - Authentication, persistence, analytics, domain models, product copy, deployment credentials, and application-specific state management are deliberately undecided.
 - The canonical origin, manifest identity, social image, robots policy, example routes, and product guidance must be replaced by each adopted application.
@@ -41,7 +41,7 @@ The source repository is named TanStack Start Template. Its voice is concise, ca
 
 ## Evidence on Hand
 
-- `README.md` documents setup, replacement points, commands, deliberate omissions, and the production path.
+- `README.md` introduces the project and links setup, development, architecture, and deployment guidance.
 - `src/routes` contains working example surfaces and global not-found and error recovery behavior.
 - `scripts/verify-seo-output.mjs` checks rendered production metadata, structured data, public routes, and the social image.
 - `.github/workflows/ci.yml` runs the same validation gate used locally.

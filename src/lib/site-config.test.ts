@@ -9,11 +9,11 @@ describe("site config", () => {
   });
 
   it("describes a standard raster social image", () => {
-    expect(siteConfig.socialImage).toMatchObject({
-      height: 630,
-      path: "/social-card.png",
-      type: "image/png",
-      width: 1200,
-    });
+    const { height, path, type, width } = siteConfig.socialImage;
+    expect([height, width].every(Number.isInteger)).toBeTruthy();
+    expect(height).toBeGreaterThan(0);
+    expect(width).toBeGreaterThan(0);
+    expect(path).toMatch(/^\/(?!\/).+\.png$/u);
+    expect(type).toBe("image/png");
   });
 });

@@ -78,6 +78,7 @@ function SetupPage() {
     <main
       className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28"
       id="main-content"
+      tabIndex={-1}
     >
       <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
         Make it yours.

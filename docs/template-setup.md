@@ -12,7 +12,7 @@ Ask all seven questions in one message, then wait for the reply. Every later ste
 2. **One sentence** describing the product. It becomes the meta description and the manifest description.
 3. **Production origin**, such as `https://app.example.com`. "Not decided yet" is a valid answer that keeps `https://example.com` until it is.
 4. **Host**: Vercel, Cloudflare Workers, or undecided.
-5. **The example surface**: keep `/setup`, `/runtime`, and `/api/health` as working references, or remove them.
+5. **The example pages**: keep `/setup` and `/runtime` as working references, or remove them. `/api/health` remains as browser-test readiness infrastructure.
 6. **Brand assets**: paths to a logo, favicon source, and social image, or keep the placeholders for now.
 7. **Repository protection**: apply the baseline GitHub ruleset after the repository exists, and should merges also require a successful deployment? For Vercel, the standard answer is the `Preview` environment after the first preview succeeds. For another host, provide its exact GitHub deployment environment or defer the deployment gate.
 
@@ -33,15 +33,19 @@ Ends when `pnpm build` writes the new name and origin into `.output/public/robot
 
 Keeping the examples is the safe default while the product is still being shaped; they demonstrate the SEO helpers, the server-function seams, and the recovery states against real routes.
 
-To remove them, delete the route file and its supporting modules together:
+To remove both example pages, delete their routes, supporting modules, and example-only browser tests together:
 
 - `/setup`: `src/routes/setup.tsx`
 - `/runtime`: `src/routes/runtime.tsx`, `src/lib/server-runtime.ts`, `src/lib/text-stats.ts`, `src/lib/text-stats.test.ts`
-- `/api/health`: `src/routes/api/health.ts`
+- Example journeys: `tests/e2e/examples.spec.ts`
 
-Then drop the matching entries from `routeVisibility` in `src/lib/public-routes.ts` and from `navigation` in `src/lib/site-config.ts`. Keep `src/start.ts` and `src/server.ts`: they carry the security headers, the CSRF protection for server functions, and the Node response optimization, not the examples.
+Drop `/setup` and `/runtime` from `routeVisibility` in `src/lib/public-routes.ts` and from `navigation` in `src/lib/site-config.ts`. Replace the home page's links to those routes with the product's destinations, including the setup badge and runtime call to action. Search for remaining inbound links with `rg '/setup|/runtime' src --glob '!routeTree.gen.ts'`. If retaining one example page, retain and adapt the journeys that exercise it instead of deleting their coverage indiscriminately.
 
-Ends when `pnpm typecheck` passes, which is the compiler confirming every remaining route is classified.
+Keep `/api/health`, `tests/e2e/smoke.spec.ts`, `src/start.ts`, and `src/server.ts`: they provide readiness, reusable browser coverage, security headers, CSRF protection, and the server entry.
+
+With route sources, inventory, and links reconciled, run `pnpm build` to regenerate `src/routeTree.gen.ts` before `pnpm validate`. A running development server for this checkout also regenerates routes. The generator owns that file; editing it by hand only hides a stale-tree failure until the next generation.
+
+Ends when the generated tree reflects the remaining routes, `pnpm validate` passes, and `pnpm test:e2e` passes against that build with Chromium installed. The reusable smoke suite must still run after both examples are removed.
 
 ## 4. Replace the brand assets
 
@@ -55,7 +59,7 @@ Ends when `pnpm build && pnpm seo:verify` passes, which checks the rendered soci
 
 For Vercel, make no code change. During import, set Vercel's **Framework Preset** to **TanStack Start** and keep its generated build and output settings. The `nitro()` plugin in `vite.config.ts` produces the Vercel server output.
 
-For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, as the Hosting section of `README.md` describes.
+For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, following [the deployment guide](deployment.md#cloudflare-workers).
 
 Ends when `pnpm build` succeeds under the chosen preset.
 
@@ -110,11 +114,11 @@ Ends when the selected ruleset is visible in `gh ruleset check --default` and, w
 
 `PRODUCT.md`, `DESIGN.md`, and `AGENTS.md` describe the template. Rewrite them to describe the product, using the answers from step 1.
 
-`AGENTS.md` loads into every agent's context on every turn. Keep it to what the code cannot reveal on its own: decisions, constraints, and the reasons behind them.
+Keep `AGENTS.md` concise: decisions, constraints, reasons, and conditional pointers to the relevant product and operating guidance. Preserve generated-file ownership, the quality gates, route visibility's SEO-only meaning, process ownership, and the requirement to document local fixtures and recovery when adding integrations.
 
-Replace `README.md` with the project's own README.
+Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, and the relevant host instructions in `docs/deployment.md`. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 
-Ends when no guidance document still describes a template rather than the product.
+Ends when product guidance describes the new application and a fresh agent can still discover how to run, change, verify, and recover it.
 
 ## 8. Remove the template-only files
 
@@ -126,13 +130,17 @@ Ends when `docs/` holds only documents about the product.
 
 ```bash
 pnpm validate
+pnpm exec playwright install chromium
+pnpm test:e2e
 pnpm dev
 ```
 
 Open `http://localhost:3000` and confirm the header, the page titles, and the footer show the new identity.
 
+For concurrent tasks, use the explicit development and `E2E_PORT` commands in [the development guide](development.md#use-concurrent-checkouts) instead of stopping another checkout's listener. A failed browser run retains screenshots and traces under `test-results/`; the same guide explains local inspection and CI artifacts.
+
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
 If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
-Ends when `pnpm validate` passes, the running application shows no placeholder text, and GitHub lists the CI workflow. If protection was deferred, leave that deferral visible to the project owner rather than claiming it was configured.
+Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.

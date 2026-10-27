@@ -43,6 +43,7 @@ export const Route = createRootRoute({
     <main
       className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-start justify-center px-5 py-20 sm:px-8 sm:py-28"
       id="main-content"
+      tabIndex={-1}
     >
       <p className="font-mono text-sm font-medium text-brand">404</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl">
