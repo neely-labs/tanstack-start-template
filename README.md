@@ -1,6 +1,14 @@
 # TanStack Start Template
 
-A starting point for a new web app, with shared UI, a production build, and checks ready to run. Built with TanStack Start, React, Nitro, Tailwind CSS, and shadcn/ui. Your project chooses its own authentication, database, and product features.
+A starting point for a new web app, with shared UI, a production build, and checks ready to run.
+
+![TanStack Start](https://img.shields.io/badge/TanStack_Start-F97316?style=flat)
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![Nitro](https://img.shields.io/badge/Nitro-18181B?style=flat&logo=nitro&logoColor=F87171)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-0F172A?style=flat&logo=tailwindcss&logoColor=38BDF8)
+![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-18181B?style=flat&logo=shadcnui&logoColor=white)
+
+Your project chooses its own authentication, database, and product features.
 
 ## Get started
 
@@ -37,3 +45,36 @@ If you maintain the template itself, use the [publishing checklist](docs/templat
 ## License
 
 Original code is available under the [MIT License](LICENSE). Vendored source keeps the licenses listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
