@@ -45,36 +45,3 @@ If you maintain the template itself, use the [publishing checklist](docs/templat
 ## License
 
 Original code is available under the [MIT License](LICENSE). Vendored source keeps the licenses listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
