@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { maxTextLength, parseTextInput, summarizeText } from "./text-stats.ts";
+import {
+  maxTextLength,
+  parseTextInput,
+  summarizeText,
+  textInputErrors,
+} from "./text-stats.ts";
 
 describe(summarizeText, () => {
   it("counts words across collapsed whitespace", () => {
@@ -28,12 +33,19 @@ describe(parseTextInput, () => {
   });
 
   it("rejects blank input", () => {
-    expect(() => parseTextInput({ text: "   " })).toThrow(/Enter some text/u);
+    expect(() => parseTextInput({ text: "   " })).toThrow(
+      textInputErrors.blank
+    );
   });
 
   it("rejects input over the length bound", () => {
     expect(() =>
       parseTextInput({ text: "a".repeat(maxTextLength + 1) })
-    ).toThrow(/at most/u);
+    ).toThrow(textInputErrors.tooLong);
+  });
+
+  it("states the length bound it enforces", () => {
+    // The message promises a limit, so its wording is a commitment worth checking.
+    expect(textInputErrors.tooLong).toContain(`${maxTextLength} characters`);
   });
 });

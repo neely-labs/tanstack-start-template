@@ -3,6 +3,12 @@ export const maxTextLength = 2000;
 
 const wordsPerMinute = 220;
 
+/** What the analyzer tells a person whose input it rejects. Tests read it here. */
+export const textInputErrors = {
+  blank: "Enter some text to analyze.",
+  tooLong: `Enter at most ${maxTextLength} characters.`,
+} as const;
+
 export interface TextInput {
   text: string;
 }
@@ -37,11 +43,11 @@ export function parseTextInput(input: TextInput): TextInput {
   const text = input.text.trim();
 
   if (text === "") {
-    throw new Error("Enter some text to analyze.");
+    throw new Error(textInputErrors.blank);
   }
 
   if (text.length > maxTextLength) {
-    throw new Error(`Enter at most ${maxTextLength} characters.`);
+    throw new Error(textInputErrors.tooLong);
   }
 
   return { text };
