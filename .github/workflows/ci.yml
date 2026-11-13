@@ -53,8 +53,9 @@ jobs:
               [ "$((lines))" = "$PR_FILES" ] || changed=""
               ;;
             push)
-              # A compare lists at most 300 files, so a list of 300 may be partial.
-              # A branch's first push reports an all-zero "before" that cannot be compared.
+              # A compare lists at most 300 files, all on its first page, so it
+              # is not paginated and a list of 300 may be partial. A branch's
+              # first push reports an all-zero "before" that cannot be compared.
               if [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
                 changed=$(gh api "repos/$REPO/compare/$BEFORE...$SHA" \
                   --jq "$per_file"' if (.files | type) == "array" and (.files | length) < 300 then .files | per_file else empty end') ||
@@ -74,7 +75,11 @@ jobs:
             done <<<"${changed//$'\t'/$'\n'}"
           fi
           echo "docs-only=$docs_only" >>"$GITHUB_OUTPUT"
+          # A path such as `::error::x.md` must print as text, not run as a workflow command.
+          resume=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')
+          echo "::stop-commands::$resume"
           printf 'docs-only=%s for these changed paths:\n%s\n' "$docs_only" "$changed"
+          echo "::$resume::"
 
       # Reuses the runner's preinstalled Node instead of letting pnpm fetch a
       # 57 MB tarball on every run, which it did before the store cache restored

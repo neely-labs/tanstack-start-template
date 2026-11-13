@@ -151,7 +151,7 @@ function runScope(input: Case) {
   if (input.response !== undefined) {
     fs.writeFileSync(responseFile, JSON.stringify(input.response));
   }
-  const pullRequest =
+  const pullRequestContext =
     input.event === "pull_request"
       ? {
           "github.event.pull_request.changed_files": String(input.changedFiles),
@@ -164,19 +164,19 @@ function runScope(input: Case) {
     "github.repository": "owner/repo",
     "github.sha": sha,
     "github.token": "fake-token",
-    ...pullRequest,
+    ...pullRequestContext,
   };
   const step = readStep(fs.readFileSync(workflowPath, "utf-8"), "scope");
   const script = path.join(dir, "step.sh");
   fs.writeFileSync(script, expand(step.run, context));
+  if (step.shell !== undefined && step.shell !== "bash") {
+    throw new Error(`Unsupported shell in the scope step: ${step.shell}`);
+  }
   // The shells GitHub runs for `shell: bash` and for a step with no shell.
   const shellArgs =
     step.shell === "bash"
       ? ["--noprofile", "--norc", "-eo", "pipefail", script]
       : ["-e", script];
-  if (step.shell !== undefined && step.shell !== "bash") {
-    throw new Error(`Unsupported shell in the scope step: ${step.shell}`);
-  }
   const env = Object.fromEntries(
     Object.entries(step.env).map(([name, value]) => [
       name,
