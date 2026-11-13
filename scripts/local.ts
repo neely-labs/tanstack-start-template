@@ -42,9 +42,18 @@ export function checkoutOf(dir = path.join(import.meta.dirname, "..")) {
   return { appPort, e2ePort: appPort + 5000, ownerFile, root };
 }
 
-/** The environment without Git's hook variables, which would override `-C`. */
+/**
+ * The environment without Git's repository-local variables, such as the
+ * `GIT_DIR` that hooks export, which would override `-C`. Global settings
+ * such as `GIT_CONFIG_GLOBAL` stay.
+ */
+const localGitVars = new Set(
+  execFileSync("git", ["rev-parse", "--local-env-vars"], { encoding: "utf-8" })
+    .split("\n")
+    .filter(Boolean)
+);
 export const gitEnv = Object.fromEntries(
-  Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))
+  Object.entries(process.env).filter(([key]) => !localGitVars.has(key))
 );
 
 function git(root: string, ...args: string[]) {
