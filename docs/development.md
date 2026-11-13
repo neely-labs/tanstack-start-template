@@ -100,3 +100,13 @@ Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
 
 Agent tooling and vendored plugin source are excluded from application quality gates. Project skills are optional. Manually review content, accessibility, architecture, and edge cases alongside the automated checks.
+
+## Optional skills
+
+The template commits no skills. To run a [flow walk](agents/delivery.md#flow-walk) with the full procedure, install the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill into this checkout:
+
+```bash
+npx skills add nick-neely/agent-skills --skill flow-walk
+```
+
+It writes `.agents/skills/flow-walk/`, a `.claude/skills/flow-walk` link, and `skills-lock.json`, which `.gitignore` keeps local. Remove it with `npx skills remove flow-walk`. Choosing extra agents during install can write other agent directories that Git will show.

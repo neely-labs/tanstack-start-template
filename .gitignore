@@ -18,6 +18,11 @@ todos.json
 # Agent tooling local state
 .claude/settings.local.json
 
+# Opt-in flow-walk skill, installed per checkout (docs/development.md)
+/.agents/skills/flow-walk/
+/.claude/skills/flow-walk
+/skills-lock.json
+
 # Local browser and authentication state
 .auth/
 
