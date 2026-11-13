@@ -22,19 +22,19 @@ pnpm local:retire  # Stop this checkout's server and remove its local state
 
 ## Find the right files
 
-Each row names the files that own an area and the check that proves a change there. Every change also gets the full checks in [Check your changes](#check-your-changes), and `pnpm test:e2e` serves the last build, so build first.
+Each row names the files that own an area and the focused check that proves a change there. The full checks in [Check your changes](#check-your-changes) still apply before handoff. `pnpm test:e2e` serves the last build, so build first.
 
 | Change | Owner | Check |
 | --- | --- | --- |
 | Name, description, or public origin | `src/lib/site-config.ts` | `pnpm test src/lib/site-config.test.ts src/lib/site-files.test.ts`, then `pnpm build && pnpm seo:verify` |
-| Add or remove a public route | `src/routes/`, `src/lib/public-routes.ts`, `navigation` in `src/lib/site-config.ts`; steps in [Change a route](#change-a-route) | `pnpm test src/lib/public-routes.test.ts src/lib/site-files.test.ts`, `pnpm validate` for prerender and metadata, then the route's journey in `tests/e2e/` |
+| Add or remove a public route | `src/routes/`, `src/lib/public-routes.ts`, `navigation` in `src/lib/site-config.ts`; steps in [Change a route](#change-a-route) | `pnpm test src/lib/public-routes.test.ts src/lib/site-files.test.ts`, `pnpm validate` for prerender and metadata, then `pnpm test:e2e` |
 | Change a server function | `src/lib/server-runtime.ts`, its input parser `src/lib/text-stats.ts`, and the route that calls it; model in [Server and browser](architecture.md#server-and-browser) | `pnpm test src/lib/text-stats.test.ts` for accepted and rejected input, then `pnpm test:e2e tests/e2e/examples.spec.ts` for the real request |
 | Page metadata or structured data | `src/lib/seo.ts` | `pnpm test src/lib/seo.test.ts`, then `pnpm build && pnpm seo:verify` |
 | Theme or design tokens | `src/styles.css`, `src/lib/theme.ts`, [DESIGN.md](../DESIGN.md) | `pnpm test src/lib/theme.test.ts`, then `pnpm test:e2e tests/e2e/smoke.spec.ts` |
 | Headers, middleware, or production serving | `src/start.ts`, `src/server.ts`, `src/lib/security-headers.ts`, `vite.config.ts` | `pnpm build`, then `pnpm test:e2e tests/e2e/smoke.spec.ts` |
 | Per-checkout ports and server ownership | `scripts/local.ts` | `pnpm test scripts/local.test.ts` |
 
-A row holds only links: owner files, a guide section, and the check. Explanation of how an area works belongs in the owning module's header comment, so it stays next to the code it describes. Add a row when the app gains its own module, and remove rows for example files the project deletes.
+A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, so it stays next to the code it describes. Add a row when the app gains its own module, and remove rows for example files the project deletes.
 
 ## Change a route
 
