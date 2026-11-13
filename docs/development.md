@@ -6,7 +6,6 @@ Use this guide for local development, route changes, checks, and debugging. Run 
 
 ```bash
 pnpm dev        # Start the app on port 3000
-pnpm dev:local  # Start the app on this checkout's own port
 pnpm fix        # Apply lint and formatting fixes
 pnpm check      # Check lint, formatting, and type-aware rules
 pnpm docs:budget # Check the size of the docs agents always read
@@ -18,11 +17,9 @@ pnpm seo:verify # Check metadata in the built files
 pnpm start      # Run an existing production build
 pnpm validate   # Run the core checks, build, and metadata verification
 pnpm test:e2e   # Check the production app in desktop and mobile Chromium
-pnpm local:status  # Show this checkout's branch, ports, and server
-pnpm local:retire  # Stop this checkout's server and remove its local state
 ```
 
-To serve the app beside other checkouts, or to call these commands from worktree hooks, see [concurrent checkouts](concurrent-checkouts.md).
+For `pnpm dev:local` and the other per-checkout commands, see [concurrent checkouts](concurrent-checkouts.md).
 
 ## Find the right files
 
@@ -105,6 +102,8 @@ Agent tooling and vendored plugin source are excluded from application quality g
 ## Skills
 
 The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, its copy for Claude Code in `.claude/skills/`, and `skills-lock.json`, which records the source. `npx skills update flow-walk -p` rewrites both copies; review and commit the diff. `scripts/skills.test.ts` checks they match. Remove it with `npx skills remove flow-walk`.
+
+Leave the dependency skills that `pnpm install` lists as awaiting approval unapproved. Approving commits a grant to `pnpm-workspace.yaml` that links their unreviewed skills into every checkout's skill folders.
 
 The optional `ui-evidence` skill publishes screenshots to a pull request and needs tools the template does not install. Install it globally to keep this checkout unchanged:
 

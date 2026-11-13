@@ -8,7 +8,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 export type Checkout = ReturnType<typeof checkoutOf>;
-/** What `dev` started, so status and retirement act only on that process. */
+/** What `dev` started, so status, stop and retire act only on that process. */
 export type Owner = Pick<Checkout, "appPort" | "e2ePort" | "root"> & {
   commit: string;
   pid: number;
@@ -150,7 +150,7 @@ function sendSignal(pid: number, name: NodeJS.Signals) {
 
 const appUrl = (checkout: Checkout) => `http://localhost:${checkout.appPort}`;
 
-/** Runs `task` while holding the checkout's exclusive start/retire lock. */
+/** Runs `task` while holding the checkout's exclusive start/stop/retire lock. */
 async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
   const lock = path.join(path.dirname(checkout.ownerFile), "lock");
   fs.mkdirSync(path.dirname(lock), { recursive: true });
@@ -158,7 +158,7 @@ async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
     fs.mkdirSync(lock);
   } catch {
     throw new Error(
-      `Another start or retire holds ${lock}; remove it if none does.`
+      `Another start, stop or retire holds ${lock}; remove it if none does.`
     );
   }
   try {
@@ -269,6 +269,14 @@ export function status(checkout: Checkout) {
   };
 }
 
+/**
+ * Stops only the dev server this checkout recorded, even on a dirty tree; build
+ * output, other resources and the rest of `.local/` stay.
+ */
+export function stop(checkout: Checkout) {
+  return withLock(checkout, () => devServer.teardown(checkout));
+}
+
 /** Refuses on uncommitted or untracked work; otherwise removes local state. */
 export async function retire(checkout: Checkout) {
   const work = workIn(checkout.root);
@@ -319,13 +327,21 @@ async function main(command: string | undefined, args: string[]) {
     console.log(
       args.includes("--json") ? JSON.stringify(report) : lines.join("\n")
     );
+  } else if (command === "stop") {
+    const report = await stop(checkout);
+    const lines = report.map((line) => `- ${line}`);
+    console.log(
+      lines.length > 0
+        ? [`Dev server of ${checkout.root}:`, ...lines].join("\n")
+        : `${checkout.root} has no recorded dev server.`
+    );
   } else if (command === "retire") {
     const report = await retire(checkout);
     const lines = report.map((line) => `- ${line}`);
     console.log([`Retired ${checkout.root}`, ...lines].join("\n"));
   } else {
     throw new Error(
-      "Usage: local.ts <dev|status|retire> [--json] [--checkout <path>]"
+      "Usage: local.ts <dev|status|stop|retire> [--json] [--checkout <path>]"
     );
   }
 }

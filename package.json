@@ -12,6 +12,7 @@
     "fix": "ultracite fix --type-aware --type-check",
     "local:retire": "node scripts/local.ts retire",
     "local:status": "node scripts/local.ts status",
+    "local:stop": "node scripts/local.ts stop",
     "seo:verify": "node --experimental-strip-types scripts/verify-seo-output.mjs",
     "start": "node .output/server/index.mjs",
     "test": "vitest run --config vitest.config.ts",

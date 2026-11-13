@@ -4,7 +4,7 @@ The procedure for turning a fresh copy of this template into a project. It is wr
 
 Work the steps in order. Each one states the result that ends it.
 
-Setup lands as one pull request with no issue: the person's request to set up the project is its work item. Commit the file changes on a branch. Steps 7 and 8 change GitHub settings rather than files. Apply the baseline ruleset and the labels once approved, before opening the pull request, so setup merges through the protected path it creates. A selected deployment gate waits for the first successful preview, as step 7 says. In the pull request, replace the `Closes #` line with `Template setup; no issue.` The change alters what users see, so it gets a [flow walk](agents/delivery.md#flow-walk) and at least tier 1 review. Brief its tester with the goal "recognize the new product from its pages", the user state of a visitor, and the home page as the start.
+Setup lands as one pull request with no issue: the person's request to set up the project is its work item. Commit the file changes on a branch. Steps 7 and 8 change GitHub settings rather than files. Apply the baseline ruleset, branch auto-delete, and the labels once approved, before opening the pull request, so setup merges through the protected path it creates. A selected deployment gate waits for the first successful preview, as step 7 says. In the pull request, replace the `Closes #` line with `Template setup; no issue.` The change alters what users see, so it gets a [flow walk](agents/delivery.md#flow-walk) and at least tier 1 review. Brief its tester with the goal "recognize the new product from its pages", the user state of a visitor, and the home page as the start.
 
 ## 1. Collect the answers
 
@@ -16,7 +16,7 @@ Ask all nine questions in one message, then wait for the reply. Every later step
 4. **Host**: Vercel, Cloudflare Workers, or undecided.
 5. **The example pages**: keep `/setup` and `/runtime` as working references, or remove them. `/api/health` remains as browser-test readiness infrastructure.
 6. **Brand assets**: paths to a logo, favicon source, and social image, or keep the placeholders for now.
-7. **Repository protection**: apply the baseline GitHub ruleset after the repository exists, and should merges also require a successful deployment? For Vercel, the standard answer is the `Preview` environment after the first preview succeeds. For another host, provide its exact GitHub deployment environment or defer the deployment gate.
+7. **Repository protection**: apply the baseline GitHub ruleset and turn on automatic deletion of merged branches after the repository exists, and should merges also require a successful deployment? For Vercel, the standard answer is the `Preview` environment after the first preview succeeds. For another host, provide its exact GitHub deployment environment or defer the deployment gate.
 8. **Issue labels**: create the issue labels in the GitHub repository? Agents and the public `mattpocock/skills` pack read an issue's state from them.
 9. **Rules every change must keep**, such as "every amount is in integer cents", or none yet. They become the Cross-cutting invariants in step 9.
 
@@ -120,7 +120,7 @@ Ends when `pnpm build` succeeds under the chosen preset, or with no preset for a
 
 ## 7. Apply repository protection
 
-Repository rulesets are GitHub settings, so they do not travel through the template flow. Applying one changes external repository state and requires an explicit yes from the person setting up the project. If the answer is no or deferred, leave the JSON files in `.github/rulesets` as documented options and continue.
+Repository rulesets and the branch auto-delete setting are GitHub settings, so they do not travel through the template flow. Applying them changes external repository state and requires an explicit yes from the person setting up the project. If the answer is no or deferred, leave the JSON files in `.github/rulesets` as documented options and continue.
 
 ### Baseline branch ruleset
 
@@ -138,6 +138,18 @@ gh ruleset check --default --repo "$repo"
 The baseline protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` check emitted by `.github/workflows/ci.yml` without requiring branches to be up to date first ([why](../.github/rulesets/README.md#up-to-date-branches-are-not-required)). It starts with zero required approvals so a solo maintainer is not locked out; the project can add approval and code-owner requirements when a review team exists. Repository admins can bypass it for [break-glass recovery](../.github/rulesets/README.md); an ordinary merge never uses that bypass.
 
 If `gh auth status`, `gh repo view`, or the API call fails, report the exact failure and stop this step. Do not retry by changing permissions or modifying the repository through another account.
+
+### Delete merged branches
+
+With the same yes, have GitHub delete a pull request's branch when it merges, so [After merge](agents/delivery.md#after-merge) has only the local branch left to delete:
+
+```bash
+repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+gh repo edit "$repo" --delete-branch-on-merge
+gh repo view "$repo" --json deleteBranchOnMerge --jq .deleteBranchOnMerge
+```
+
+The last command prints `true`. If any fails, report it and stop this step, as for the ruleset.
 
 ### Optional deployment gate
 
@@ -163,7 +175,7 @@ If Vercel reports a project-suffixed or custom environment, copy the JSON to a t
 
 Cloudflare Workers and other hosts have no template-wide environment name. Do not apply the Vercel file for them. Add a separate required-deployment rule only when the chosen integration emits a stable GitHub deployment environment, using the same import command with that exact value. Otherwise the baseline `validate` check is the complete default.
 
-Ends when the selected ruleset is visible in `gh ruleset check --default` and, when selected, the deployment rule names an environment that exists in the repository's deployment history.
+Ends when the selected ruleset is visible in `gh ruleset check --default` with branch auto-delete reading `true`, and, when selected, the deployment rule names an environment that exists in the repository's deployment history.
 
 ## 8. Create the issue labels
 
@@ -209,10 +221,10 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-Then start `pnpm dev:local` in the background, open the `appUrl` that `pnpm local:status --json` prints, and confirm the header, the page titles, and the footer show the new identity. It serves this checkout on its own port, so another project already on port 3000 does not get in the way. Commit, then stop it with `pnpm local:retire`; [concurrent checkouts](concurrent-checkouts.md) covers both commands. A failed browser run retains screenshots and traces under `test-results/`; [the development guide](development.md#investigate-a-failure) explains local inspection and CI artifacts.
+Then start `pnpm dev:local` in the background, open the `appUrl` that `pnpm local:status --json` prints, and confirm the header, the page titles, and the footer show the new identity. It serves this checkout on its own port, so another project already on port 3000 does not get in the way. Then stop it with `pnpm local:stop`; [concurrent checkouts](concurrent-checkouts.md) covers these commands. A failed browser run retains screenshots and traces under `test-results/`; [the development guide](development.md#investigate-a-failure) explains local inspection and CI artifacts.
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
-Confirm `docs/template-origin.md` lists each departure setup made, such as removed example pages or a host preset. If issue labels were selected, confirm `gh label list` shows the labels from step 8. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
+Confirm `docs/template-origin.md` lists each departure setup made, such as removed example pages or a host preset. If issue labels were selected, confirm `gh label list` shows the labels from step 8. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`, and confirm `gh repo view --json deleteBranchOnMerge` reports `true`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
 Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. The footer's "Built from" credit is an attribution, not placeholder text. Keep it, or drop it from `src/components/site-footer.tsx`, and remove `templateUrl` from `src/lib/site-config.ts` once nothing else uses it. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.
