@@ -35,27 +35,22 @@ jobs:
           EVENT: ${{ github.event_name }}
           REPO: ${{ github.repository }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PR_FILES: ${{ github.event.pull_request.changed_files }}
           BEFORE: ${{ github.event.before }}
           SHA: ${{ github.sha }}
         run: |
-          # Compare the event's own commits, not the live pull request, which a
-          # later push can change. A compare lists at most 300 files, all on its
-          # first page, so it is not paginated and a list of 300 may be partial.
-          complete='(.files | type) == "array" and (.files | length) < 300'
+          # Compare an already-checked commit with the one this run tests, which
+          # for a pull request is its merge into the base. Only an "ahead"
+          # compare diffs the two directly; any other compares from their merge
+          # base and can hide a change, such as a push that undid commits or a
+          # base-side rename that moves a docs edit into source.
           range=""
           case "$EVENT" in
-            pull_request)
-              range="$PR_BASE...$PR_HEAD"
-              ;;
+            pull_request) range="$PR_BASE...$SHA" ;;
             push)
-              # Only a push that adds commits compares "before" with "after"; a
-              # force push compares from the merge base and hides what it undid.
               # A branch's first push reports an all-zero "before".
               if [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
                 range="$BEFORE...$SHA"
-                complete="$complete"' and .status == "ahead"'
               fi
               ;;
           esac
@@ -64,11 +59,15 @@ jobs:
           # @tsv escapes tabs and newlines inside a name, so a name adds no lines.
           changed=""
           if [ -n "$range" ]; then
-            changed=$(gh api "repos/$REPO/compare/$range" --jq "if $complete then"'
-              .files[] | [.filename, .previous_filename // empty] | @tsv else empty end') ||
-              changed=""
+            # A compare lists at most 300 files, all on its first page, so it is
+            # not paginated and a list of 300 may be partial.
+            changed=$(gh api "repos/$REPO/compare/$range" --jq '
+              if .status == "ahead" and (.files | type) == "array" and (.files | length) < 300
+              then .files[] | [.filename, .previous_filename // empty] | @tsv
+              else empty end') || changed=""
           fi
-          # A pull request lists each file once, so a different count is partial.
+          # The merge changes exactly the pull request's files, so a different
+          # count means the list is partial or the base has moved since.
           if [ "$EVENT" = pull_request ]; then
             lines=$(printf '%s\n' "$changed" | wc -l)
             [ "$((lines))" = "$PR_FILES" ] || changed=""

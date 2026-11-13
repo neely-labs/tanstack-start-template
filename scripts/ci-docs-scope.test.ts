@@ -119,7 +119,6 @@ fs.writeFileSync(path.join(fakeBin, "gh"), fakeGh, { mode: 0o755 });
 const before = "a".repeat(40);
 const sha = "b".repeat(40);
 const prBase = "c".repeat(40);
-const prHead = "d".repeat(40);
 const firstPush = "0".repeat(40);
 
 interface ChangedFile {
@@ -161,7 +160,6 @@ function runScope(input: Case) {
       ? {
           "github.event.pull_request.changed_files": String(input.changedFiles),
           "github.event.pull_request.base.sha": prBase,
-          "github.event.pull_request.head.sha": prHead,
         }
       : {};
   const context = {
@@ -217,21 +215,21 @@ const renamed = (filename: string, previous: string): ChangedFile => ({
   previous_filename: previous,
   status: "renamed",
 });
-// A pull request's base has usually moved on, so its compare is "diverged".
 const pullRequest = (
   files: ChangedFile[],
-  changedFiles = files.length
+  changedFiles = files.length,
+  status = "ahead"
 ): Case => ({
   changedFiles,
   event: "pull_request",
-  response: { files, status: "diverged" },
+  response: { files, status },
 });
 const push = (response?: Compare): Case => ({ event: "push", response });
 const ahead = (files: ChangedFile[]): Compare => ({ files, status: "ahead" });
 const markdown = (count: number) =>
   Array.from({ length: count }, (_, n) => modified(`docs/${n}.md`));
 
-const pullCompare = `repos/owner/repo/compare/${prBase}...${prHead}`;
+const pullCompare = `repos/owner/repo/compare/${prBase}...${sha}`;
 const compare = `repos/owner/repo/compare/${before}...${sha}`;
 
 const cases: [string, Case, boolean, string[]][] = [
@@ -290,6 +288,12 @@ const cases: [string, Case, boolean, string[]][] = [
   [
     "a pull request at the 300-file limit",
     pullRequest(markdown(300)),
+    false,
+    [pullCompare],
+  ],
+  [
+    "a pull request merge that does not descend from its base",
+    pullRequest([modified("docs/config.md")], 1, "diverged"),
     false,
     [pullCompare],
   ],
