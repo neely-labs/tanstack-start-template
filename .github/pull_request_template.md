@@ -1,17 +1,35 @@
+<!-- Terms and rules: docs/agents/delivery.md and docs/agents/issue-tracker.md -->
+
 ## Summary
 
-Describe the user-visible outcome and the implementation seam that changed.
+<!-- What changed and why, in a few sentences. Then `Closes #N`, or `Refs #N` when part of the issue or a later check remains. -->
+
+Closes #
+
+## UI evidence
+
+<!-- Screenshots or a recording of the final head. Delete this section when nothing visible changed. -->
+
+## Merge danger
+
+- **Door:** <!-- clean two-way, two-way, one-way, or uncertain -->
+- **Rollback:** <!-- Only when the door is not clean two-way; otherwise delete this line. -->
+- **Blast radius:**
+- **Risk tier:** <!-- 0, 1, or 2 -->
 
 ## Verification
 
-- [ ] `pnpm validate` passes.
-- [ ] `pnpm test:e2e` passes against the current production build for runtime or user-interface changes.
-- [ ] Keyboard behavior and relevant recovery paths were verified for user-interface changes.
-- [ ] Public routes, metadata, and `src/lib/public-routes.ts` stay aligned.
-- [ ] Relevant product, design, architecture, or operating guidance is updated.
+<!-- Commit: its SHA, plus "dirty" if the tree had uncommitted changes. Result: ran and skipped counts. Limits: where it ran (local, preview, production) and what it does not show. -->
 
-Delete or explain any checklist item that does not apply.
+<details>
+<summary>Outcome in one line, naming the head commit</summary>
 
-## Evidence
+| Commit | Command | Result | Limits |
+| ------ | ------- | ------ | ------ |
+|        |         |        |        |
 
-Name the route or action exercised and the actual check results. Include useful screenshots, recordings, logs, or a browser-failure artifact link. State any unavailable prerequisite or remaining uncertainty; explain when visual evidence is not needed.
+</details>
+
+## Decisions
+
+<!-- Choices you made on the owner's behalf, each with its reason. -->
