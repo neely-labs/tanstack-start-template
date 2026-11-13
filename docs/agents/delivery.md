@@ -16,7 +16,7 @@ Classify a change by the behavior it can affect, not by its size or file type. W
 - **Agent authority** is what an agent may do without asking, such as merge, delete, spend, publish, or change these rules. A docs-only change that widens it is tier 2.
 - **Examples:** fixing a typo in a guide is tier 0. Changing a button label is tier 1. Adding a field that is saved with each record is tier 2, even as a one-line change.
 
-A round is one review and the fixes it prompts; at tier 0 the review is the author's own read of the diff. When the budget runs out and substantive findings remain, stop. Report the open findings, what each round fixed, and whether the findings are shrinking, then ask the owner whether to continue, narrow the change, or split it. If a change grows into a higher tier, review it at that tier.
+A round is one review and the fixes it prompts; at tier 0 the review is the author's own read of the diff. A finding is substantive when leaving it would break behavior or mislead a reader; style preferences are not. When the budget runs out before the tier's review is satisfied, stop, even if the last round fixed everything and only a recheck remains. Report the open findings, what each round fixed, and whether the findings are shrinking, then ask the owner whether to continue, narrow the change, or split it. If a change grows into a higher tier, review it at that tier.
 
 ## Merge danger
 
@@ -42,7 +42,7 @@ State three things in the pull request description before merge.
 
 A pull request is ready to merge when all of these hold on its current head:
 
-- It is up to date, meaning it reports as mergeable with no conflicts.
+- It is up to date, meaning it reports as mergeable: no conflicts, and nothing the branch rules still require, such as an update from the default branch.
 - Required checks are green on that head, not on an earlier commit.
 - Review at its tier is complete, each finding is fixed or answered with a written reason, and its review threads are resolved.
 - The merge danger is stated, and the evidence names that head.
