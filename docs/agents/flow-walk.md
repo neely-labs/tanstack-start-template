@@ -4,7 +4,7 @@ Settings for a [flow walk](delivery.md#flow-walk) in this project. Builder and t
 
 | Item | This template |
 | --- | --- |
-| Open the app | `pnpm dev:local`; take the URL and commit from `pnpm local:status --json`; finish with `pnpm local:retire` |
+| Open the app | Run `pnpm dev:local` in the background; take the URL and commit from `pnpm local:status --json`; finish with `pnpm local:retire`, which stops that server |
 | User states | One: no account. The app has no sign-in. |
 | Differences from production | None. |
 | Walk notes | Under Decisions in the PR. |
