@@ -44,10 +44,10 @@ State these in the pull request description before merge.
 
 ## Evidence
 
-- Name the commit each result came from, and say whether the working tree had uncommitted changes when it ran. A result from a dirty tree proves that tree, not the commit.
+- Name the commit each result came from, and say whether the working tree had uncommitted changes when it ran. A result from a dirty tree proves that tree, not the commit. If that exact tree is then committed with no further edits, the result names the new commit.
 - Report how many tests or checks ran and how many were skipped, and name each skip with its reason.
 - Keep local, preview, and production results apart, and label each with where it ran.
-- Update the pull request description once, before merge, so it describes the final head. Do not rewrite it after each fix.
+- Open the pull request with a short summary. Complete the description once, before merge, so it describes the final head. Do not rewrite it after each fix.
 - After pushing, confirm the remote branch points at the commit you tested: `git ls-remote origin <branch>` prints the same SHA as `git rev-parse HEAD`.
 
 ## Merge gate
@@ -58,6 +58,10 @@ A pull request is ready to merge when all of these hold on its current head:
 - Required checks are green on that head, not on an earlier commit.
 - Review at its tier is complete, each finding is fixed or answered with a written reason, and its review threads are resolved.
 - The merge danger is stated, and the evidence names that head.
+
+## After merge
+
+Delete the branch on GitHub and locally, and run `pnpm local:retire` in the task's checkout. If the task had its own worktree, remove it too. A squash merge leaves the local branch looking unmerged, so before deleting it with `git branch -D`, check that its tip matches the merged head that `gh pr view <n> --json headRefOid` prints. Keep any checkout that still holds uncommitted work, and report it.
 
 ## Guards
 

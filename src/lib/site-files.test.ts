@@ -28,6 +28,7 @@ describe("generated site files", () => {
     expect(
       JSON.parse(generatedSiteFiles["manifest.json"].source)
     ).toMatchObject({
+      categories: siteConfig.categories,
       description: siteConfig.description,
       name: siteConfig.name,
       short_name: siteConfig.shortName,

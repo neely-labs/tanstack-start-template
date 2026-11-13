@@ -8,6 +8,8 @@ Work for this repository lives in GitHub Issues. Use the `gh` CLI, which infers 
 2. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the issue body or in its entry on the work map may name an open issue.
 3. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
 
+When the person asks for work that has no issue yet, file one with acceptance criteria, label it `ready-for-agent`, and claim it: their request is its triage. Work you find yourself and leave for later, such as a follow-up, starts at `needs-triage`.
+
 State labels and their transitions are in [triage labels](triage-labels.md).
 
 ## Issue shape
