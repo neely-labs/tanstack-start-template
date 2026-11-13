@@ -9,6 +9,7 @@ pnpm dev        # Start the app on port 3000
 pnpm dev:local  # Start the app on this checkout's own port (see below)
 pnpm fix        # Apply lint and formatting fixes
 pnpm check      # Check lint, formatting, and type-aware rules
+pnpm docs:budget # Check the size of the docs agents always read
 pnpm typecheck  # Check TypeScript
 pnpm test       # Run unit tests once
 pnpm build      # Build the production app and prerender public pages
@@ -33,6 +34,7 @@ Each row names the files that own an area and the focused check that proves a ch
 | Theme or design tokens | `src/styles.css`, `src/lib/theme.ts`, [DESIGN.md](../DESIGN.md) | `pnpm test src/lib/theme.test.ts`, then `pnpm test:e2e tests/e2e/smoke.spec.ts` |
 | Headers, middleware, or production serving | `src/start.ts`, `src/server.ts`, `src/lib/security-headers.ts`, `vite.config.ts` | `pnpm build`, then `pnpm test:e2e tests/e2e/smoke.spec.ts` |
 | Per-checkout ports and server ownership | `scripts/local.ts` | `pnpm test scripts/local.test.ts` |
+| Always-read docs and their size limits | `BUDGET` in `scripts/verify-doc-budget.ts` | `pnpm docs:budget`; `pnpm test scripts/verify-doc-budget.test.ts` for the script itself |
 
 A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, so it stays next to the code it describes. Add a row when the app gains its own module, and remove rows for example files the project deletes.
 
