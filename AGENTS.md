@@ -13,7 +13,8 @@ This file points to where each rule lives. A rule is stated once, in the doc tha
 | Choose, claim, or link work to an issue, or change its state label | [Issue tracker](docs/agents/issue-tracker.md) and [triage labels](docs/agents/triage-labels.md) |
 | Review a change, write PR evidence, or decide it is ready to merge | [Delivery](docs/agents/delivery.md) |
 | Need the file that owns a change and the check that proves it | [Find the right files](docs/development.md#find-the-right-files) |
-| Run, check, or debug the app, or work beside other checkouts | [Development guide](docs/development.md) |
+| Run, check, or debug the app | [Development guide](docs/development.md) |
+| Serve the app beside other checkouts, or wire worktree setup and cleanup hooks | [Concurrent checkouts](docs/concurrent-checkouts.md) |
 | Cross the server/browser boundary, or change identity, metadata, or route visibility | [Architecture](docs/architecture.md) |
 | Change anything visible | [DESIGN.md](DESIGN.md) |
 | Consider authentication, persistence, analytics, or other choices left to the product | [Capabilities and Constraints](PRODUCT.md#capabilities-and-constraints) |
