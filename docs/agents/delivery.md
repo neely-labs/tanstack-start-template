@@ -63,7 +63,7 @@ Squash-merge, pinned to that head: `gh pr merge <n> --squash --match-head-commit
 
 ## After merge
 
-Confirm the pull request merged and that the local branch's tip matches the merged head, `gh pr view <n> --json headRefOid --jq .headRefOid`; if not, keep the branch and report it. Otherwise retire the checkout as [concurrent checkouts](../concurrent-checkouts.md) describes and remove its worktree, or switch the main checkout back to the default branch, then delete the local branch with `git branch -D`. GitHub deletes the remote branch on merge; if [setup](../template-setup.md#7-apply-repository-protection) left that off, delete it too.
+Confirm the pull request merged and that the local branch's tip matches the merged head, `gh pr view <n> --json headRefOid --jq .headRefOid`; if not, keep the branch and report it. Otherwise retire the checkout as [concurrent checkouts](../concurrent-checkouts.md) describes and remove its worktree, or switch the main checkout back to the default branch, then delete the local branch with `git branch -D`. GitHub deletes the remote branch on merge; if [setup](../template-setup.md#7-apply-repository-protection) left that off, leave it and report it.
 
 ## Guards
 
