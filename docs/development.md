@@ -93,7 +93,7 @@ The example loader-retry test simulates a failed request inside its browser, the
 
 ## Flaky tests
 
-A test that fails and then passes on the same code is flaky. Browser tests do not retry, in CI or locally, so a flake shows as a failure instead of a clean pass. When one happens, open a `flaky` issue that names the test, quotes the failure text, and states the cause, or what is known of it. Each pull request that hits the flake links that issue in its description.
+Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.md#category-labels) test shows as a failure instead of a clean pass. When a rerun of the same code passes, open a `flaky` issue that names the test, quotes the failure text, and states the cause, or what is known of it. Each pull request that hit the flake says `Refs #N` for that issue in its description, never `Closes`.
 
 ## Formatting and hooks
 

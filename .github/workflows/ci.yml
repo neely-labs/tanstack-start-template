@@ -6,9 +6,9 @@ on:
   push:
     branches: [main]
 
-# A newer run cancels an older one for the same pull request. Each push to main
-# gets its own group instead: main CI is the check that catches two passing
-# pull requests that break once combined, so no push may lose its run.
+# A newer run cancels an older one for the same pull request or dispatched ref.
+# Each push to main gets its own group so none loses its run: main CI is what
+# catches passing pull requests that break once combined (.github/rulesets/README.md).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true

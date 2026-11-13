@@ -43,7 +43,7 @@ State these in the pull request description before merge.
 
 A pull request is ready to merge when all of these hold on its current head:
 
-- It is up to date, meaning it reports as mergeable: no conflicts, and nothing the branch rules still require, such as an update from the default branch.
+- It is up to date, meaning it reports as mergeable: no conflicts, and nothing the branch rules still require, such as an update from the default branch where the rules require one.
 - Required checks are green on that head, not on an earlier commit.
 - Review at its tier is complete, each finding is fixed or answered with a written reason, and its review threads are resolved.
 - The merge danger is stated, and the evidence names that head.
