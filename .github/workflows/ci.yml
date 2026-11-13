@@ -25,42 +25,70 @@ jobs:
       # `validate` is a required status check, so this job always has to report a
       # conclusion. Skipping the workflow with `paths-ignore` would leave
       # documentation-only pull requests waiting on a check that never arrives,
-      # so narrow the work inside the job instead.
+      # so narrow the work inside the job instead. scripts/ci-docs-scope.test.ts
+      # runs this step's script with a fake `gh`.
       - name: Detect documentation-only changes
         id: scope
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_FILES: ${{ github.event.pull_request.changed_files }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
         run: |
-          case "${{ github.event_name }}" in
-            pull_request)
-              changed=$(gh api --paginate \
-                "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-                --jq '.[].filename')
-              ;;
+          # Compare an already-checked commit with the one this run tests, which
+          # for a pull request is its merge into the base. Only an "ahead"
+          # compare diffs the two directly; any other compares from their merge
+          # base and can hide a change, such as a push that undid commits or a
+          # base-side rename that moves a docs edit into source.
+          range=""
+          case "$EVENT" in
+            pull_request) range="$PR_BASE...$SHA" ;;
             push)
-              # A branch's first push reports an all-zero "before" that cannot be compared.
-              case "${{ github.event.before }}" in
-                0000000000000000000000000000000000000000) changed="" ;;
-                *)
-                  changed=$(gh api --paginate \
-                    "repos/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}" \
-                    --jq '.files[].filename')
-                  ;;
-              esac
-              ;;
-            *)
-              changed=""
+              # A branch's first push reports an all-zero "before".
+              if [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
+                range="$BEFORE...$SHA"
+              fi
               ;;
           esac
 
-          # An empty list means "could not determine", never "nothing changed",
-          # so fall through to the full run.
-          if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qvE '^(docs/|[^/]*\.md$)'; then
-            echo "docs-only=true" >>"$GITHUB_OUTPUT"
-            printf 'Documentation-only change:\n%s\n' "$changed"
-          else
-            echo "docs-only=false" >>"$GITHUB_OUTPUT"
+          # One line per file: its path, then a rename's old path after a tab.
+          # @tsv escapes tabs and newlines inside a name, so a name adds no lines.
+          changed=""
+          if [ -n "$range" ]; then
+            # A compare lists at most 300 files, all on its first page, so it is
+            # not paginated and a list of 300 may be partial.
+            changed=$(gh api "repos/$REPO/compare/$range" --jq '
+              if .status == "ahead" and (.files | type) == "array" and (.files | length) < 300
+              then .files[] | [.filename, .previous_filename // empty] | @tsv
+              else empty end') || changed=""
           fi
+          # The merge changes exactly the pull request's files, so a different
+          # count means the list is partial or the base has moved since.
+          if [ "$EVENT" = pull_request ]; then
+            lines=$(printf '%s\n' "$changed" | wc -l)
+            [ "$((lines))" = "$PR_FILES" ] || changed=""
+          fi
+
+          # An empty list means "could not determine", never "nothing changed",
+          # so fall through to the full run. Only Markdown at the root or under
+          # docs/ qualifies; other files there can be imported or served.
+          docs_only=false
+          if [ -n "$changed" ]; then
+            docs_only=true
+            while IFS= read -r file; do
+              [[ $file =~ ^(docs/.+|[^/]+)\.md$ ]] || docs_only=false
+            done <<<"${changed//$'\t'/$'\n'}"
+          fi
+          echo "docs-only=$docs_only" >>"$GITHUB_OUTPUT"
+          # A path such as `::error::x.md` must print as text, not run as a workflow command.
+          resume=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')
+          echo "::stop-commands::$resume"
+          printf 'docs-only=%s for these changed paths:\n%s\n' "$docs_only" "$changed"
+          echo "::$resume::"
 
       # Reuses the runner's preinstalled Node instead of letting pnpm fetch a
       # 57 MB tarball on every run, which it did before the store cache restored
