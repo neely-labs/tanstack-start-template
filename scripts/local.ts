@@ -136,6 +136,24 @@ function sendSignal(pid: number, name: NodeJS.Signals) {
 
 const appUrl = (checkout: Checkout) => `http://localhost:${checkout.appPort}`;
 
+/** Runs `task` while holding the checkout's exclusive start/retire lock. */
+async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
+  const lock = path.join(path.dirname(checkout.ownerFile), "lock");
+  fs.mkdirSync(path.dirname(lock), { recursive: true });
+  try {
+    fs.mkdirSync(lock);
+  } catch {
+    throw new Error(
+      `Another start or retire holds ${lock}; remove it if none does.`
+    );
+  }
+  try {
+    return await task();
+  } finally {
+    fs.rmSync(lock, { force: true, recursive: true });
+  }
+}
+
 /** Checks ownership, starts Vite, and records it; callers hold the lock. */
 function startVite(checkout: Checkout) {
   const own = readOwner(checkout);
@@ -165,20 +183,7 @@ function startVite(checkout: Checkout) {
 export const devServer: Resource = {
   name: "dev server",
   async setup(checkout) {
-    // An exclusive lock keeps overlapping starts from sharing one record.
-    const lock = path.join(path.dirname(checkout.ownerFile), "starting");
-    fs.mkdirSync(path.dirname(lock), { recursive: true });
-    try {
-      fs.mkdirSync(lock);
-    } catch {
-      throw new Error(`Another start holds ${lock}; remove it if none does.`);
-    }
-    let child: ReturnType<typeof spawn>;
-    try {
-      child = startVite(checkout);
-    } finally {
-      fs.rmSync(lock, { force: true, recursive: true });
-    }
+    const child = await withLock(checkout, () => startVite(checkout));
     for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
       process.on(signal, () => {
         child.kill(signal);
@@ -257,18 +262,25 @@ export async function retire(checkout: Checkout) {
     const reason = "commit or remove this work first";
     throw new Error(`Refusing to retire ${checkout.root}; ${reason}:\n${work}`);
   }
-  const report: string[] = [];
-  for (let index = resources.length - 1; index >= 0; index -= 1) {
-    // oxlint-disable-next-line no-await-in-loop -- reverse dependency order.
-    report.push(...((await resources[index]?.teardown(checkout)) ?? []));
-  }
-  for (const dir of [".output", ".tanstack"]) {
-    if (fs.existsSync(path.join(checkout.root, dir))) {
-      fs.rmSync(path.join(checkout.root, dir), { recursive: true });
-      report.push(`removed ${dir}/`);
+  const report = await withLock(checkout, async () => {
+    const done: string[] = [];
+    for (let index = resources.length - 1; index >= 0; index -= 1) {
+      // oxlint-disable-next-line no-await-in-loop -- reverse dependency order.
+      done.push(...((await resources[index]?.teardown(checkout)) ?? []));
     }
+    for (const dir of [".output", ".tanstack"]) {
+      if (fs.existsSync(path.join(checkout.root, dir))) {
+        fs.rmSync(path.join(checkout.root, dir), { recursive: true });
+        done.push(`removed ${dir}/`);
+      }
+    }
+    return done;
+  });
+  try {
+    fs.rmdirSync(path.dirname(checkout.ownerFile));
+  } catch {
+    // Not empty: a later start already wrote its record.
   }
-  fs.rmSync(path.dirname(checkout.ownerFile), { force: true, recursive: true });
   return report;
 }
 

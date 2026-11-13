@@ -149,14 +149,16 @@ describe("local environment", () => {
     expect(isAlive(theirs)).toBeTruthy();
   });
 
-  it("refuses to start while another start holds the lock", async () => {
+  it("refuses to start or retire while another holds the lock", async () => {
     const [main] = repositoryWithWorktree();
-    fs.mkdirSync(path.join(path.dirname(main.ownerFile), "starting"), {
-      recursive: true,
-    });
+    const mine = startProcess();
+    own(main, mine);
+    fs.mkdirSync(path.join(path.dirname(main.ownerFile), "lock"));
 
-    await expect(devServer.setup(main)).rejects.toThrow(/Another start holds/u);
-    expect(readOwner(main)).toBeUndefined();
+    await expect(devServer.setup(main)).rejects.toThrow(/holds .*lock/u);
+    await expect(retire(main)).rejects.toThrow(/holds .*lock/u);
+    expect(isAlive(mine)).toBeTruthy();
+    expect(readOwner(main)?.pid).toBe(mine);
   });
 
   it("refuses a port that another worktree's live server owns", async () => {
