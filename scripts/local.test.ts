@@ -117,6 +117,17 @@ describe("local environment", () => {
     expect(readOwner(main)).toBeUndefined();
   });
 
+  it("refuses to start twice and keeps the running server's record", async () => {
+    const [main] = repositoryWithWorktree();
+    const mine = startProcess();
+    own(main, mine);
+
+    await expect(devServer.setup(main)).rejects.toThrow(
+      `Already serving http://localhost:${main.appPort} (pid ${mine}).`
+    );
+    expect(readOwner(main)?.pid).toBe(mine);
+  });
+
   it("refuses a port that another worktree's live server owns", async () => {
     const [main, other] = repositoryWithWorktree();
     own({ ...other, appPort: main.appPort }, startProcess());

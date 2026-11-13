@@ -41,18 +41,29 @@ function git(root: string, ...args: string[]) {
   return execFileSync("git", ["-C", root, ...args], options).trim();
 }
 
-/** The process start time, which tells a reused process id apart. */
-export function processStart(pid: number) {
-  const env = { ...process.env, LC_ALL: "C" };
-  const args = ["-o", "lstart=", "-p", String(pid)];
-  let started = "";
+function attempt(read: () => string) {
   try {
-    const options = { encoding: "utf-8", env, stdio: "pipe" } as const;
-    started = execFileSync("ps", args, options).trim();
+    return read().trim();
   } catch {
-    // `ps` exits non-zero when no process has this id.
+    return "";
   }
-  return started || undefined;
+}
+
+/**
+ * The process start time, which tells a reused process id apart. Linux reports
+ * clock ticks since boot; `ps` there derives `lstart` from the wall clock,
+ * which drifts when the clock is adjusted (as WSL does).
+ */
+export function processStart(pid: number) {
+  const stat = attempt(() => fs.readFileSync(`/proc/${pid}/stat`, "utf-8"));
+  if (stat) {
+    // Fields after the parenthesized command name start at field 3.
+    return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[22 - 3];
+  }
+  const env = { ...process.env, LC_ALL: "C" };
+  const options = { encoding: "utf-8", env, stdio: "pipe" } as const;
+  const args = ["-o", "lstart=", "-p", String(pid)];
+  return attempt(() => execFileSync("ps", args, options)) || undefined;
 }
 
 /** Parses the ownership file; a missing or malformed one owns nothing. */

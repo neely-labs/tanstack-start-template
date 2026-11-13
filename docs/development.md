@@ -73,7 +73,7 @@ pnpm local:retire        # Stop this checkout's server, remove .output/, .tansta
 - **Status.** The dev server reports `running`, `stopped`, or `stale`. `stale` means the recorded process id now belongs to a different process, which nothing here will stop.
 - **Retirement.** `pnpm local:retire` refuses while the checkout has uncommitted or untracked files, and then changes nothing. Otherwise it stops only the process it recorded, removes the build output and ownership file, and lists what it removed. To retire an older worktree whose script may be out of date, run it from an up-to-date checkout: `pnpm local:retire --checkout <path>`.
 
-`pnpm dev` still serves port 3000 for a single checkout. The commands rely on `git` and `ps`, so they run on macOS, Linux, and WSL.
+`pnpm dev` still serves port 3000 for a single checkout. The commands rely on `git`, plus `/proc` on Linux and WSL or `ps` on macOS.
 
 ### Call it from worktree hooks
 
