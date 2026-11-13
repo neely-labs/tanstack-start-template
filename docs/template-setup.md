@@ -127,7 +127,7 @@ Fill **Cross-cutting invariants** in `PRODUCT.md` with the rules every change mu
 
 Keep `AGENTS.md` an index under 4 KB: its always-read pointers, the table of conditional links including `docs/agents/`, and the Quality list. State each new rule once, in the doc that owns it, and link it from the index rather than copying it. Record any conflict between a shared skill and repository policy under **Skills in this repo**.
 
-Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, and the relevant host instructions in `docs/deployment.md`. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
+Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, the relevant host instructions in `docs/deployment.md`, and `docs/recipes/` for safeguards the product has not needed yet. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 
 Ends when product guidance describes the new application and a fresh agent can still discover how to run, change, verify, and recover it.
 
