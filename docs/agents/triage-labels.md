@@ -1,6 +1,6 @@
 # Triage labels
 
-An open issue carries exactly one state label. Change it by removing the old label in the same edit that adds the new one. GitHub does not copy labels into a repository made from a template, so a new repository creates them once with the commands below.
+An open issue carries exactly one state label. Change it by removing the old label in the same edit that adds the new one. Labels are repository settings that a template does not copy, so a new repository creates them once with the commands below.
 
 ## State labels
 
@@ -13,7 +13,7 @@ An open issue carries exactly one state label. Change it by removing the old lab
 | `awaiting-qualification` | `awaiting-qualification` | Delivered; open only for the checks its Current acceptance lists |
 | `wontfix` | `wontfix` | Will not be actioned |
 
-The roles `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` match the public `mattpocock/skills` pack, so its skills work unchanged. If a project renames a label, change only the second column.
+The roles `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` match the public `mattpocock/skills` pack, so its skills work unchanged. If a project renames a label, change the second column and the matching command below.
 
 A new issue starts at `needs-triage`. Triage moves it to `needs-info`, `ready-for-agent`, `ready-for-human`, or `wontfix`; `needs-info` returns to `needs-triage` when the reporter answers. When a PR that says `Refs #N` merges, the person or agent who merged it moves the issue to `awaiting-qualification`.
 
@@ -30,7 +30,7 @@ Status: delivered in #57; open for two production checks.
 - [ ] A fresh agent repeats the setup rehearsal after #60 merges.
 ```
 
-Close the issue when every box is ticked. A failed check opens a separate `bug` issue and leaves this one open.
+[The issue tracker guide](issue-tracker.md#awaiting-qualification) says how to run the checks and when to close the issue.
 
 ## Category labels
 
@@ -43,7 +43,7 @@ Category labels describe the kind of work and sit alongside the state label.
 
 ## Create the labels
 
-Run from the repository root with an account that can manage the repository's labels:
+These commands change repository settings, so run them only with the owner's yes. Run them from the repository root with an account that can manage the repository's labels:
 
 ```bash
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)

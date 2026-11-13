@@ -113,7 +113,7 @@ Ends when the selected ruleset is visible in `gh ruleset check --default` and, w
 
 ## 7. Create the issue labels
 
-Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 6. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Agents follow [the issue tracker guide](agents/issue-tracker.md) either way, and the labels can be created later.
+Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 6. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Until the labels exist, agents following [the issue tracker guide](agents/issue-tracker.md) find no `ready-for-agent` issues and work only on issues the person names.
 
 Run the commands under [Create the labels](agents/triage-labels.md#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
 
