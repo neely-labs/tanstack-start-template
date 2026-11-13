@@ -1,8 +1,8 @@
-<!-- Terms and rules: docs/agents/delivery.md -->
+<!-- Terms and rules: docs/agents/delivery.md and docs/agents/issue-tracker.md -->
 
 ## Summary
 
-<!-- What changed and why, in a few sentences. Then `Closes #N`, or `Refs #N` for partial delivery. -->
+<!-- What changed and why, in a few sentences. Then `Closes #N`, or `Refs #N` when part of the issue or a later check remains. -->
 
 Closes #
 
@@ -19,6 +19,8 @@ Closes #
 
 ## Verification
 
+<!-- Commit: its SHA, plus "dirty" if the tree had uncommitted changes. Result: ran and skipped counts. Limits: where it ran (local, preview, production) and what it does not show. -->
+
 <details>
 <summary>Outcome in one line, naming the head commit</summary>
 
@@ -30,4 +32,4 @@ Closes #
 
 ## Decisions
 
-<!-- Choices made for the owner, each with its reason. -->
+<!-- Choices you made on the owner's behalf, each with its reason. -->
