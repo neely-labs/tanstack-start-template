@@ -15,7 +15,9 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   reporter: "list",
-  retries: process.env.CI === "true" ? 1 : 0,
+  // No retries, in CI either: a retry reports a flaky test as a clean pass.
+  // docs/development.md#flaky-tests says how to track one instead.
+  retries: 0,
   testDir: "./tests/e2e",
   use: {
     baseURL,

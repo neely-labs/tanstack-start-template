@@ -6,8 +6,11 @@ on:
   push:
     branches: [main]
 
+# A newer run cancels an older one for the same pull request. Each push to main
+# gets its own group instead: main CI is the check that catches two passing
+# pull requests that break once combined, so no push may lose its run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 
 permissions:
