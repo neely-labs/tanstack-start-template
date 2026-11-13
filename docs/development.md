@@ -41,7 +41,7 @@ Each row names the files that own an area and the focused check that proves a ch
 | Add or change a form | [Forms before hydration](architecture.md#forms-before-hydration) and [the forms recipe](recipes/forms.md) | `pnpm build && pnpm test:e2e` with the recipe's test copied into `tests/e2e/` |
 | Which changes CI treats as documentation-only | The `scope` step in `.github/workflows/ci.yml` | `pnpm test scripts/ci-docs-scope.test.ts` |
 
-A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, so it stays next to the code it describes. Add a row when the app gains its own module, and remove rows for example files the project deletes.
+A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, next to the code. Add a row when the app gains its own module, and remove rows for example files the project deletes.
 
 ## Change a route
 
@@ -69,7 +69,7 @@ pnpm exec playwright install chromium
 
 After `pnpm validate` has built the current app, run `pnpm test:e2e`. The browser suite exercises served files, hydration, keyboard behavior, server requests, and recovery. `tests/e2e/smoke.spec.ts` covers shared infrastructure; `tests/e2e/examples.spec.ts` goes with the optional example pages. Missing expected behavior fails a check.
 
-Before handoff, inspect the changed route or action and report what you actually checked, with useful evidence and any remaining uncertainty. Unit checks, production browser checks, and manual review each answer different questions.
+Before handoff, inspect the changed route or action and report what you actually checked, with useful evidence and any remaining uncertainty.
 
 - For interface changes, operate the changed controls with the keyboard alone and walk their recovery paths, such as a failed request or invalid input.
 - When public pages change, confirm that their metadata, navigation, and entries in `src/lib/public-routes.ts` still agree.
@@ -88,9 +88,9 @@ Record each result in the Verification table of the [pull request template](../.
 pnpm exec playwright show-trace path/to/trace.zip
 ```
 
-CI uploads those files as `browser-failure-evidence` for seven days when browser checks fail. Download the artifact and use the same trace command locally. Review captured data before publishing a trace from an app with private or authenticated content.
+CI uploads those files as `browser-failure-evidence` for seven days when browser checks fail. Download the artifact and run the same trace command. Review captured data before publishing a trace from an app with private or authenticated content.
 
-The example loader-retry test simulates a failed request inside its browser, then retries the real server. It provides a pattern for failure testing without a production fault endpoint. If an approach fails, inspect the diff and undo only the task's changes, preserving unrelated edits and other tasks' processes.
+The example loader-retry test simulates a failed request inside its browser, then retries the real server. It is a pattern for failure testing without a production fault endpoint. If an approach fails, inspect the diff and undo only the task's changes, preserving unrelated edits and other tasks' processes.
 
 ## Flaky tests
 
@@ -100,14 +100,14 @@ Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.
 
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
 
-Agent tooling and vendored plugin source are excluded from application quality gates. Manually review content, accessibility, architecture, and edge cases alongside the automated checks.
+Agent tooling and vendored plugin source are excluded from application quality gates. Review content, accessibility, architecture, and edge cases by hand as well.
 
-## Optional skills
+## Skills
 
-The template commits no skills. To run a [flow walk](agents/delivery.md#flow-walk) with the full procedure, install the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill into this checkout:
+The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, its copy for Claude Code in `.claude/skills/`, and `skills-lock.json`, which records the source. `npx skills update flow-walk -p` rewrites both copies; review and commit the diff. `scripts/skills.test.ts` checks they match. Remove it with `npx skills remove flow-walk`.
+
+The optional `ui-evidence` skill publishes screenshots to a pull request and needs tools the template does not install. Install it globally to keep this checkout unchanged:
 
 ```bash
-npx skills add nick-neely/agent-skills --skill flow-walk
+npx skills add nick-neely/agent-skills --skill ui-evidence -g
 ```
-
-It writes `.agents/skills/flow-walk/`, a `.claude/skills/flow-walk` link, and `skills-lock.json`, which `.gitignore` keeps local. Remove it with `npx skills remove flow-walk`. Choosing extra agents during install can write other agent directories that Git will show.

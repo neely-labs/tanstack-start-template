@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "skills": {
+    "flow-walk": {
+      "source": "nick-neely/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/flow-walk/SKILL.md",
+      "computedHash": "f395c11d370a916b47e7811e4ae9fc470cb9a21c9f02e523d7659fd10ad2de90",
+      "installMode": "copy"
+    }
+  }
+}
