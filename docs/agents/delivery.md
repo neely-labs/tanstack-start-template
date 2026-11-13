@@ -27,7 +27,7 @@ Before code review of a change to what a user sees or decides, a fresh tester wa
 3. Fix a blocker and walk again with a new tester. For a finding on a screen this change altered, fix it or decline it with a reason, unless it needs a new owner decision. Handle a bug you reproduce per [the issue tracker guide](issue-tracker.md#issue-shape). Everything else is a note under the PR's Decisions.
 4. If review then changes the visible flow beyond wording, walk it once more with a new tester.
 
-The `flow-walk` skill carries the full procedure; installing it is [optional](../development.md#optional-skills).
+The committed [`flow-walk` skill](../development.md#skills) carries the full procedure.
 
 ## Merge danger
 

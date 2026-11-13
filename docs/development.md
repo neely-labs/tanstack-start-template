@@ -102,12 +102,12 @@ Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatti
 
 Agent tooling and vendored plugin source are excluded from application quality gates. Manually review content, accessibility, architecture, and edge cases alongside the automated checks.
 
-## Optional skills
+## Skills
 
-The template commits no skills. To run a [flow walk](agents/delivery.md#flow-walk) with the full procedure, install the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill into this checkout:
+The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, the `.claude/skills/flow-walk` link, and `skills-lock.json`, which records its source and hash. Update it with `npx skills update flow-walk -p`, review the diff, and commit it; remove it with `npx skills remove flow-walk`.
+
+The optional `ui-evidence` skill publishes screenshots to a pull request and needs tools the template does not install. Install it globally, which leaves this checkout unchanged:
 
 ```bash
-npx skills add nick-neely/agent-skills --skill flow-walk
+npx skills add nick-neely/agent-skills --skill ui-evidence -g
 ```
-
-It writes `.agents/skills/flow-walk/`, a `.claude/skills/flow-walk` link, and `skills-lock.json`, which `.gitignore` keeps local. Remove it with `npx skills remove flow-walk`. Choosing extra agents during install can write directories Git will show. The `ui-evidence` skill, installed the same way, publishes screenshots to a pull request.
