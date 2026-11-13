@@ -26,13 +26,18 @@ const advice = `Move detail out of the always-read set rather than raising a lim
 - Dated history and measurements: the pull request or issue.
 Raise a limit in BUDGET, scripts/verify-doc-budget.ts, only for deliberate growth.`;
 
-/** A `## heading` section, up to the next level 1 or 2 heading outside a fence. */
+/** A `## heading` section, up to the next level 1 or 2 heading outside a code fence. */
 function section(text: string, heading: string): string | null {
-  let fenced = false;
+  let fence = "";
   const lines = text.split(/(?<=\n)/u);
   const isHeading = lines.map((line) => {
-    fenced = /^\s*(?:```|~~~)/u.test(line) ? !fenced : fenced;
-    return !fenced && /^#{1,2} /u.test(line);
+    const marker = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(line)?.groups?.m ?? "";
+    if (marker !== "" && fence === "") {
+      fence = marker;
+    } else if (marker.startsWith(fence) && line.trim() === marker) {
+      fence = "";
+    }
+    return fence === "" && /^#{1,2} /u.test(line);
   });
   const start = lines.findIndex(
     (line, at) => isHeading[at] && line.trimEnd() === `## ${heading}`
@@ -66,16 +71,12 @@ export function check(budget: typeof BUDGET, root: string) {
   }
   for (const [file, bytes] of sizes) {
     if (bytes > budget.fileBytes) {
-      problems.push(
-        `${file} is ${bytes} bytes, over the ${budget.fileBytes}-byte file cap`
-      );
+      problems.push(`${file}: ${bytes} bytes, file cap ${budget.fileBytes}`);
     }
   }
   const total = [...sizes.values()].reduce((sum, bytes) => sum + bytes, 0);
   if (total > budget.totalBytes) {
-    problems.push(
-      `The set is ${total} bytes, over the ${budget.totalBytes}-byte total cap`
-    );
+    problems.push(`total: ${total} bytes, total cap ${budget.totalBytes}`);
   }
   return { problems, sizes, total };
 }

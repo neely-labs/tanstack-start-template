@@ -45,9 +45,7 @@ describe(check, () => {
       { docs: ["big.md", "small.md"], fileBytes: 10, totalBytes: 100 },
       root
     );
-    expect(problems).toStrictEqual([
-      "big.md is 11 bytes, over the 10-byte file cap",
-    ]);
+    expect(problems).toStrictEqual(["big.md: 11 bytes, file cap 10"]);
   });
 
   it("fails a total over its cap even when every file is within", () => {
@@ -56,9 +54,7 @@ describe(check, () => {
       { docs: ["*.md"], fileBytes: 10, totalBytes: 10 },
       root
     );
-    expect(problems).toStrictEqual([
-      "The set is 12 bytes, over the 10-byte total cap",
-    ]);
+    expect(problems).toStrictEqual(["total: 12 bytes, total cap 10"]);
   });
 
   it("counts only the named sections, summed under their file", () => {
@@ -98,6 +94,27 @@ describe(check, () => {
     );
     // Everything before "## Next": 11 + 6 + 12 + 4 + 5 bytes.
     expect([...sizes]).toStrictEqual([["P.md", 38]]);
+  });
+
+  it("closes a fence only with a matching marker at least as long", () => {
+    const text = [
+      "## Purpose",
+      "````md",
+      "```",
+      "## Inside",
+      "~~~~",
+      "````",
+      "kept",
+      "## Next",
+      "skip",
+    ].join("\n");
+    const root = tree({ "P.md": text });
+    const { sizes } = check(
+      { docs: ["P.md#Purpose"], fileBytes: 100, totalBytes: 100 },
+      root
+    );
+    // Everything before "## Next": 11 + 7 + 4 + 10 + 5 + 5 + 5 bytes.
+    expect([...sizes]).toStrictEqual([["P.md", 47]]);
   });
 
   it("fails an entry that matches no file or no section", () => {
