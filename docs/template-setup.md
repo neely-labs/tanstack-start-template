@@ -19,7 +19,51 @@ Ask all eight questions in one message, then wait for the reply. Every later ste
 
 Ends when every question has an answer or an explicit deferral.
 
-## 2. Apply the identity
+## 2. Record the template origin
+
+A copy made with GitHub's **Use this template** starts an unrelated history, so nothing in it says which template revision it came from. Record that revision now, so the project can later review what changed upstream and tell its deliberate differences from drift.
+
+Do this before committing any setup change. The revision is the upstream `main` commit whose files match this copy's latest commit exactly:
+
+```bash
+upstream=https://github.com/neely-labs/tanstack-start-template
+copy=HEAD
+git fetch --quiet "$upstream" main
+git log --format='%T %H %cs' FETCH_HEAD | awk -v tree="$(git rev-parse "$copy^{tree}")" '$1 == tree { print $2, $3; exit }'
+```
+
+It prints the revision and its commit date. If it prints nothing, the copy already has commits of its own or did not come from upstream `main`. For a copy made with **Use this template**, set `copy=$(git rev-list --max-parents=0 HEAD)`, its first commit, and rerun the last line. Otherwise ask the person which revision they copied; never record a guess.
+
+Write `docs/template-origin.md` from this outline, filling the angle brackets. Under **Intentional departures**, list the differences the step 1 answers already settle, such as removed example pages or a host other than Vercel, and leave out the renaming, branding, and guidance rewrites every project makes.
+
+````markdown
+# Template origin
+
+This project started as a copy of the TanStack Start Template.
+
+- Upstream: https://github.com/neely-labs/tanstack-start-template
+- Revision: `<revision>`, committed <commit date>
+- Adopted: <today's date>
+
+## Intentional departures
+
+- <One line per deliberate difference from upstream, such as "Removed the /setup and /runtime example pages.">
+
+## Pull later improvements
+
+```bash
+rev=$(grep -Eom1 '[0-9a-f]{40}' docs/template-origin.md)
+git fetch --quiet https://github.com/neely-labs/tanstack-start-template main
+git log --oneline "$rev"..FETCH_HEAD
+git diff --stat "$rev" FETCH_HEAD
+```
+
+The log lists upstream commits since the recorded revision, and the stat lists the files they changed; `git diff "$rev" FETCH_HEAD -- <path>` shows one file's change. Port by hand what applies, skipping what a departure above rules out. Then set the revision to the commit you reviewed through, which `git log -1 --format='%H %cs' FETCH_HEAD` prints with its date, and add any new departure.
+````
+
+Ends when `docs/template-origin.md` names a revision that the command above printed, or one the person confirmed.
+
+## 3. Apply the identity
 
 `src/lib/site-config.ts` is the single seam for public identity. `src/lib/seo.ts` derives every page title, canonical URL, and JSON-LD graph from it, and `src/lib/site-files.ts` generates `robots.txt` and `manifest.json` from it at build time. Editing that one file renames the project everywhere.
 
@@ -30,7 +74,7 @@ Ends when every question has an answer or an explicit deferral.
 
 Ends when `pnpm build` writes the new name and origin into `.output/public/robots.txt`, `.output/public/manifest.json`, and the rendered `<title>` of every page.
 
-## 3. Choose the surface
+## 4. Choose the surface
 
 Keeping the examples is the safe default while the product is still being shaped; they demonstrate the SEO helpers, the server-function seams, and the recovery states against real routes.
 
@@ -48,7 +92,7 @@ With route sources, inventory, and links reconciled, run `pnpm build` to regener
 
 Ends when the generated tree reflects the remaining routes, `pnpm validate` passes, and `pnpm test:e2e` passes against that build with Chromium installed. The reusable smoke suite must still run after both examples are removed.
 
-## 4. Replace the brand assets
+## 5. Replace the brand assets
 
 Replace `public/tanstack.svg` (header logo and SVG favicon), `public/favicon.ico`, and `public/social-card.png`. The social card is verified at 1200x630 PNG, so keep those dimensions or update `socialImage` in `src/lib/site-config.ts` to match the new asset.
 
@@ -56,7 +100,7 @@ Replacing the logo also retires the TanStack trademark entry at the end of `THIR
 
 Ends when `pnpm build && pnpm seo:verify` passes, which checks the rendered social image rather than the source file.
 
-## 5. Set the host preset
+## 6. Set the host preset
 
 For Vercel, make no code change. During import, set Vercel's **Framework Preset** to **TanStack Start** and keep its generated build and output settings. The `nitro()` plugin in `vite.config.ts` produces the Vercel server output.
 
@@ -64,7 +108,7 @@ For Cloudflare Workers, set the preset on the Nitro plugin in `vite.config.ts`, 
 
 Ends when `pnpm build` succeeds under the chosen preset.
 
-## 6. Apply repository protection
+## 7. Apply repository protection
 
 Repository rulesets are GitHub settings, so they do not travel through the template flow. Applying one changes external repository state and requires an explicit yes from the person setting up the project. If the answer is no or deferred, leave the JSON files in `.github/rulesets` as documented options and continue.
 
@@ -111,35 +155,35 @@ Cloudflare Workers and other hosts have no template-wide environment name. Do no
 
 Ends when the selected ruleset is visible in `gh ruleset check --default` and, when selected, the deployment rule names an environment that exists in the repository's deployment history.
 
-## 7. Create the issue labels
+## 8. Create the issue labels
 
-Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 6. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Until the labels exist, agents following [the issue tracker guide](agents/issue-tracker.md) find no `ready-for-agent` issues and work only on issues the person names.
+Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 7. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Until the labels exist, agents following [the issue tracker guide](agents/issue-tracker.md) find no `ready-for-agent` issues and work only on issues the person names.
 
 Run the commands under [Create the labels](agents/triage-labels.md#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
 
 Ends when `gh label list` shows all eight labels.
 
-## 8. Rewrite the guidance documents
+## 9. Rewrite the guidance documents
 
 `PRODUCT.md`, `DESIGN.md`, and `AGENTS.md` describe the template. Rewrite them to describe the product, using the answers from step 1.
 
 Fill **Cross-cutting invariants** in `PRODUCT.md` with the rules every change must preserve, one line each, linking the doc or module that enforces it. Ask the person for them if step 1 did not surface any. Agents read this section on every task, together with Product Purpose, so keep it short; an empty section is better than a guessed rule.
 
-Keep `AGENTS.md` an index under 4 KB: its always-read pointers, the table of conditional links including `docs/agents/`, and the Quality list. State each new rule once, in the doc that owns it, and link it from the index rather than copying it. Record any conflict between a shared skill and repository policy under **Skills in this repo**.
+Keep `AGENTS.md` an index under 4 KB: its always-read pointers, the table of conditional links including `docs/agents/`, and the Quality list. State each new rule once, in the doc that owns it, and link it from the index rather than copying it. Add a row that sends agents pulling template improvements to `docs/template-origin.md`. Record any conflict between a shared skill and repository policy under **Skills in this repo**.
 
 `pnpm docs:budget`, part of `pnpm validate`, caps the docs agents read on every task: each file and their total. When the rewrite moves the always-read set or needs different limits, edit `BUDGET` at the top of `scripts/verify-doc-budget.ts`.
 
-Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, the relevant host instructions in `docs/deployment.md`, and `docs/recipes/` for safeguards the product has not needed yet. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
+Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, the relevant host instructions in `docs/deployment.md`, and `docs/recipes/` for safeguards the product has not needed yet. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 4. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 
 Ends when product guidance describes the new application and a fresh agent can still discover how to run, change, verify, and recover it.
 
-## 9. Remove the template-only files
+## 10. Remove the template-only files
 
-`docs/template-publishing.md` and this file describe publishing and adopting the template. Delete both once the project has its own history. Keep `.github/rulesets` if the project wants its repository policy to remain reviewable and repeatable.
+`docs/template-publishing.md` and this file describe publishing and adopting the template. Delete both once the project has its own history. Keep `docs/template-origin.md`: it is the project's record of the template, not part of it. Keep `.github/rulesets` if the project wants its repository policy to remain reviewable and repeatable.
 
-Ends when `docs/` holds only documents about the product.
+Ends when `docs/` holds only documents about the product and its template origin.
 
-## 10. Verify
+## 11. Verify
 
 ```bash
 pnpm validate
@@ -154,6 +198,6 @@ For concurrent tasks, use `pnpm dev:local` and the other per-checkout commands i
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
-If issue labels were selected, confirm `gh label list` shows the eight labels from step 7. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
+Confirm `docs/template-origin.md` lists each departure setup made, such as removed example pages or a host preset. If issue labels were selected, confirm `gh label list` shows the eight labels from step 8. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
 Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.
