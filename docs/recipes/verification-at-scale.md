@@ -13,10 +13,10 @@ pre-push:
       run: pnpm check && pnpm typecheck
     - name: affected tests
       run: pnpm test:changed origin/main
-      exclude: "*.md"
+      exclude: "*.{md,css,svg,png,ico}"
 ```
 
-Lefthook skips a job when its `exclude` leaves none of the pushed files, so a Markdown-only push runs no tests and CI checks it. Every other push runs the affected tests and fails when they select none. That includes a push that changes only untested code, such as a new module with no test or a CSS-only change: it fails until you add a relevant test, or run `pnpm validate` and push with `--no-verify`. [Check your changes](../development.md#check-your-changes) lists what affected selection misses.
+Lefthook skips a job when its `exclude` leaves none of the pushed files, so a push of only docs, stylesheets, and images runs no tests, and CI checks it. List the file types the project ships that no unit test imports; drop one once a test imports it. Every other push runs the affected tests and fails when they select none. That includes a push of only untested code, such as a new module with no test: it fails until you add a relevant test, or run `pnpm validate` and push with `--no-verify`. [Check your changes](../development.md#check-your-changes) lists what affected selection misses.
 
 **Named full-validation checkpoints.** _Measure:_ count the pull requests whose CI failed after local affected checks passed. With affected checks in the hook, full `pnpm validate` still runs at three named points: when a pull request becomes ready for review, after a rebase that brings in dependency or config changes, and in CI on the head to be merged. If more than about one pull request in ten fails CI that way, add a checkpoint or widen the hook.
 
@@ -49,7 +49,7 @@ Run it from an up-to-date checkout. A branch with commits after its merge, an op
 
 ## Prove
 
-- After switching the hook, push a change that breaks one module's test: the push fails. Push a change to a module no test imports: the push fails with no affected tests. Push a Markdown-only change: the affected tests are skipped, the push passes, and CI runs its documentation checks.
+- After switching the hook, push a change that breaks one module's test: the push fails. Push a change to a module no test imports: the push fails with no affected tests. Push a Markdown-only change and a stylesheet-only change: the affected tests are skipped, and each push passes.
 - Run the reuse script twice on a clean tree: the second run skips. Change one file and it validates again.
 - The sweep removes a worktree whose pull request merged at its head, and keeps one with a later commit, an unmerged one, and a dirty merged one with its refusal printed.
 

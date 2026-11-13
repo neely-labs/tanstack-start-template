@@ -55,7 +55,7 @@ Affected selection is a shortcut, not proof:
 
 - It misses files read at runtime instead of imported, such as assets and fixtures, and changes to the lockfile or `tsconfig.json`. A change to `package.json` or the Vite or Vitest config runs every test.
 - Selecting zero tests fails, as on a clean tree with no base or a change to files no test imports. Run `pnpm test` instead.
-- When pre-push regularly takes more than about two minutes, [verification at scale](recipes/verification-at-scale.md) moves the hook to lint, types and `pnpm test:changed`, skips the tests for a Markdown-only push, and keeps CI as the full gate.
+- When pre-push regularly takes more than about two minutes, [verification at scale](recipes/verification-at-scale.md) moves the hook to lint, types and `pnpm test:changed`, skips the tests for a push of only docs, stylesheets, and images, and keeps CI as the full gate.
 
 Before pushing, run `pnpm fix` and `pnpm validate`. Refresh route types first when route files changed: the lint and type checks consume them before the build stage runs.
 
