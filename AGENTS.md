@@ -4,6 +4,7 @@ Read `PRODUCT.md` for intent and `DESIGN.md` for interface changes. For local wo
 
 ## Project-specific guidance
 
+- GitHub Issues own order, status, and blockers. Read `docs/agents/issue-tracker.md` before choosing work, linking a PR to an issue, or acting on an issue's state label; `docs/agents/triage-labels.md` defines the labels.
 - Ultracite is the quality entry point; Oxlint and Oxfmt own mechanical linting and formatting. Run `pnpm fix` after edits.
 - `pnpm validate` is the core gate (lint, types, unit tests, Nitro build, prerender, rendered SEO). Run it freely rather than guessing which stage a change affects.
 - CI also runs `pnpm test:e2e` against the production build. For runtime or UI changes, install Chromium with `pnpm exec playwright install chromium` and run the browser suite when the environment supports it. It covers desktop and mobile navigation, hydration, server functions, security headers, and static assets.

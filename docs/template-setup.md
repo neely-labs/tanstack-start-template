@@ -6,7 +6,7 @@ Work the steps in order. Each one states the result that ends it.
 
 ## 1. Collect the answers
 
-Ask all seven questions in one message, then wait for the reply. Every later step depends on the answers, and one batch costs the person a single response.
+Ask all eight questions in one message, then wait for the reply. Every later step depends on the answers, and one batch costs the person a single response.
 
 1. **Project name** as it should appear in the interface, and the package name for `package.json`.
 2. **One sentence** describing the product. It becomes the meta description and the manifest description.
@@ -15,6 +15,7 @@ Ask all seven questions in one message, then wait for the reply. Every later ste
 5. **The example pages**: keep `/setup` and `/runtime` as working references, or remove them. `/api/health` remains as browser-test readiness infrastructure.
 6. **Brand assets**: paths to a logo, favicon source, and social image, or keep the placeholders for now.
 7. **Repository protection**: apply the baseline GitHub ruleset after the repository exists, and should merges also require a successful deployment? For Vercel, the standard answer is the `Preview` environment after the first preview succeeds. For another host, provide its exact GitHub deployment environment or defer the deployment gate.
+8. **Issue labels**: create the issue state labels in the GitHub repository? Agents and the public `mattpocock/skills` pack read an issue's state from them.
 
 Ends when every question has an answer or an explicit deferral.
 
@@ -110,23 +111,31 @@ Cloudflare Workers and other hosts have no template-wide environment name. Do no
 
 Ends when the selected ruleset is visible in `gh ruleset check --default` and, when selected, the deployment rule names an environment that exists in the repository's deployment history.
 
-## 7. Rewrite the guidance documents
+## 7. Create the issue labels
+
+Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 6. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Until the labels exist, agents following [the issue tracker guide](agents/issue-tracker.md) find no `ready-for-agent` issues and work only on issues the person names.
+
+Run the commands under [Create the labels](agents/triage-labels.md#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
+
+Ends when `gh label list` shows all eight labels.
+
+## 8. Rewrite the guidance documents
 
 `PRODUCT.md`, `DESIGN.md`, and `AGENTS.md` describe the template. Rewrite them to describe the product, using the answers from step 1.
 
-Keep `AGENTS.md` concise: decisions, constraints, reasons, and conditional pointers to the relevant product and operating guidance. Preserve generated-file ownership, the quality gates, route visibility's SEO-only meaning, process ownership, and the requirement to document local fixtures and recovery when adding integrations.
+Keep `AGENTS.md` concise: decisions, constraints, reasons, and conditional pointers to the relevant product and operating guidance. Preserve generated-file ownership, the quality gates, route visibility's SEO-only meaning, process ownership, the requirement to document local fixtures and recovery when adding integrations, and the links to `docs/agents/`.
 
 Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, and the relevant host instructions in `docs/deployment.md`. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 
 Ends when product guidance describes the new application and a fresh agent can still discover how to run, change, verify, and recover it.
 
-## 8. Remove the template-only files
+## 9. Remove the template-only files
 
 `docs/template-publishing.md` and this file describe publishing and adopting the template. Delete both once the project has its own history. Keep `.github/rulesets` if the project wants its repository policy to remain reviewable and repeatable.
 
 Ends when `docs/` holds only documents about the product.
 
-## 9. Verify
+## 10. Verify
 
 ```bash
 pnpm validate
@@ -141,6 +150,6 @@ For concurrent tasks, use the explicit development and `E2E_PORT` commands in [t
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
-If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
+If issue labels were selected, confirm `gh label list` shows the eight labels from step 7. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
 Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.

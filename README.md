@@ -31,6 +31,7 @@ Run `pnpm validate` before sharing changes. For page or server changes, also fol
 | --- | --- |
 | Make this template your project | [Setup guide](docs/template-setup.md) |
 | Run checks, change routes, use separate checkouts, or debug a failure | [Development guide](docs/development.md) |
+| Choose, link, or close an issue | [Issue tracker guide](docs/agents/issue-tracker.md) |
 | Find the code and understand what runs on the server or in the browser | [How the app fits together](docs/architecture.md) |
 | Deploy to Vercel, Cloudflare, or another host | [Deployment guide](docs/deployment.md) |
 | Understand product and design choices | [Product](PRODUCT.md) and [design](DESIGN.md) |
