@@ -112,5 +112,11 @@ export default defineConfig({
     "anti-slop/require-safety-comment-for-type-assertion": "error",
     "func-style": "off",
     "react/function-component-definition": "off",
+    // Its autofix adds `async` to any function that returns a promise. The
+    // result fails `require-await` until a second `pnpm fix` adds `return
+    // await`, and in an array callback such as `.map((x) => load(x))` it then
+    // fails `react-doctor/async-await-in-loop`, so no fixed form passes.
+    // Oxlint cannot turn off one rule's fix, so the rule is off instead.
+    "typescript/promise-function-async": "off",
   },
 });
