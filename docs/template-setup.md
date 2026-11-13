@@ -32,7 +32,7 @@ git fetch --quiet "$upstream" main
 git log --format='%T %H %cs' FETCH_HEAD | awk -v tree="$(git rev-parse "$copy^{tree}")" '$1 == tree { print $2, $3; exit }'
 ```
 
-It prints the revision and its commit date. If it prints nothing, the copy already has commits of its own or did not come from upstream `main`. For a copy made with **Use this template**, set `copy=$(git rev-list --max-parents=0 HEAD)`, its first commit, and rerun the last line. Otherwise ask the person which revision they copied; never record a guess.
+It prints the revision and its commit date. If it prints nothing, the copy already has commits of its own or did not come from upstream `main`. For a copy made with **Use this template**, change the `copy=` line to `copy=$(git rev-list --max-parents=0 HEAD)`, its first commit, and run the block again. Otherwise ask the person which revision they copied; never record a guess.
 
 Write `docs/template-origin.md` from this outline, filling the angle brackets. Under **Intentional departures**, list the differences the step 1 answers already settle, such as removed example pages or a host other than Vercel, and leave out the renaming, branding, and guidance rewrites every project makes.
 
@@ -52,8 +52,9 @@ This project started as a copy of the TanStack Start Template.
 ## Pull later improvements
 
 ```bash
-rev=$(grep -Eom1 '[0-9a-f]{40}' docs/template-origin.md)
-git fetch --quiet https://github.com/neely-labs/tanstack-start-template main
+upstream=$(sed -n 's/^- Upstream: //p' docs/template-origin.md)
+rev=$(sed -n 's/^- Revision: `\([0-9a-f]*\)`.*/\1/p' docs/template-origin.md)
+git fetch --quiet "$upstream" main
 git log --oneline "$rev"..FETCH_HEAD
 git diff --stat "$rev" FETCH_HEAD
 ```
