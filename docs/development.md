@@ -91,7 +91,7 @@ Harnesses that create a worktree per task usually offer setup and cleanup hooks.
 
 A project that adds a database, local cookies, or fixtures registers it in the `resources` list in `scripts/local.ts`, before the dev server, whose setup keeps running until the server exits. Each resource has `setup`, `status`, and `teardown`: `dev:local` sets resources up in order, `local:status` reports each one, and `local:retire` tears them down in reverse, so retirement stays one command. Keep per-checkout state under `.local/`.
 
-The app currently needs no account, database, or environment file for local work. When adding persistence or an external service, include local fixtures, local credentials kept separate from production ones, reset/cleanup instructions, and recovery checks with that feature.
+The app currently needs no account, database, or environment file for local work. When adding persistence or an external service, include local fixtures, local credentials kept separate from production ones, reset/cleanup instructions, and recovery checks with that feature. [The recipes](recipes/README.md) cover a per-checkout database and its safeguards, slow checks, date-dependent tests, and tests that run Git.
 
 ## Investigate a failure
 

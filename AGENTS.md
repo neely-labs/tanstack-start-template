@@ -17,6 +17,7 @@ This file points to where each rule lives. A rule is stated once, in the doc tha
 | Cross the server/browser boundary, or change identity, metadata, or route visibility | [Architecture](docs/architecture.md) |
 | Change anything visible | [DESIGN.md](DESIGN.md) |
 | Consider authentication, persistence, analytics, or other choices left to the product | [Capabilities and Constraints](PRODUCT.md#capabilities-and-constraints) |
+| Add a database, find checks slow, test the date, or test code that runs Git | The matching [recipe](docs/recipes/README.md), only once its trigger applies |
 | Need a project term or the reason for a past decision | [Domain docs](docs/agents/domain.md) |
 | Deploy, or adopt the template as a new project | [Deployment](docs/deployment.md) and [template setup](docs/template-setup.md) |
 
