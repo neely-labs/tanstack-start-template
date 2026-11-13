@@ -38,6 +38,10 @@ The `/runtime` example connects three parts: a parser/calculation in `src/lib/te
 
 A route that needs browser APIs can choose `ssr: false` or `ssr: "data-only"`. The current examples use server rendering.
 
+## Forms before hydration
+
+Until hydration the browser owns every field, and a visitor on a slow connection types into the server HTML; React leaves that text in the field but not in state. A form that React handles takes a function `action` and reads the submit from its `FormData`, as the `/runtime` analyzer does: React replays a submit made before hydration with that data, and with JavaScript off the submit does nothing, so data that must stay in the browser is never sent. Before hydration or with JavaScript off, a form with only `onSubmit` sends its fields as a GET query string, putting them in the URL. A controlled field copies the field's value into state when it mounts, or it reads as empty and its next render erases the text. A form meant to work without JavaScript, such as a search, keeps a real `action` URL. [The forms recipe](recipes/forms.md) has the code and the browser test.
+
 ## Requests and headers
 
 `src/start.ts` registers request middleware through `createStart`. It adds shared security headers and rejects cross-site server-function requests. Ordinary HTTP routes stay outside that RPC check so non-browser callers can reach endpoints such as health checks.
