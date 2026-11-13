@@ -114,9 +114,10 @@ export default defineConfig({
     "react/function-component-definition": "off",
     // Its autofix adds `async` to any function that returns a promise. The
     // result fails `require-await` until a second `pnpm fix` adds `return
-    // await`, and in an array callback such as `.map((x) => load(x))` it then
-    // fails `react-doctor/async-await-in-loop`, so no fixed form passes.
-    // Oxlint cannot turn off one rule's fix, so the rule is off instead.
+    // await`. In an array callback such as `.map((x) => load(x))` whose array
+    // is not passed to `Promise.all`, it then fails
+    // `react-doctor/async-await-in-loop`, so no fixed form passes. Oxlint
+    // cannot turn off one rule's fix, so the rule is off instead.
     "typescript/promise-function-async": "off",
   },
 });

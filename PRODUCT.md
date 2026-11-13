@@ -33,7 +33,7 @@ The template combines a deliberately small application surface with a complete p
 ## Capabilities and Constraints
 
 - The baseline uses TanStack Start, React, Nitro, Tailwind CSS, shadcn/ui on Base UI, TypeScript, Vitest, Ultracite, Oxlint, Oxfmt, Lefthook, and pnpm.
-- Browsers need ES2023 built-ins such as `Array#toSorted`, which every major browser has shipped since mid-2023: TypeScript's `lib` allows them and the build adds no polyfills.
+- The browser floor is ES2023: TypeScript's `lib` lets code use built-ins such as `Array#toSorted`, which every major browser has shipped since mid-2023, and the build adds no polyfills.
 - Node.js 24 and the package manager pinned in `package.json` are repository constraints until intentionally upgraded.
 - The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and agent-assisted development tooling.
 - Authentication, persistence, analytics, domain models, product copy, deployment credentials, application-specific state management, and an environment-schema library are deliberately undecided. [The recipes](docs/recipes/README.md) hold the safeguards that a database and other later choices bring.
