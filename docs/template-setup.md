@@ -127,7 +127,7 @@ Fill **Cross-cutting invariants** in `PRODUCT.md` with the rules every change mu
 
 Keep `AGENTS.md` an index under 4 KB: its always-read pointers, the table of conditional links including `docs/agents/`, and the Quality list. State each new rule once, in the doc that owns it, and link it from the index rather than copying it. Record any conflict between a shared skill and repository policy under **Skills in this repo**.
 
-`pnpm docs:budget`, part of `pnpm validate`, caps the docs agents read on every task: each file and their total. When the rewrite moves the always-read set or needs different limits, edit `BUDGET` at the top of `scripts/verify-doc-budget.ts`. Prefer moving detail out over raising a limit.
+`pnpm docs:budget`, part of `pnpm validate`, caps the docs agents read on every task: each file and their total. When the rewrite moves the always-read set or needs different limits, edit `BUDGET` at the top of `scripts/verify-doc-budget.ts`.
 
 Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, the relevant host instructions in `docs/deployment.md`, and `docs/recipes/` for safeguards the product has not needed yet. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 

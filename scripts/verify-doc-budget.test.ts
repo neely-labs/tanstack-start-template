@@ -89,6 +89,17 @@ describe(check, () => {
     expect([...sizes]).toStrictEqual([["PRODUCT.md", 36 + 15]]);
   });
 
+  it("keeps counting past heading-like lines inside a code fence", () => {
+    const text = "## Purpose\n```sh\n# a comment\n```\nkept\n## Next\nskip\n";
+    const root = tree({ "P.md": text });
+    const { sizes } = check(
+      { docs: ["P.md#Purpose"], fileBytes: 100, totalBytes: 100 },
+      root
+    );
+    // Everything before "## Next": 11 + 6 + 12 + 4 + 5 bytes.
+    expect([...sizes]).toStrictEqual([["P.md", 38]]);
+  });
+
   it("fails an entry that matches no file or no section", () => {
     const root = tree({ "PRODUCT.md": "# Product\n## Users\n" });
     const { problems } = check(

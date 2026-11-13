@@ -15,6 +15,7 @@ Use this reference when finding a module, changing public identity or metadata, 
 | `src/start.ts`, `src/server.ts`, `src/lib/security-headers.ts` | Request middleware, server entry, and headers shared with Nitro |
 | `scripts/verify-seo-output.mjs` | Verification of rendered production metadata and assets |
 | `scripts/local.ts` | Per-checkout ports, server ownership, status, and retirement for concurrent worktrees |
+| `scripts/verify-doc-budget.ts` | Size caps on the docs agents read on every task |
 
 TanStack Router generates `src/routeTree.gen.ts` from the route files. Work in the source routes and let Vite regenerate it.
 
