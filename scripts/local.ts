@@ -42,8 +42,13 @@ export function checkoutOf(dir = path.join(import.meta.dirname, "..")) {
   return { appPort, e2ePort: appPort + 5000, ownerFile, root };
 }
 
+/** The environment without Git's hook variables, which would override `-C`. */
+export const gitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))
+);
+
 function git(root: string, ...args: string[]) {
-  const options = { encoding: "utf-8" } as const;
+  const options = { encoding: "utf-8", env: gitEnv } as const;
   return execFileSync("git", ["-C", root, ...args], options).trim();
 }
 

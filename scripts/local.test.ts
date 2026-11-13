@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   checkoutOf,
+  gitEnv,
   devServer,
   processStart,
   readOwner,
@@ -25,7 +26,10 @@ function repositoryWithWorktree(): [Checkout, Checkout] {
   temporary.push(base);
   const main = path.join(base, "main");
   const run = (...args: string[]) =>
-    execFileSync("git", ["-C", main, ...args], { stdio: "ignore" });
+    execFileSync("git", ["-C", main, ...args], {
+      env: gitEnv,
+      stdio: "ignore",
+    });
   fs.mkdirSync(main);
   run("init", "--quiet");
   fs.writeFileSync(path.join(main, ".gitignore"), ".local/\n.output/\n");
@@ -37,7 +41,7 @@ function repositoryWithWorktree(): [Checkout, Checkout] {
 
 /** Starts an unrelated long-lived process and returns its id. */
 function startProcess(): number {
-  const child = spawn("sleep", ["30"], { stdio: "ignore" });
+  const child = spawn("sleep", ["30"], { env: gitEnv, stdio: "ignore" });
   children.push(child);
   return child.pid ?? 0;
 }
@@ -98,13 +102,8 @@ describe("local environment", () => {
     fs.mkdirSync(path.join(main.root, ".output"));
     fs.writeFileSync(path.join(main.root, "notes.txt"), "draft");
     // A user setting that hides untracked files must not hide them here.
-    execFileSync("git", [
-      "-C",
-      main.root,
-      "config",
-      "status.showUntrackedFiles",
-      "no",
-    ]);
+    const config = ["config", "status.showUntrackedFiles", "no"];
+    execFileSync("git", ["-C", main.root, ...config], { env: gitEnv });
 
     await expect(retire(main)).rejects.toThrow(/Refusing.*notes\.txt/su);
     expect(isAlive(mine)).toBeTruthy();
