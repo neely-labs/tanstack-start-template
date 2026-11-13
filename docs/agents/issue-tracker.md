@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Work for this repository lives in GitHub Issues. Use the `gh` CLI, which infers the repository from `git remote -v`. Issues own order, status, and blockers; no file in the repository tracks them. Replace this file as a whole if the project moves to another tracker.
+Work for this repository lives in GitHub Issues. Use the `gh` CLI. Issues own order, status, and blockers; no file in the repository tracks them. Replace this file as a whole if the project moves to another tracker.
 
 ## Pick up work
 
@@ -15,18 +15,18 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 ## Issue shape
 
 - A task starts as an issue with checkbox acceptance criteria that a reviewer can verify.
-- When a decision changes the criteria, add a **Current acceptance** section. It supersedes the original criteria, which stay in place as history.
+- When a decision changes the criteria, add a **Current acceptance** section that supersedes them; the originals stay as history.
 - A user-visible change names the user's goal, the state they are in, and where they start.
 - A change to stored state names each pause between reading that state and applying a result, so the work covers what can change in between.
-- A `bug` issue carries exactly one line: `Introduced by: #N`, `Introduced by: before #N`, or `Introduced by: unknown`.
+- A `bug` issue is for merged work; fix a defect in unmerged work within its task. It carries exactly one line, `Introduced by: #N`, `Introduced by: before #N`, or `Introduced by: unknown`, where #N is a merged pull request.
 
 ## Link pull requests
 
-- A delivery PR that completes an issue says `Closes #N` in its description.
+- A delivery PR that completes an issue says `Closes #N`.
 - A PR that delivers only part of an issue, or delivers all of it while later checks remain, says `Refs #N`. In the second case, whoever merges it moves the issue to `awaiting-qualification` and writes its Current acceptance; a partial delivery keeps its current label.
 - Write one keyword per issue, only in the PR description. Keep `Closes`, `Refs`, and other issue keywords out of commit messages: a squash merge can carry them onto the default branch and close an issue early.
 - Refer to a work map as `Part of #N`, which is not a closing keyword.
-- Record status in the issue, with labels, comments, and checkboxes. Never push a commit only to record status.
+- Record status in the issue with labels, comments, and checkboxes, never with a commit.
 
 ## Awaiting qualification
 

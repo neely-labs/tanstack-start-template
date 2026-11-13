@@ -8,7 +8,7 @@ Closes #
 
 ## UI evidence
 
-<!-- Screenshots or a recording of the final head. Delete this section when nothing visible changed. -->
+<!-- Screenshots or a recording of the final head. If you cannot upload, describe each screenshot with its local path and note that reviewers cannot open it. Delete this section when nothing visible changed. -->
 
 ## Merge danger
 
