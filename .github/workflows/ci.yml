@@ -80,11 +80,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Formatting and linting cover Markdown too, so documentation still gets
-      # checked; only the type, test, and build gates are skipped. `pnpm check`
-      # is the first stage of `pnpm validate`, so the two cannot drift apart.
+      # checked; only the type, test, and build gates are skipped. These are the
+      # first two stages of `pnpm validate`, so the two paths cannot drift apart.
+      # The doc budget is a script, not a test, because this path skips tests.
       - name: Check documentation
         if: steps.scope.outputs.docs-only == 'true'
-        run: pnpm check
+        run: pnpm check && pnpm docs:budget
 
       - name: Validate
         if: steps.scope.outputs.docs-only != 'true'

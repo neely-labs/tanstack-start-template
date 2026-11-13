@@ -8,6 +8,7 @@
     "check": "ultracite check --type-aware --type-check",
     "dev": "vite dev --port 3000 --strictPort",
     "dev:local": "node scripts/local.ts dev",
+    "docs:budget": "node scripts/verify-doc-budget.ts",
     "fix": "ultracite fix --type-aware --type-check",
     "local:retire": "node scripts/local.ts retire",
     "local:status": "node scripts/local.ts status",
@@ -16,7 +17,7 @@
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "validate": "pnpm check && pnpm typecheck && pnpm test && pnpm build && pnpm seo:verify"
+    "validate": "pnpm check && pnpm docs:budget && pnpm typecheck && pnpm test && pnpm build && pnpm seo:verify"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
