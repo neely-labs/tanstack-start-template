@@ -23,10 +23,12 @@ Affected selection misses files read at runtime, dependency and config changes, 
 key="$(git rev-parse 'HEAD^{tree}') $(node --version)" stamp=node_modules/.cache/validated
 clean() { test -z "$(git status --porcelain)"; }
 if clean && [ "$(cat "$stamp" 2>/dev/null)" = "$key" ]; then echo "Already validated: $key"; exit 0; fi
-pnpm validate && clean && mkdir -p "${stamp%/*}" && echo "$key" >"$stamp"
+clean && before=clean
+pnpm validate || exit
+if [ "$before" = clean ] && clean; then mkdir -p "${stamp%/*}" && echo "$key" >"$stamp"; fi
 ```
 
-The stamp lives in `node_modules/`, so a reinstall discards it. Never reuse a pass across a dirty tree, another Node version, or for the CI gate.
+A tree that was dirty before or after the run still validates but is never stamped. The key includes the Node version, and the stamp lives in `node_modules/`, so a reinstall discards it. CI never reuses a pass.
 
 **Sweep finished worktrees.** _Measure:_ `git worktree list | wc -l`, the disk those trees use, and servers that `pnpm local:status` still reports running. Once finished worktrees pile up faster than people retire them, sweep the ones whose branch was merged and deleted upstream:
 

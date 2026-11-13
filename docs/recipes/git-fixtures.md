@@ -43,7 +43,7 @@ Run the Git tests the way a hook would, aimed at a decoy repository so a leak ca
 
 ```bash
 decoy=$(mktemp -d) && git init -q "$decoy"
-GIT_DIR="$decoy/.git" GIT_WORK_TREE="$decoy" pnpm test path/to/git.test.ts
+GIT_DIR="$decoy/.git" pnpm test path/to/git.test.ts
 git -C "$decoy" rev-list --all | wc -l # 0: no commit leaked
 ```
 
