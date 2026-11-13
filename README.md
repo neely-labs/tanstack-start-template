@@ -30,7 +30,8 @@ Run `pnpm validate` before sharing changes. For page or server changes, also fol
 | What you need | Where to go |
 | --- | --- |
 | Make this template your project | [Setup guide](docs/template-setup.md) |
-| Run checks, change routes, use separate checkouts, or debug a failure | [Development guide](docs/development.md) |
+| Run checks, change routes, or debug a failure | [Development guide](docs/development.md) |
+| Run several checkouts side by side | [Concurrent checkouts](docs/concurrent-checkouts.md) |
 | Choose, link, or close an issue | [Issue tracker guide](docs/agents/issue-tracker.md) |
 | Decide how much review a change needs, what evidence to give, or whether it is ready to merge | [Delivery guide](docs/agents/delivery.md) |
 | Add a database, speed up slow checks, or test dates or Git safely | [Recipes](docs/recipes/README.md) |
