@@ -34,7 +34,7 @@ State these in the pull request description before merge.
 ## Evidence
 
 - Name the commit each result came from, and say whether the working tree had uncommitted changes when it ran. A result from a dirty tree proves that tree, not the commit.
-- Report how many tests or checks ran and how many were skipped, and name each skip with its reason. A suite that ran nothing has not passed.
+- Report how many tests or checks ran and how many were skipped, and name each skip with its reason.
 - Keep local, preview, and production results apart, and label each with where it ran.
 - Update the pull request description once, before merge, so it describes the final head. Do not rewrite it after each fix.
 - After pushing, confirm the remote branch points at the commit you tested: `git ls-remote origin <branch>` prints the same SHA as `git rev-parse HEAD`.

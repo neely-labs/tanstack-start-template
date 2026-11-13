@@ -1,26 +1,35 @@
-# Project Agent Notes
+# Agent index
 
-Read `PRODUCT.md` for intent and `DESIGN.md` for interface changes. For local work and verification, use `docs/development.md`; it links the runtime and deployment references. This file records decisions and constraints that survive template adoption.
+This file points to where each rule lives. A rule is stated once, in the doc that owns it; follow the link instead of restating it. The Quality list is owned here.
 
-## Project-specific guidance
+## Always read
 
-- GitHub Issues own order, status, and blockers. Read `docs/agents/issue-tracker.md` before choosing work, linking a PR to an issue, or acting on an issue's state label; `docs/agents/triage-labels.md` defines the labels.
-- Read `docs/agents/delivery.md` before review, before writing a PR's evidence, and before merging.
-- Ultracite is the quality entry point; Oxlint and Oxfmt own mechanical linting and formatting. Run `pnpm fix` after edits.
-- `pnpm validate` is the core gate (lint, types, unit tests, Nitro build, prerender, rendered SEO). Run it freely rather than guessing which stage a change affects.
-- CI also runs `pnpm test:e2e` against the production build. For runtime or UI changes, install Chromium with `pnpm exec playwright install chromium` and run the browser suite when the environment supports it. It covers desktop and mobile navigation, hydration, server functions, security headers, and static assets.
-- Run the route generator through Vite before checking route additions or removals, as the development guide describes. Keep the inventory, metadata, navigation, inbound links, and browser journeys aligned; `src/routeTree.gen.ts` stays generator-owned.
-- In concurrent worktrees, start the app with `pnpm dev:local` rather than `pnpm dev`, and clean up with `pnpm local:retire`; the development guide explains both. Browser tests start their own production server to avoid exercising another checkout or an old build.
+- [Product Purpose](PRODUCT.md#product-purpose) and [Cross-cutting invariants](PRODUCT.md#cross-cutting-invariants): what the product is for and what every change must preserve.
 
-## Decisions, not omissions
+## Read when
 
-- Authentication, persistence, analytics, state management beyond React and TanStack Router, and an environment-schema library are deliberately undecided. The application built on this template picks them.
-- Keep one-off template assessments and delivery logs in the PR; committed guidance should be reusable by a new project.
-- Route visibility controls prerendering and SEO discovery, not access control. `/api/health` stays available as infrastructure for browser-test readiness when example pages are removed.
-- Adoption replaces product identity and examples while preserving the development workflow, quality gates, and generated-file ownership. Add local fixtures, reset/cleanup instructions, credential separation, and recovery checks alongside any new persistence or external integration.
+| When you | Read |
+| --- | --- |
+| Choose, claim, or link work to an issue, or change its state label | [Issue tracker](docs/agents/issue-tracker.md) and [triage labels](docs/agents/triage-labels.md) |
+| Review a change, write PR evidence, or decide it is ready to merge | [Delivery](docs/agents/delivery.md) |
+| Need the file that owns a change and the check that proves it | [Find the right files](docs/development.md#find-the-right-files) |
+| Run, check, or debug the app, or work beside other checkouts | [Development guide](docs/development.md) |
+| Cross the server/browser boundary, or change identity, metadata, or route visibility | [Architecture](docs/architecture.md) |
+| Change anything visible | [DESIGN.md](DESIGN.md) |
+| Consider authentication, persistence, analytics, or other choices left to the product | [Capabilities and Constraints](PRODUCT.md#capabilities-and-constraints) |
+| Need a project term or the reason for a past decision | [Domain docs](docs/agents/domain.md) |
+| Deploy, or adopt the template as a new project | [Deployment](docs/deployment.md) and [template setup](docs/template-setup.md) |
 
-## When Oxlint + Oxfmt cannot help
+## Quality
 
-Manually verify domain and editorial correctness, source quality, user experience, accessibility, architecture, and edge cases.
+- Before handoff, run the checks in [Check your changes](docs/development.md#check-your-changes) and report them as [Delivery](docs/agents/delivery.md#evidence) describes.
+- Green means it ran: zero selected tests, or a required suite that skipped, is not verification.
+- A measured number in a doc carries its host, load and date, or links the PR that measured it. Budgets and limits are exempt.
+- Agent-facing docs are written for agents; human guides stay short; dated history goes in PRs and issues.
+- Write temporary files outside the repository.
 
-For handoff, name the affected route or action, the checks actually run, and any remaining uncertainty. Core validation and production browser verification are separate results; attach useful evidence through the existing PR template.
+## Skills in this repo
+
+Repo policy wins over shared or global skills. When a skill's wording conflicts with a rule here or in a linked doc, map that conflict below once: the skill, its wording, and the rule that applies instead.
+
+No conflicts are mapped yet.

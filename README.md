@@ -36,7 +36,7 @@ Run `pnpm validate` before sharing changes. For page or server changes, also fol
 | Find the code and understand what runs on the server or in the browser | [How the app fits together](docs/architecture.md) |
 | Deploy to Vercel, Cloudflare, or another host | [Deployment guide](docs/deployment.md) |
 | Understand product and design choices | [Product](PRODUCT.md) and [design](DESIGN.md) |
-| Give a coding agent the project rules | [Agent notes](AGENTS.md) |
+| Give a coding agent the project rules | [Agent index](AGENTS.md) |
 
 If you maintain the template itself, use the [publishing checklist](docs/template-publishing.md) before a release.
 

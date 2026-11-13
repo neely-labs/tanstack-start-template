@@ -14,6 +14,10 @@ TanStack Start Template is a reusable GitHub template for beginning production-m
 
 Success means a developer can create a new repository, replace the documented identity and example surfaces, run one validation command, and continue building without first rebuilding the project's foundation.
 
+## Cross-cutting invariants
+
+<!-- Filled during setup (docs/template-setup.md, "Rewrite the guidance documents"). One line per rule that every change must preserve, whatever the area, such as "Every stored amount is in integer cents" or "No page requires sign-in to read". Link the doc or module that enforces each one. Leave this section empty until the product has such a rule. -->
+
 ## Positioning
 
 The template combines a deliberately small application surface with a complete path from local editing through hooks, tests, production output, rendered SEO verification, CI, and Vercel deployment. Its replacement seams and deliberate omissions are documented so infrastructure is reusable without quietly imposing a product model.
@@ -31,7 +35,7 @@ The template combines a deliberately small application surface with a complete p
 - The baseline uses TanStack Start, React, Nitro, Tailwind CSS, shadcn/ui on Base UI, TypeScript, Vitest, Ultracite, Oxlint, Oxfmt, Lefthook, and pnpm.
 - Node.js 24 and the package manager pinned in `package.json` are repository constraints until intentionally upgraded.
 - The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and agent-assisted development tooling.
-- Authentication, persistence, analytics, domain models, product copy, deployment credentials, and application-specific state management are deliberately undecided.
+- Authentication, persistence, analytics, domain models, product copy, deployment credentials, application-specific state management, and an environment-schema library are deliberately undecided.
 - The canonical origin, manifest identity, social image, robots policy, example routes, and product guidance must be replaced by each adopted application.
 - Original template code is distributed under the MIT License; vendored source remains under its upstream license.
 
