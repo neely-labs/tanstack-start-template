@@ -48,7 +48,7 @@ const unitTestRules = {
   ...vitest,
   overrides: vitest.overrides?.map((override) => ({
     ...override,
-    files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs"],
+    files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}"],
   })),
 };
 
