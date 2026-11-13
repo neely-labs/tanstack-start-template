@@ -146,7 +146,7 @@ pnpm dev
 
 Open `http://localhost:3000` and confirm the header, the page titles, and the footer show the new identity.
 
-For concurrent tasks, use the explicit development and `E2E_PORT` commands in [the development guide](development.md#use-concurrent-checkouts) instead of stopping another checkout's listener. A failed browser run retains screenshots and traces under `test-results/`; the same guide explains local inspection and CI artifacts.
+For concurrent tasks, use `pnpm dev:local` and the other per-checkout commands in [the development guide](development.md#use-concurrent-checkouts) instead of stopping another checkout's listener. A failed browser run retains screenshots and traces under `test-results/`; the same guide explains local inspection and CI artifacts.
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 

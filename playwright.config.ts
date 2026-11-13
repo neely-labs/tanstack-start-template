@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = process.env.E2E_PORT ?? "4173";
+import { checkoutOf } from "./scripts/local.ts";
+
+const port = process.env.E2E_PORT ?? String(checkoutOf().e2ePort);
 if (!/^[1-9]\d{0,4}$/u.test(port) || Number(port) > 65_535) {
   throw new Error("E2E_PORT must be an integer from 1 to 65535.");
 }

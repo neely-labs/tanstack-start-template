@@ -6,6 +6,7 @@ Use this guide for local development, route changes, checks, and debugging. Run 
 
 ```bash
 pnpm dev        # Start the app on port 3000
+pnpm dev:local  # Start the app on this checkout's own port (see below)
 pnpm fix        # Apply lint and formatting fixes
 pnpm check      # Check lint, formatting, and type-aware rules
 pnpm typecheck  # Check TypeScript
@@ -15,6 +16,8 @@ pnpm seo:verify # Check metadata in the built files
 pnpm start      # Run an existing production build
 pnpm validate   # Run the core checks, build, and metadata verification
 pnpm test:e2e   # Check the production app in desktop and mobile Chromium
+pnpm local:status  # Show this checkout's branch, ports, and server
+pnpm local:retire  # Stop this checkout's server and remove its local state
 ```
 
 ## Find the right files
@@ -56,16 +59,32 @@ Record each result in the Verification table of the [pull request template](../.
 
 ## Use concurrent checkouts
 
-Separate worktrees have their own source and build output, but share network ports. Reuse a development server after confirming its process belongs to this checkout and it serves the expected app.
-
-`pnpm dev` uses port 3000 and exits if it is occupied. Choose other ports explicitly for a second task:
+Separate worktrees have their own source and build output but share network ports. `scripts/local.ts` gives each checkout its own ports and records what it started, so several agents or people can work side by side without choosing ports or stopping each other's servers.
 
 ```bash
-pnpm exec vite dev --port 3101 --strictPort
-E2E_PORT=4181 pnpm test:e2e
+pnpm dev:local           # Serve this checkout on its own port
+pnpm local:status        # Checkout, branch, commit, dirty state, URL, server state
+pnpm local:status --json # The same report for scripts
+pnpm local:retire        # Stop this checkout's server, remove .output/, .tanstack/, and .local/
 ```
 
-`E2E_PORT` defaults to 4173 and sets the browser URL, production-server port, and readiness probe together. Browser checks start their own server and reject an occupied port, so they cannot quietly test another checkout or an old build. Give concurrent runs different ports and stop only processes your task started.
+- **Ports.** Each checkout derives a stable app port (20000-24999) and browser-test port (5000 higher) from its path, so the same worktree always gets the same URL. `pnpm test:e2e` uses the browser-test port unless `E2E_PORT` is set. Browser checks start their own production server and reject an occupied port, so they cannot quietly test another checkout or an old build.
+- **Ownership.** `pnpm dev:local` writes the ignored `.local/owner.json` with the checkout path, port, server process id and start time, and the commit it started from. It refuses to start when this checkout is already serving, or when another worktree's live server owns the same port. Two paths rarely share a port; if they do, retire one or start Vite with an explicit `--port`.
+- **Status.** The dev server reports `running`, `stopped`, or `stale`. `stale` means the recorded process id now belongs to a different process, which nothing here will stop.
+- **Retirement.** `pnpm local:retire` refuses while the checkout has uncommitted or untracked files, and then changes nothing. Otherwise it stops only the process it recorded, removes the build output and ownership file, and lists what it removed. To retire an older worktree whose script may be out of date, run it from an up-to-date checkout: `pnpm local:retire --checkout <path>`.
+
+`pnpm dev` still serves port 3000 for a single checkout. The commands rely on `git` and `ps`, so they run on macOS, Linux, and WSL.
+
+### Call it from worktree hooks
+
+Harnesses that create a worktree per task usually offer setup and cleanup hooks. Point them at these commands instead of harness-specific scripts:
+
+- **Setup:** run `pnpm install`, then start `pnpm dev:local` in the background if the task needs a running app. Read the URL from `appUrl` in `pnpm local:status --json`.
+- **Cleanup:** before removing the worktree, run `pnpm --dir <an up-to-date checkout> local:retire --checkout <worktree>`. A refusal means the worktree holds uncommitted work; keep it and report it rather than forcing removal.
+
+### Add a local resource
+
+A project that adds a database, local cookies, or fixtures registers it in the `resources` list in `scripts/local.ts`. Each resource has `setup`, `status`, and `teardown`: `dev:local` sets resources up in order, `local:status` reports each one, and `local:retire` tears them down in reverse, so retirement stays one command. Keep per-checkout state under `.local/`.
 
 The app currently needs no account, database, or environment file for local work. When adding persistence or an external service, include local fixtures, credentials, reset/cleanup instructions, and recovery checks with that feature.
 

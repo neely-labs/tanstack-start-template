@@ -21,6 +21,9 @@ todos.json
 # Local browser and authentication state
 .auth/
 
+# Per-checkout local environment (scripts/local.ts)
+.local/
+
 # Vitest artifacts
 .vitest
 
