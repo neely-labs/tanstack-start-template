@@ -55,8 +55,7 @@ export function check(budget: typeof BUDGET, root: string) {
   const problems: string[] = [];
   for (const entry of budget.docs) {
     const [pattern, heading] = entry.split("#", 2);
-    // oxlint-disable-next-line no-array-sort -- sorts a copy; the ES2022 lib lacks toSorted.
-    const files = [...fs.globSync(pattern, { cwd: root })].sort();
+    const files = fs.globSync(pattern, { cwd: root }).toSorted();
     if (files.length === 0) {
       problems.push(`${pattern} matches no file`);
     }
