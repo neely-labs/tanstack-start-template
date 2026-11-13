@@ -4,7 +4,7 @@
 
 ## Add
 
-**A disposable database per checkout.** Register it first in `resources` in `scripts/local.ts`, as `[database, devServer]`, so `pnpm dev:local` creates and migrates it, `pnpm local:status` reports it, and `pnpm local:retire` drops it. Setting `DATABASE_URL` in `setup` passes it to the migration and the dev server. Keep anything worth keeping in a seed script.
+**A disposable database per checkout.** Register it first in `resources` in `scripts/local.ts`, as `[database, devServer]`, so `pnpm dev:local` creates and migrates it, `pnpm local:status` reports it, and `pnpm local:retire` drops it. The snippet uses only imports and types that file already has. Setting `DATABASE_URL` in `setup` passes it to the migration and the dev server. Keep anything worth keeping in a seed script.
 
 ```ts
 async function run(command: string, ...args: string[]) {
