@@ -19,7 +19,7 @@ Run `pnpm build`, then `pnpm test:e2e` on the copied test: every test passes. Th
 - With the action reading the name from state, the greeting reads "Enter a name.".
 - With `onSubmit` in place of `action`, the submit puts `?name=Ada` in the URL, and the no-JavaScript test fails too.
 
-Restore the form. The test's setup asserts that the count still reads 0 after typing, so a route pattern that stops holding the scripts fails the test instead of passing it unheld.
+Restore the form. The test's setup asserts that the count still reads 0 after typing, which holds only before hydration, so a route pattern that stops holding the scripts fails the test instead of letting it type into a hydrated page.
 
 ## Remove
 
