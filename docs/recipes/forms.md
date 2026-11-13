@@ -4,23 +4,21 @@
 
 ## Add
 
-The code lives beside this file, where `pnpm check` and `pnpm typecheck` keep it passing on the pinned stack until you copy it:
+The code lives in [`forms/`](forms/), beside this file. Copy it, then rename the fields to yours:
 
-- **[`greeting-form.tsx`](forms/greeting-form.tsx)**, into `src/components/`. Its field is controlled for the live count. One effect copies what the field holds into state when it mounts, and the action reads the submitted `FormData`, never state.
-- **[`greeting.spec.ts`](forms/greeting.spec.ts)**, into `tests/e2e/`, with `/greeting` changed to the route that renders the form. It holds the page's scripts, types and submits into the server HTML, releases the scripts, and expects the greeting, the count, the field, and a URL without the name. A second test submits with JavaScript disabled and expects the URL unchanged.
-
-Then rename the fields to yours. A real form keeps the same three parts: a function `action`, a submit read from `FormData`, and one adopting effect per controlled field.
+- **[`greeting-form.tsx`](forms/greeting-form.tsx)**, into `src/components/`, rendered on a route. It follows the rule with a controlled field for the live count.
+- **[`greeting.spec.ts`](forms/greeting.spec.ts)**, into `tests/e2e/`, with `/greeting` changed to that route. The first test holds the page's scripts, types and submits into the server HTML, releases the scripts, and expects the greeting, the count, the field, and a URL without the name. The second submits with JavaScript disabled and expects no request at all.
 
 ## Prove
 
-Run `pnpm build`, then `pnpm test:e2e` on the copied test: every test passes. Then break the form three ways, rebuilding each time, and watch the first test fail:
+Run `pnpm build`, then `pnpm test:e2e` on the copied test: both tests pass. Then break the form three ways, rebuilding each time, and watch the first test fail:
 
 - Without the effect, the count stays at 0 and the next render erases the field.
 - With the action reading the name from state, the greeting reads "Enter a name.".
-- With `onSubmit` in place of `action`, the submit puts `?name=Ada` in the URL, and the no-JavaScript test fails too.
+- With `onSubmit` in place of `action`, the submit reloads the page with `?name=Ada` in the URL, so no greeting appears, and the second test sees that request.
 
-Restore the form. The test's setup asserts that the count still reads 0 after typing, which holds only before hydration, so a route pattern that stops holding the scripts fails the test instead of letting it type into a hydrated page.
+Restore the form. The first test asserts that the count still reads 0 after typing, which holds only before hydration, so a route pattern that stops holding the scripts fails the test instead of letting it type into a hydrated page.
 
 ## Remove
 
-Delete the copied test with the last controlled form. The rule stays. Delete `docs/recipes/forms/` with this file when the project drops its recipes.
+Delete the copied test with the last form it covers. The rule stays.

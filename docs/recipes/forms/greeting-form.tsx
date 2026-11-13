@@ -1,5 +1,4 @@
-// The forms recipe, docs/recipes/forms.md. Copy this file into src/components/
-// and render the form on a route; `pnpm check` keeps it passing here meanwhile.
+// The controlled form from docs/recipes/forms.md.
 import { useActionState, useEffect, useRef, useState } from "react";
 
 /** A controlled field with a live count, greeted without leaving the page. */

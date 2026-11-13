@@ -1,5 +1,4 @@
-// The forms recipe's browser test, docs/recipes/forms.md. Copy it into
-// tests/e2e/ and change "/greeting" to the route that renders the form.
+// The browser test from docs/recipes/forms.md.
 import { expect, test } from "@playwright/test";
 import type { Route } from "@playwright/test";
 
@@ -36,12 +35,16 @@ test("keeps a name typed and submitted before hydration", async ({ page }) => {
 
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
-  test("keeps the name out of the URL", async ({ page }) => {
+  test("sends nothing on submit", async ({ page }) => {
     await page.goto("/greeting");
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      sent.push(`${request.method()} ${request.url()}`);
+    });
     const field = page.getByRole("textbox", { name: "Name" });
     await field.fill("Ada");
     await field.press("Enter");
     await page.waitForLoadState();
-    expect(new URL(page.url()).search).toBe("");
+    expect(sent).toStrictEqual([]);
   });
 });
