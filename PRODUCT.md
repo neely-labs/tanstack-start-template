@@ -16,7 +16,7 @@ Success means a developer can create a new repository, replace the documented id
 
 ## Cross-cutting invariants
 
-<!-- Filled during setup (docs/template-setup.md, "Rewrite the guidance documents"). One line per rule that every change must preserve, whatever the area, such as "Every stored amount is in integer cents" or "No page requires sign-in to read". Link the doc or module that enforces each one. Leave this section empty until the product has such a rule. -->
+<!-- Filled during setup (docs/template-setup.md, "Rewrite the guidance documents"). One line per rule that every change must preserve, whatever the area, such as "Every stored amount is in integer cents" or "No page requires sign-in to read". Link the doc or module that enforces each one, or the issue that will build it. Leave this section empty until the product has such a rule. -->
 
 ## Positioning
 

@@ -61,7 +61,7 @@ A pull request is ready to merge when all of these hold on its current head:
 
 ## After merge
 
-Delete the branch on GitHub and locally, and run `pnpm local:retire` in the task's checkout. If the task had its own worktree, remove it too. A squash merge leaves the local branch looking unmerged, so before deleting it with `git branch -D`, check that its tip matches the merged head that `gh pr view <n> --json headRefOid` prints. Keep any checkout that still holds uncommitted work, and report it.
+Retire the task's checkout as [concurrent checkouts](../concurrent-checkouts.md) describes. Then remove its worktree, or switch the main checkout back to the default branch if the task used it. Then delete the branch on GitHub and locally. A squash merge leaves the local branch looking unmerged, so before deleting it with `git branch -D`, check that its tip matches the merged head that `gh pr view <n> --json headRefOid --jq .headRefOid` prints.
 
 ## Guards
 

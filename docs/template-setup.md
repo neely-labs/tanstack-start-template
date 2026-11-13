@@ -4,7 +4,7 @@ The procedure for turning a fresh copy of this template into a project. It is wr
 
 Work the steps in order. Each one states the result that ends it.
 
-Setup lands as one pull request, and the person's request to set up the project is its work item, so it needs no issue. Commit steps 2 to 6, 9 and 10 on a branch. Steps 7 and 8 change GitHub settings rather than files: apply them once approved, before opening the pull request, so setup merges through the protected path it creates. In the pull request, replace the `Closes #` line with `Setup per docs/template-setup.md`. The change alters what users see, so [the delivery guide](agents/delivery.md) gives it a flow walk and tier 1 review.
+Setup lands as one pull request with no issue: the person's request to set up the project is its work item. Commit the file changes on a branch. Steps 7 and 8 change GitHub settings rather than files: apply them once approved, before opening the pull request, so setup merges through the protected path it creates. In the pull request, replace the `Closes #` line with `Template setup; no issue.` The change alters what users see, so it gets a [flow walk](agents/delivery.md#flow-walk) and at least tier 1 review. Brief its tester with the goal "recognize the new product from its pages", the user state of a visitor, and the home page as the start.
 
 ## 1. Collect the answers
 
@@ -207,13 +207,12 @@ Ends when `docs/` holds only documents about the product and its template origin
 pnpm validate
 pnpm exec playwright install chromium
 pnpm test:e2e
-pnpm dev:local
 ```
 
-Open the `appUrl` that `pnpm local:status --json` prints and confirm the header, the page titles, and the footer show the new identity. `pnpm dev:local` serves this checkout on its own port, so another project already on port 3000 does not get in the way; [concurrent checkouts](concurrent-checkouts.md) covers the other per-checkout commands. Commit, then stop it with `pnpm local:retire`, which refuses while files are uncommitted. A failed browser run retains screenshots and traces under `test-results/`; [the development guide](development.md#investigate-a-failure) explains local inspection and CI artifacts.
+Then start `pnpm dev:local` in the background, open the `appUrl` that `pnpm local:status --json` prints, and confirm the header, the page titles, and the footer show the new identity. It serves this checkout on its own port, so another project already on port 3000 does not get in the way. Commit, then stop it with `pnpm local:retire`; [concurrent checkouts](concurrent-checkouts.md) covers both commands. A failed browser run retains screenshots and traces under `test-results/`; [the development guide](development.md#investigate-a-failure) explains local inspection and CI artifacts.
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
 Confirm `docs/template-origin.md` lists each departure setup made, such as removed example pages or a host preset. If issue labels were selected, confirm `gh label list` shows the labels from step 8. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
-Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. The footer's "Built from" credit is an attribution, not placeholder text. Keep it, or drop it from `src/components/site-footer.tsx` together with `templateUrl` in `src/lib/site-config.ts`. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.
+Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. The footer's "Built from" credit is an attribution, not placeholder text. Keep it, or drop it from `src/components/site-footer.tsx`, and remove `templateUrl` from `src/lib/site-config.ts` once nothing else uses it. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.
