@@ -8,7 +8,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 export type Checkout = ReturnType<typeof checkoutOf>;
-/** What `dev` started, so status and retirement act only on that process. */
+/** What `dev` started, so status, stop and retire act only on that process. */
 export type Owner = Pick<Checkout, "appPort" | "e2ePort" | "root"> & {
   commit: string;
   pid: number;
@@ -158,7 +158,7 @@ async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
     fs.mkdirSync(lock);
   } catch {
     throw new Error(
-      `Another start or retire holds ${lock}; remove it if none does.`
+      `Another start, stop or retire holds ${lock}; remove it if none does.`
     );
   }
   try {

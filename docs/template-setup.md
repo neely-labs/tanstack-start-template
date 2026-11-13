@@ -149,7 +149,7 @@ gh repo edit "$repo" --delete-branch-on-merge
 gh repo view "$repo" --json deleteBranchOnMerge --jq .deleteBranchOnMerge
 ```
 
-The second command prints `true`. If either fails, report it and stop this step, as for the ruleset.
+The last command prints `true`. If any fails, report it and stop this step, as for the ruleset.
 
 ### Optional deployment gate
 

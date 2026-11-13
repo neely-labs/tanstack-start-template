@@ -22,7 +22,7 @@ A round is one review and the fixes it prompts; at tier 0 the review is the auth
 
 Before code review of a change to what a user sees or decides, a fresh tester walks the flow: a new agent or a person who has seen neither the diff nor the conversation behind it.
 
-1. Commit the change, use its main path yourself, and stop your server with `pnpm local:stop`. Brief the tester with the commit and three lines from the issue: the user's goal, their user state, and where they start. Share nothing else: no diff, changed files, rationale, or suspected problems.
+1. Commit the change, use its main path yourself, and stop your server. Brief the tester with the commit and three lines from the issue: the user's goal, their user state, and where they start. Share nothing else: no diff, changed files, rationale, or suspected problems.
 2. The tester opens the app as [the flow-walk notes](flow-walk.md) say, walks toward the goal using only what the screens show, and reports where they hesitated, what they could not recover from, and what they could not judge.
 3. Fix a blocker and walk again with a new tester. For a finding on a screen this change altered, fix it or decline it with a reason, unless it needs a new owner decision. Handle a bug you reproduce per [the issue tracker guide](issue-tracker.md#issue-shape). Everything else is a note under the PR's Decisions.
 4. If review then changes the visible flow beyond wording, walk it once more with a new tester.
@@ -63,7 +63,7 @@ Squash-merge, pinned to that head: `gh pr merge <n> --squash --match-head-commit
 
 ## After merge
 
-GitHub deletes the remote branch on merge. Confirm the pull request merged and that the local branch's tip matches the merged head, `gh pr view <n> --json headRefOid --jq .headRefOid`; if not, keep the branch and report it. Otherwise retire the checkout as [concurrent checkouts](../concurrent-checkouts.md) describes and remove its worktree, or switch the main checkout back to the default branch, then delete the local branch with `git branch -D`.
+Confirm the pull request merged and that the local branch's tip matches the merged head, `gh pr view <n> --json headRefOid --jq .headRefOid`; if not, keep the branch and report it. Otherwise retire the checkout as [concurrent checkouts](../concurrent-checkouts.md) describes and remove its worktree, or switch the main checkout back to the default branch, then delete the local branch with `git branch -D`. GitHub deletes the remote branch on merge; if [setup](../template-setup.md#7-apply-repository-protection) left that off, delete it too.
 
 ## Guards
 
