@@ -22,10 +22,10 @@ A round is one review and the fixes it prompts; at tier 0 the review is the auth
 
 Before code review of a change to what a user sees or decides, someone with fresh context walks the flow: a new agent or a person who has seen neither the diff nor the conversation that built it.
 
-1. Commit the change and use its main path yourself. Brief the tester with the commit and three lines from the issue: the user's goal, their user state, and where they start. Share nothing else, such as the diff, changed files, rationale, or suspected problems.
+1. Commit the change, use its main path yourself, and stop your server. Brief the tester with the commit and three lines from the issue: the user's goal, their user state, and where they start. Share nothing else about the change, such as the diff, changed files, rationale, or suspected problems.
 2. The tester opens the app as [the flow-walk notes](flow-walk.md) say, walks toward the goal using only what the screens show, and reports where they hesitated, what they could not recover from, and what they could not judge.
-3. Fix a blocker and walk again with a new tester. Fix or decline, with a reason, findings on screens this change altered. A bug you reproduce yourself at that commit becomes an issue, per [the issue tracker guide](issue-tracker.md). Everything else is a note under the PR's Decisions.
-4. If review then changes the visible flow, walk it once more with a new tester.
+3. Fix a blocker and walk again with a new tester. For a finding on a screen this change altered, fix it or decline it with a reason, unless it needs a new owner decision. A bug you reproduce yourself at that commit becomes an issue, per [the issue tracker guide](issue-tracker.md). Everything else is a note under the PR's Decisions.
+4. If review then changes the visible flow beyond wording, walk it once more with a new tester.
 
 The `flow-walk` skill carries the full procedure; installing it is [optional](../development.md#optional-skills).
 

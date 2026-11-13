@@ -99,7 +99,7 @@ Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.
 
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
 
-Agent tooling and vendored plugin source are excluded from application quality gates. Project skills are optional. Manually review content, accessibility, architecture, and edge cases alongside the automated checks.
+Agent tooling and vendored plugin source are excluded from application quality gates. Manually review content, accessibility, architecture, and edge cases alongside the automated checks.
 
 ## Optional skills
 
