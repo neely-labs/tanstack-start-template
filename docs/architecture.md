@@ -1,6 +1,6 @@
 # How the app fits together
 
-Use this reference when finding a module, changing public identity or metadata, or working across the server/browser boundary. For the editing and verification sequence, see [the development guide](development.md).
+Use this reference when finding a module, changing public identity or metadata, working across the server/browser boundary, or adding a feature that touches a central list or shared rule. For the editing and verification sequence, see [the development guide](development.md).
 
 ## Where code lives
 
@@ -45,3 +45,15 @@ A route that needs browser APIs can choose `ssr: false` or `ssr: "data-only"`. T
 `src/lib/security-headers.ts` also supplies Nitro's route rules, keeping the same headers on prerendered and static responses. A Content-Security-Policy belongs to the application's requirements and is left for that project to choose.
 
 For the current UI decisions and theme tokens, see [DESIGN.md](../DESIGN.md).
+
+## Keep features cheap to add
+
+These rules lower the number of things a caller, or the next feature, must remember. They are guidance, not a framework: they add no directory convention, base class, or registry, and they do not promise a file count per feature.
+
+**Check a registration before inventing a manifest.** When a feature must be added to a central list, derive the list where you can. Where you cannot, add a type or test that fails and names the list to change. `src/lib/public-routes.ts` does both: `RoutePath` comes from the generated route tree, so a route missing from `routeVisibility` fails `pnpm typecheck` at that map, and `publicPaths` is derived from the map for prerendering, the sitemap, and `pnpm seo:verify`.
+
+**Keep shared rules behind thin adapters.** Routes, server functions, and any later protocol call one shared operation. Validation and policy live in that operation, not in each caller. `src/lib/text-stats.ts` owns the input rules in `parseTextInput` and `maxTextLength`; `analyzeText` in `src/lib/server-runtime.ts` only connects them to a POST, and `src/routes/runtime.tsx` imports `maxTextLength` instead of restating the limit.
+
+**Give copy one home.** User-facing wording lives in one module per surface. Tests read it from that module, and assert exact wording only where the wording states a commitment, such as a limit. `src/lib/site-config.ts` holds the site's name, description, and navigation labels; the header, the footer, `src/lib/seo.test.ts`, and `src/lib/site-files.test.ts` all read them from there.
+
+**Test the pauses in asynchronous writes.** For anything asynchronous that writes state, name each pause between reading the state and applying the result, test the interleaving at each pause, and assert that the test's setup took effect so the test can fail. Starting a dev server in `scripts/local.ts` reads the ownership file, spawns Vite, then writes the file, so a second start or retire could run in between; both hold `withLock`. In `scripts/local.test.ts`, "refuses to start or retire while another holds the lock" takes the lock first and expects the lock's own error rather than any rejection, so it fails if the lock was not held. [Issues](agents/issue-tracker.md#issue-shape) name these pauses up front.
