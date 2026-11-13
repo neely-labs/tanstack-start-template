@@ -47,6 +47,10 @@ function git(root: string, ...args: string[]) {
   return execFileSync("git", ["-C", root, ...args], options).trim();
 }
 
+/** Uncommitted and untracked work, whatever the user's Git configuration. */
+const workIn = (root: string) =>
+  git(root, "status", "--porcelain", "--untracked-files=all");
+
 /** Trimmed output of `read`, or "" when it throws. */
 function readOrEmpty(read: () => string) {
   try {
@@ -73,7 +77,10 @@ export function processStart(pid: number) {
   return readOrEmpty(() => execFileSync("ps", args, options)) || undefined;
 }
 
-/** Parses the ownership file; a missing or malformed one owns nothing. */
+/**
+ * Parses the ownership file. A missing or malformed one, or one copied from
+ * another checkout, owns nothing.
+ */
 export function readOwner(checkout: Checkout): Owner | undefined {
   let value: unknown;
   try {
@@ -90,7 +97,8 @@ export function readOwner(checkout: Checkout): Owner | undefined {
     root: String(fields.get("root")),
     startedAt: String(fields.get("startedAt")),
   };
-  return Number.isInteger(owner.pid) && owner.pid > 0 ? owner : undefined;
+  const valid = Number.isInteger(owner.pid) && owner.pid > 0;
+  return valid && owner.root === checkout.root ? owner : undefined;
 }
 
 /** `stale` means the recorded process id now belongs to another process. */
@@ -128,38 +136,56 @@ function sendSignal(pid: number, name: NodeJS.Signals) {
 
 const appUrl = (checkout: Checkout) => `http://localhost:${checkout.appPort}`;
 
+/** Checks ownership, starts Vite, and records it; callers hold the lock. */
+function startVite(checkout: Checkout) {
+  const own = readOwner(checkout);
+  if (own && serverState(own) === "running") {
+    throw new Error(`Already serving ${appUrl(checkout)} (pid ${own.pid}).`);
+  }
+  const other = claimant(checkout);
+  if (other) {
+    const fix = "Retire it or start Vite with an explicit --port.";
+    throw new Error(`Port ${other.appPort} belongs to ${other.root}. ${fix}`);
+  }
+  const vite = path.join(checkout.root, "node_modules/vite/bin/vite.js");
+  const args = [vite, "dev", "--port", String(checkout.appPort)];
+  const child = spawn(process.execPath, [...args, "--strictPort"], {
+    cwd: checkout.root,
+    stdio: "inherit",
+  });
+  const pid = child.pid ?? 0;
+  const commit = git(checkout.root, "rev-parse", "HEAD");
+  const startedAt = processStart(pid) ?? "";
+  const { appPort, e2ePort, root } = checkout;
+  const owner: Owner = { appPort, commit, e2ePort, pid, root, startedAt };
+  fs.writeFileSync(checkout.ownerFile, `${JSON.stringify(owner, null, 2)}\n`);
+  return child;
+}
+
 export const devServer: Resource = {
   name: "dev server",
   async setup(checkout) {
-    const own = readOwner(checkout);
-    if (own && serverState(own) === "running") {
-      throw new Error(`Already serving ${appUrl(checkout)} (pid ${own.pid}).`);
+    // An exclusive lock keeps overlapping starts from sharing one record.
+    const lock = path.join(path.dirname(checkout.ownerFile), "starting");
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    try {
+      fs.mkdirSync(lock);
+    } catch {
+      throw new Error(`Another start holds ${lock}; remove it if none does.`);
     }
-    const other = claimant(checkout);
-    if (other) {
-      const fix = "Retire it or start Vite with an explicit --port.";
-      throw new Error(`Port ${other.appPort} belongs to ${other.root}. ${fix}`);
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = startVite(checkout);
+    } finally {
+      fs.rmSync(lock, { force: true, recursive: true });
     }
-    const vite = path.join(checkout.root, "node_modules/vite/bin/vite.js");
-    const args = [vite, "dev", "--port", String(checkout.appPort)];
-    const child = spawn(process.execPath, [...args, "--strictPort"], {
-      cwd: checkout.root,
-      stdio: "inherit",
-    });
-    const pid = child.pid ?? 0;
-    const commit = git(checkout.root, "rev-parse", "HEAD");
-    const startedAt = processStart(pid) ?? "";
-    const { appPort, e2ePort, root } = checkout;
-    const owner: Owner = { appPort, commit, e2ePort, pid, root, startedAt };
-    fs.mkdirSync(path.dirname(checkout.ownerFile), { recursive: true });
-    fs.writeFileSync(checkout.ownerFile, `${JSON.stringify(owner, null, 2)}\n`);
     for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
       process.on(signal, () => {
         child.kill(signal);
       });
     }
     await once(child, "exit");
-    if (readOwner(checkout)?.pid === pid) {
+    if (readOwner(checkout)?.pid === child.pid) {
       fs.rmSync(checkout.ownerFile, { force: true });
     }
     process.exitCode = child.exitCode ?? 0;
@@ -218,7 +244,7 @@ export function status(checkout: Checkout) {
     branch: git(checkout.root, "branch", "--show-current") || "(detached)",
     checkout: checkout.root,
     commit: git(checkout.root, "rev-parse", "--short", "HEAD"),
-    dirty: git(checkout.root, "status", "--porcelain") !== "",
+    dirty: workIn(checkout.root) !== "",
     e2ePort: checkout.e2ePort,
     resources: Object.fromEntries(states),
   };
@@ -226,7 +252,7 @@ export function status(checkout: Checkout) {
 
 /** Refuses on uncommitted or untracked work; otherwise removes local state. */
 export async function retire(checkout: Checkout) {
-  const work = git(checkout.root, "status", "--porcelain");
+  const work = workIn(checkout.root);
   if (work) {
     const reason = "commit or remove this work first";
     throw new Error(`Refusing to retire ${checkout.root}; ${reason}:\n${work}`);

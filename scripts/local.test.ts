@@ -97,6 +97,14 @@ describe("local environment", () => {
     own(main, mine);
     fs.mkdirSync(path.join(main.root, ".output"));
     fs.writeFileSync(path.join(main.root, "notes.txt"), "draft");
+    // A user setting that hides untracked files must not hide them here.
+    execFileSync("git", [
+      "-C",
+      main.root,
+      "config",
+      "status.showUntrackedFiles",
+      "no",
+    ]);
 
     await expect(retire(main)).rejects.toThrow(/Refusing.*notes\.txt/su);
     expect(isAlive(mine)).toBeTruthy();
@@ -126,6 +134,29 @@ describe("local environment", () => {
       `Already serving http://localhost:${main.appPort} (pid ${mine}).`
     );
     expect(readOwner(main)?.pid).toBe(mine);
+  });
+
+  it("ignores a record copied from another checkout", async () => {
+    const [main, other] = repositoryWithWorktree();
+    const theirs = startProcess();
+    own(other, theirs);
+    fs.cpSync(path.dirname(other.ownerFile), path.dirname(main.ownerFile), {
+      recursive: true,
+    });
+
+    expect(serverOf(main)).toStrictEqual({ state: "stopped" });
+    await expect(retire(main)).resolves.toStrictEqual([]);
+    expect(isAlive(theirs)).toBeTruthy();
+  });
+
+  it("refuses to start while another start holds the lock", async () => {
+    const [main] = repositoryWithWorktree();
+    fs.mkdirSync(path.join(path.dirname(main.ownerFile), "starting"), {
+      recursive: true,
+    });
+
+    await expect(devServer.setup(main)).rejects.toThrow(/Another start holds/u);
+    expect(readOwner(main)).toBeUndefined();
   });
 
   it("refuses a port that another worktree's live server owns", async () => {
