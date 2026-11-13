@@ -123,7 +123,9 @@ Ends when `gh label list` shows all eight labels.
 
 `PRODUCT.md`, `DESIGN.md`, and `AGENTS.md` describe the template. Rewrite them to describe the product, using the answers from step 1.
 
-Keep `AGENTS.md` concise: decisions, constraints, reasons, and conditional pointers to the relevant product and operating guidance. Preserve generated-file ownership, the quality gates, route visibility's SEO-only meaning, process ownership, the requirement to document local fixtures and recovery when adding integrations, and the links to `docs/agents/`.
+Fill **Cross-cutting invariants** in `PRODUCT.md` with the rules every change must preserve, one line each, linking the doc or module that enforces it. Ask the person for them if step 1 did not surface any. Agents read this section on every task, together with Product Purpose, so keep it short; an empty section is better than a guessed rule.
+
+Keep `AGENTS.md` an index of about 4 KB: its always-read pointers, the table of conditional links including `docs/agents/`, and the Quality list. State each new rule once, in the doc that owns it, and link it from the index rather than copying it. Record any conflict between a shared skill and repository policy under **Skills in this repo**.
 
 Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, and the relevant host instructions in `docs/deployment.md`. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 3. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 

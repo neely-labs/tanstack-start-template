@@ -14,6 +14,10 @@ TanStack Start Template is a reusable GitHub template for beginning production-m
 
 Success means a developer can create a new repository, replace the documented identity and example surfaces, run one validation command, and continue building without first rebuilding the project's foundation.
 
+## Cross-cutting invariants
+
+<!-- Filled during setup (docs/template-setup.md, step 8). One line per rule that every change must preserve, whatever the area, such as "Every stored amount is in integer cents" or "No page requires sign-in to read". Link the doc or module that enforces each one. Leave this section empty until the product has such a rule. -->
+
 ## Positioning
 
 The template combines a deliberately small application surface with a complete path from local editing through hooks, tests, production output, rendered SEO verification, CI, and Vercel deployment. Its replacement seams and deliberate omissions are documented so infrastructure is reusable without quietly imposing a product model.
