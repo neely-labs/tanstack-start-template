@@ -34,35 +34,45 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PR_FILES: ${{ github.event.pull_request.changed_files }}
           BEFORE: ${{ github.event.before }}
           SHA: ${{ github.sha }}
         run: |
-          # One line per file: its path, then a rename's old path after a tab.
-          # @tsv escapes tabs and newlines inside a name, so a name adds no lines.
-          per_file='def per_file: .[] | [.filename, .previous_filename // empty] | @tsv;'
-          changed=""
+          # Compare the event's own commits, not the live pull request, which a
+          # later push can change. A compare lists at most 300 files, all on its
+          # first page, so it is not paginated and a list of 300 may be partial.
+          complete='(.files | type) == "array" and (.files | length) < 300'
+          range=""
           case "$EVENT" in
             pull_request)
-              # The files endpoint stops at 3,000 files, so a list shorter than
-              # the pull request's file count is partial.
-              changed=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
-                --jq "$per_file"' per_file') || changed=""
-              lines=$(printf '%s\n' "$changed" | wc -l)
-              [ "$((lines))" = "$PR_FILES" ] || changed=""
+              range="$PR_BASE...$PR_HEAD"
               ;;
             push)
-              # A compare lists at most 300 files, all on its first page, so it
-              # is not paginated and a list of 300 may be partial. A branch's
-              # first push reports an all-zero "before" that cannot be compared.
+              # Only a push that adds commits compares "before" with "after"; a
+              # force push compares from the merge base and hides what it undid.
+              # A branch's first push reports an all-zero "before".
               if [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
-                changed=$(gh api "repos/$REPO/compare/$BEFORE...$SHA" \
-                  --jq "$per_file"' if (.files | type) == "array" and (.files | length) < 300 then .files | per_file else empty end') ||
-                  changed=""
+                range="$BEFORE...$SHA"
+                complete="$complete"' and .status == "ahead"'
               fi
               ;;
           esac
+
+          # One line per file: its path, then a rename's old path after a tab.
+          # @tsv escapes tabs and newlines inside a name, so a name adds no lines.
+          changed=""
+          if [ -n "$range" ]; then
+            changed=$(gh api "repos/$REPO/compare/$range" --jq "if $complete then"'
+              .files[] | [.filename, .previous_filename // empty] | @tsv else empty end') ||
+              changed=""
+          fi
+          # A pull request lists each file once, so a different count is partial.
+          if [ "$EVENT" = pull_request ]; then
+            lines=$(printf '%s\n' "$changed" | wc -l)
+            [ "$((lines))" = "$PR_FILES" ] || changed=""
+          fi
 
           # An empty list means "could not determine", never "nothing changed",
           # so fall through to the full run. Only Markdown at the root or under

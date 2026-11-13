@@ -118,6 +118,8 @@ fs.writeFileSync(path.join(fakeBin, "gh"), fakeGh, { mode: 0o755 });
 
 const before = "a".repeat(40);
 const sha = "b".repeat(40);
+const prBase = "c".repeat(40);
+const prHead = "d".repeat(40);
 const firstPush = "0".repeat(40);
 
 interface ChangedFile {
@@ -126,14 +128,17 @@ interface ChangedFile {
   status: string;
 }
 
-/** The pull request files list, or a compare with or without its `files`. */
-type Response = ChangedFile[] | { files?: ChangedFile[]; status?: string };
+/** A compare response, which can lack its `files`. */
+interface Compare {
+  files?: ChangedFile[];
+  status?: string;
+}
 
 interface Case {
   event: string;
   before?: string;
   changedFiles?: number;
-  response?: Response;
+  response?: Compare;
 }
 
 let runCount = 0;
@@ -155,7 +160,8 @@ function runScope(input: Case) {
     input.event === "pull_request"
       ? {
           "github.event.pull_request.changed_files": String(input.changedFiles),
-          "github.event.pull_request.number": "7",
+          "github.event.pull_request.base.sha": prBase,
+          "github.event.pull_request.head.sha": prHead,
         }
       : {};
   const context = {
@@ -211,17 +217,21 @@ const renamed = (filename: string, previous: string): ChangedFile => ({
   previous_filename: previous,
   status: "renamed",
 });
+// A pull request's base has usually moved on, so its compare is "diverged".
 const pullRequest = (
   files: ChangedFile[],
   changedFiles = files.length
 ): Case => ({
   changedFiles,
   event: "pull_request",
-  response: files,
+  response: { files, status: "diverged" },
 });
-const push = (response?: Response): Case => ({ event: "push", response });
+const push = (response?: Compare): Case => ({ event: "push", response });
+const ahead = (files: ChangedFile[]): Compare => ({ files, status: "ahead" });
+const markdown = (count: number) =>
+  Array.from({ length: count }, (_, n) => modified(`docs/${n}.md`));
 
-const pullFiles = "repos/owner/repo/pulls/7/files";
+const pullCompare = `repos/owner/repo/compare/${prBase}...${prHead}`;
 const compare = `repos/owner/repo/compare/${before}...${sha}`;
 
 const cases: [string, Case, boolean, string[]][] = [
@@ -233,17 +243,17 @@ const cases: [string, Case, boolean, string[]][] = [
       modified("docs/agents/delivery.md"),
     ]),
     true,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "a rename between docs",
     pullRequest([renamed("docs/new.md", "docs/old.md")]),
     true,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "a Markdown-only push",
-    push({ files: [modified("docs/guide.md")] }),
+    push(ahead([modified("docs/guide.md")])),
     true,
     [compare],
   ],
@@ -251,55 +261,60 @@ const cases: [string, Case, boolean, string[]][] = [
     "a rename from source into docs",
     pullRequest([renamed("docs/notes.md", "src/notes.ts")]),
     false,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "a deleted source file",
     pullRequest([{ filename: "src/old.ts", status: "removed" }]),
     false,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "a pull request list shorter than its file count",
     pullRequest([modified("docs/guide.md")], 3001),
     false,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "a filename with a newline",
     pullRequest([modified("README.md\ndocs/app.ts")]),
     false,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "a compare at its 300-file limit",
-    push({
-      files: Array.from({ length: 300 }, (_, n) => modified(`docs/${n}.md`)),
-    }),
+    push(ahead(markdown(300))),
     false,
     [compare],
   ],
   [
-    "a compare with no files key",
-    push({ status: "identical" }),
+    "a pull request at the 300-file limit",
+    pullRequest(markdown(300)),
+    false,
+    [pullCompare],
+  ],
+  [
+    "a force push, which compares from the merge base",
+    push({ files: [modified("docs/guide.md")], status: "diverged" }),
     false,
     [compare],
   ],
+  ["a compare with no files key", push({ status: "ahead" }), false, [compare]],
   ["a failed request", push(), false, [compare]],
-  ["an empty file list", pullRequest([]), false, [pullFiles]],
+  ["an empty file list", pullRequest([]), false, [pullCompare]],
   ["a branch's first push", { before: firstPush, event: "push" }, false, []],
   ["a manual dispatch", { event: "workflow_dispatch" }, false, []],
   [
     "a non-Markdown file under docs/",
     pullRequest([modified("docs/guide.md"), modified("docs/diagram.svg")]),
     false,
-    [pullFiles],
+    [pullCompare],
   ],
   [
     "Markdown outside docs/ and the root",
     pullRequest([modified("src/README.md")]),
     false,
-    [pullFiles],
+    [pullCompare],
   ],
 ];
 
@@ -320,6 +335,6 @@ describe("documentation-only CI detection", () => {
     expect(result.stderr).not.toMatch(/fake gh: /u);
     expect(result.status).toBe(0);
     expect(result.output).toBe(`docs-only=${docsOnly}\n`);
-    expect(result.calls.map((call) => call.split("?")[0])).toStrictEqual(calls);
+    expect(result.calls).toStrictEqual(calls);
   });
 });
