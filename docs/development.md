@@ -115,3 +115,22 @@ The example loader-retry test simulates a failed request inside its browser, the
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
 
 Agent tooling and vendored plugin source are excluded from application quality gates. Project skills are optional. Manually review content, accessibility, architecture, and edge cases alongside the automated checks.
+
+## Release history
+
+- 2026-11-01: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-02: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-03: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-04: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-05: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-06: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-07: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-08: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-09: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-10: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-11: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-12: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-13: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-14: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-15: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
+- 2026-11-16: Changed the local checks and recorded what each run measured on this host, so a later agent can compare.
