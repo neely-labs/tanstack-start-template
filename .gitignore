@@ -19,7 +19,7 @@ todos.json
 .claude/settings.local.json
 
 # Opt-in flow-walk skill, installed per checkout (docs/development.md).
-# Drop the lock file line to commit installed skills.
+# Remove these rules to commit installed skills instead.
 /.agents/skills/flow-walk/
 /.claude/skills/flow-walk
 /skills-lock.json
