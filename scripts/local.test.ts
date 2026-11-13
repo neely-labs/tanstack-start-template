@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -14,6 +15,7 @@ import {
   readOwner,
   retire,
   status,
+  stop,
 } from "./local.ts";
 import type { Checkout } from "./local.ts";
 
@@ -111,6 +113,58 @@ describe("local environment", () => {
     expect(fs.existsSync(path.join(main.root, ".output"))).toBeTruthy();
   });
 
+  it("stops only the owned server on a dirty tree and keeps local state", async () => {
+    const [main, other] = repositoryWithWorktree();
+    const [mine, theirs] = [startProcess(), startProcess()];
+    own(main, mine);
+    own(other, theirs);
+    const kept = [".output/server.mjs", ".local/data.db", "notes.txt"];
+    for (const file of kept) {
+      fs.mkdirSync(path.dirname(path.join(main.root, file)), {
+        recursive: true,
+      });
+      fs.writeFileSync(path.join(main.root, file), "keep");
+    }
+
+    await expect(stop(main)).resolves.toStrictEqual([
+      `stopped dev server (pid ${mine})`,
+      "removed .local/owner.json",
+    ]);
+    expect(isAlive(mine)).toBeFalsy();
+    expect(serverOf(main)).toStrictEqual({ state: "stopped" });
+    expect(serverOf(other)).toMatchObject({ pid: theirs, state: "running" });
+    for (const file of kept) {
+      expect(fs.readFileSync(path.join(main.root, file), "utf-8")).toBe("keep");
+    }
+  });
+
+  it("clears a record whose server already exited", async () => {
+    const [main] = repositoryWithWorktree();
+    const exited = spawn("true", { env: gitEnv, stdio: "ignore" });
+    const exitedPid = exited.pid ?? 0;
+    const startedAt = processStart(exitedPid);
+    await once(exited, "exit");
+    own(main, exitedPid, startedAt ?? "gone");
+    expect(serverOf(main)).toStrictEqual({ state: "stopped" });
+
+    await expect(stop(main)).resolves.toStrictEqual([
+      "removed .local/owner.json",
+    ]);
+    await expect(stop(main)).resolves.toStrictEqual([]);
+  });
+
+  it("clears a reused record without signalling its process", async () => {
+    const [main] = repositoryWithWorktree();
+    const unrelated = startProcess();
+    own(main, unrelated, "Thu Jan  1 00:00:00 1970");
+    await expect(stop(main)).resolves.toStrictEqual([
+      `left pid ${unrelated} alone: it is now another process`,
+      "removed .local/owner.json",
+    ]);
+    expect(isAlive(unrelated)).toBeTruthy();
+    expect(serverOf(main)).toStrictEqual({ state: "stopped" });
+  });
+
   it("detects a reused process id and does not kill it", async () => {
     const [main] = repositoryWithWorktree();
     const unrelated = startProcess();
@@ -148,13 +202,14 @@ describe("local environment", () => {
     expect(isAlive(theirs)).toBeTruthy();
   });
 
-  it("refuses to start or retire while another holds the lock", async () => {
+  it("refuses to start, stop or retire while another holds the lock", async () => {
     const [main] = repositoryWithWorktree();
     const mine = startProcess();
     own(main, mine);
     fs.mkdirSync(path.join(path.dirname(main.ownerFile), "lock"));
 
     await expect(devServer.setup(main)).rejects.toThrow(/holds .*lock/u);
+    await expect(stop(main)).rejects.toThrow(/holds .*lock/u);
     await expect(retire(main)).rejects.toThrow(/holds .*lock/u);
     expect(isAlive(mine)).toBeTruthy();
     expect(readOwner(main)?.pid).toBe(mine);
