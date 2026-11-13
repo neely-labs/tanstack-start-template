@@ -20,15 +20,16 @@ A round is one review and the fixes it prompts; at tier 0 the review is the auth
 
 ## Merge danger
 
-State three things in the pull request description before merge.
+State these in the pull request description before merge.
 
 - **Door:** one for the whole change, set by its least reversible part.
   - _Clean two-way:_ reverting the merge restores everything, because nothing outside the code changed.
   - _Two-way:_ reverting restores the behavior, but something left behind needs known cleanup, such as data written in a new shape, a setting, or a cache.
   - _One-way:_ a revert cannot undo it, as with deleted or rewritten data, a sent message, a charge, or a published release.
   - _Uncertain:_ you cannot tell. Treat it as one-way until you can.
+- **Rollback:** only when the door is not clean two-way, how to undo or contain the change, such as the cleanup a revert leaves or the forward fix for a one-way step.
 - **Blast radius:** what breaks if the change is wrong, such as docs only, one page, every page, stored data, or people outside the project.
-- **Tier:** from the table above.
+- **Risk tier:** the review tier from the table above.
 
 ## Evidence
 

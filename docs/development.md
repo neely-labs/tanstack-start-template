@@ -48,6 +48,12 @@ After `pnpm validate` has built the current app, run `pnpm test:e2e`. The browse
 
 Before handoff, inspect the changed route or action and report what you actually checked, with useful evidence and any remaining uncertainty. Unit checks, production browser checks, and manual review each answer different questions.
 
+- For interface changes, operate the changed controls with the keyboard alone and walk their recovery paths, such as a failed request or invalid input.
+- When public pages change, confirm that their metadata, navigation, and entries in `src/lib/public-routes.ts` still agree.
+- Update any product, design, architecture, or operating guidance the change makes stale.
+
+Record each result in the Verification table of the [pull request template](../.github/pull_request_template.md).
+
 ## Use concurrent checkouts
 
 Separate worktrees have their own source and build output, but share network ports. Reuse a development server after confirming its process belongs to this checkout and it serves the expected app.
