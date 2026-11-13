@@ -45,7 +45,7 @@ Code that reads the time takes a `clock: Clock = systemClock` parameter, and tes
 
 **Allowed exceptions.** To time a real process, such as a polling deadline, use `performance.now()`, which the rule allows. Anything else needs `// oxlint-disable-next-line no-restricted-properties -- <reason>`, so review sees it.
 
-The rule does not see `new Date()` without arguments; review catches those, or a custom rule beside `tools/oxlint/anti-slop` can once they recur. Vitest's `vi.setSystemTime` suits a one-off test, but it changes the clock for the whole file and hides the dependency, so prefer the injected clock in code you own.
+The rule does not see `new Date()` without arguments; review catches those, or a custom rule beside `tools/oxlint/anti-slop` can once they recur. Vitest's `vi.setSystemTime` suits a one-off test, but it changes the shared clock until `vi.useRealTimers()` restores it and hides the dependency, so prefer the injected clock in code you own.
 
 ## Prove
 
