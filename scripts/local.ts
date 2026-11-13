@@ -9,11 +9,17 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 export type Checkout = ReturnType<typeof checkoutOf>;
 /** What `dev` started, so status and retirement act only on that process. */
-export type Owner = Pick<Checkout, "appPort" | "root"> & {
+export type Owner = Pick<Checkout, "appPort" | "e2ePort" | "root"> & {
   commit: string;
   pid: number;
   startedAt: string;
 };
+
+/** A resource's state, such as `running`, plus details such as a URL. */
+export interface ResourceStatus {
+  [detail: string]: string | number;
+  state: string;
+}
 
 /**
  * A local dependency of the app: `dev` sets resources up in order, `retire`
@@ -22,7 +28,7 @@ export type Owner = Pick<Checkout, "appPort" | "root"> & {
 export interface Resource {
   name: string;
   setup: (checkout: Checkout) => Promise<void>;
-  status: (checkout: Checkout) => Record<string, string | number>;
+  status: (checkout: Checkout) => ResourceStatus;
   /** Returns one line per action taken, for the retirement report. */
   teardown: (checkout: Checkout) => Promise<string[]>;
 }
@@ -41,7 +47,8 @@ function git(root: string, ...args: string[]) {
   return execFileSync("git", ["-C", root, ...args], options).trim();
 }
 
-function attempt(read: () => string) {
+/** Trimmed output of `read`, or "" when it throws. */
+function readOrEmpty(read: () => string) {
   try {
     return read().trim();
   } catch {
@@ -55,7 +62,7 @@ function attempt(read: () => string) {
  * which drifts when the clock is adjusted (as WSL does).
  */
 export function processStart(pid: number) {
-  const stat = attempt(() => fs.readFileSync(`/proc/${pid}/stat`, "utf-8"));
+  const stat = readOrEmpty(() => fs.readFileSync(`/proc/${pid}/stat`, "utf-8"));
   if (stat) {
     // Fields after the parenthesized command name start at field 3.
     return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[22 - 3];
@@ -63,7 +70,7 @@ export function processStart(pid: number) {
   const env = { ...process.env, LC_ALL: "C" };
   const options = { encoding: "utf-8", env, stdio: "pipe" } as const;
   const args = ["-o", "lstart=", "-p", String(pid)];
-  return attempt(() => execFileSync("ps", args, options)) || undefined;
+  return readOrEmpty(() => execFileSync("ps", args, options)) || undefined;
 }
 
 /** Parses the ownership file; a missing or malformed one owns nothing. */
@@ -74,13 +81,14 @@ export function readOwner(checkout: Checkout): Owner | undefined {
   } catch {
     // No ownership file yet, or one that cannot be read.
   }
-  const field = new Map(Object.entries(value ?? {}));
+  const fields = new Map(Object.entries(value ?? {}));
   const owner = {
-    appPort: Number(field.get("appPort")),
-    commit: String(field.get("commit")),
-    pid: Number(field.get("pid")),
-    root: String(field.get("root")),
-    startedAt: String(field.get("startedAt")),
+    appPort: Number(fields.get("appPort")),
+    commit: String(fields.get("commit")),
+    e2ePort: Number(fields.get("e2ePort")),
+    pid: Number(fields.get("pid")),
+    root: String(fields.get("root")),
+    startedAt: String(fields.get("startedAt")),
   };
   return Number.isInteger(owner.pid) && owner.pid > 0 ? owner : undefined;
 }
@@ -109,6 +117,15 @@ function claimant(checkout: Checkout) {
     );
 }
 
+/** Sends a signal to a process that may already have exited. */
+function sendSignal(pid: number, name: NodeJS.Signals) {
+  try {
+    process.kill(pid, name);
+  } catch {
+    // Already gone.
+  }
+}
+
 const appUrl = (checkout: Checkout) => `http://localhost:${checkout.appPort}`;
 
 export const devServer: Resource = {
@@ -132,7 +149,8 @@ export const devServer: Resource = {
     const pid = child.pid ?? 0;
     const commit = git(checkout.root, "rev-parse", "HEAD");
     const startedAt = processStart(pid) ?? "";
-    const owner: Owner = { ...checkout, commit, pid, startedAt };
+    const { appPort, e2ePort, root } = checkout;
+    const owner: Owner = { appPort, commit, e2ePort, pid, root, startedAt };
     fs.mkdirSync(path.dirname(checkout.ownerFile), { recursive: true });
     fs.writeFileSync(checkout.ownerFile, `${JSON.stringify(owner, null, 2)}\n`);
     for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
@@ -146,13 +164,15 @@ export const devServer: Resource = {
     }
     process.exitCode = child.exitCode ?? 0;
   },
-  status(checkout): Record<string, string | number> {
+  status(checkout): ResourceStatus {
     const owner = readOwner(checkout);
     const state = serverState(owner);
-    const url = appUrl(checkout);
-    return owner && state !== "stopped"
-      ? { pid: owner.pid, state, url }
-      : { state };
+    if (!owner || state === "stopped") {
+      return { state };
+    }
+    return state === "running"
+      ? { pid: owner.pid, state, url: appUrl(checkout) }
+      : { pid: owner.pid, state };
   },
   async teardown(checkout) {
     const owner = readOwner(checkout);
@@ -162,13 +182,17 @@ export const devServer: Resource = {
     const state = serverState(owner);
     const report = [];
     if (state === "running") {
-      process.kill(owner.pid, "SIGTERM");
+      sendSignal(owner.pid, "SIGTERM");
       for (let i = 0; i < 50 && serverState(owner) === "running"; i += 1) {
         // oxlint-disable-next-line no-await-in-loop -- polls for the exit.
         await sleep(100);
       }
       if (serverState(owner) === "running") {
-        process.kill(owner.pid, "SIGKILL");
+        sendSignal(owner.pid, "SIGKILL");
+        await sleep(200);
+      }
+      if (serverState(owner) === "running") {
+        throw new Error(`Could not stop the dev server (pid ${owner.pid}).`);
       }
       report.push(`stopped dev server (pid ${owner.pid})`);
     } else if (state === "stale") {
@@ -179,7 +203,10 @@ export const devServer: Resource = {
   },
 };
 
-/** Register new local resources here, after anything they depend on. */
+/**
+ * Set up in order and torn down in reverse. Register new resources before
+ * `devServer`: its setup runs the server in the foreground until it exits.
+ */
 export const resources: Resource[] = [devServer];
 
 export function status(checkout: Checkout) {
@@ -199,12 +226,7 @@ export function status(checkout: Checkout) {
 
 /** Refuses on uncommitted or untracked work; otherwise removes local state. */
 export async function retire(checkout: Checkout) {
-  const work = git(
-    checkout.root,
-    "status",
-    "--porcelain",
-    "--untracked-files=all"
-  );
+  const work = git(checkout.root, "status", "--porcelain");
   if (work) {
     const reason = "commit or remove this work first";
     throw new Error(`Refusing to retire ${checkout.root}; ${reason}:\n${work}`);
@@ -227,7 +249,7 @@ export async function retire(checkout: Checkout) {
 async function main(command: string | undefined, args: string[]) {
   const at = args.indexOf("--checkout");
   const dir = at === -1 ? import.meta.dirname : args.at(at + 1);
-  if (dir === undefined) {
+  if (dir === undefined || dir.startsWith("-")) {
     throw new Error("--checkout needs a path.");
   }
   const checkout = checkoutOf(git(dir, "rev-parse", "--show-toplevel"));
