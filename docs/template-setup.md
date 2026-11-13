@@ -4,7 +4,7 @@ The procedure for turning a fresh copy of this template into a project. It is wr
 
 Work the steps in order. Each one states the result that ends it.
 
-Setup lands as one pull request with no issue: the person's request to set up the project is its work item. Commit the file changes on a branch. Steps 7 and 8 change GitHub settings rather than files: apply them once approved, before opening the pull request, so setup merges through the protected path it creates. In the pull request, replace the `Closes #` line with `Template setup; no issue.` The change alters what users see, so it gets a [flow walk](agents/delivery.md#flow-walk) and at least tier 1 review. Brief its tester with the goal "recognize the new product from its pages", the user state of a visitor, and the home page as the start.
+Setup lands as one pull request with no issue: the person's request to set up the project is its work item. Commit the file changes on a branch. Steps 7 and 8 change GitHub settings rather than files. Apply the baseline ruleset and the labels once approved, before opening the pull request, so setup merges through the protected path it creates. A selected deployment gate waits for the first successful preview, as step 7 says. In the pull request, replace the `Closes #` line with `Template setup; no issue.` The change alters what users see, so it gets a [flow walk](agents/delivery.md#flow-walk) and at least tier 1 review. Brief its tester with the goal "recognize the new product from its pages", the user state of a visitor, and the home page as the start.
 
 ## 1. Collect the answers
 

@@ -15,7 +15,7 @@ An open issue carries exactly one state label. Change it by removing the old lab
 
 The roles `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` match the public `mattpocock/skills` pack, so its skills work unchanged. If a project renames a label, change the second column and the matching command below.
 
-A new issue starts at `needs-triage`. One the person asked for starts at `ready-for-agent`, because their request is its triage; a follow-up you file for later still starts at `needs-triage`. Triage moves it to `needs-info`, `ready-for-agent`, `ready-for-human`, or `wontfix`; `needs-info` returns to `needs-triage` when the reporter answers. When a PR that completes an issue's implementation merges while later checks remain, the person or agent who merged it moves the issue to `awaiting-qualification`.
+A new issue starts at `needs-triage`. One the person asked for starts at `ready-for-agent`, because their request is its triage; a follow-up you file for later still starts at `needs-triage`. Until the labels exist, file requested work without a state label. Triage moves it to `needs-info`, `ready-for-agent`, `ready-for-human`, or `wontfix`; `needs-info` returns to `needs-triage` when the reporter answers. When a PR that completes an issue's implementation merges while later checks remain, the person or agent who merged it moves the issue to `awaiting-qualification`.
 
 ## Awaiting qualification
 
