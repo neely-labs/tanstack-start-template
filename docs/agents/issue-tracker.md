@@ -4,8 +4,8 @@ Work for this repository lives in GitHub Issues. Use the `gh` CLI, which infers 
 
 ## Pick up work
 
-1. Work on the issue the person names. Otherwise take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists. An issue without acceptance criteria is not ready: ask for them, or move it to `needs-triage` and pick another.
-2. Check blockers before starting. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the body may name an open issue.
+1. Work on the issue the person names. Otherwise take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it. An issue without acceptance criteria is not ready: ask for them, or move it to `needs-triage` and pick another.
+2. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the body may name an open issue.
 3. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
 
 State labels and their transitions are in [triage labels](triage-labels.md).
@@ -21,8 +21,8 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 ## Link pull requests
 
 - A delivery PR that completes an issue says `Closes #N` in its description.
-- A PR that delivers the change while later checks remain says `Refs #N`, and the issue moves to `awaiting-qualification` when the PR merges.
-- Write one keyword per issue, only in the PR description. Keep closing keywords out of commit messages: a squash merge can carry them onto the default branch and close an issue early.
+- A PR that delivers the change while later checks remain says `Refs #N`. Whoever merges it moves the issue to `awaiting-qualification` and writes its Current acceptance.
+- Write one keyword per issue, only in the PR description. Keep `Closes`, `Refs`, and other issue keywords out of commit messages: a squash merge can carry them onto the default branch and close an issue early.
 - Refer to a work map as `Part of #N`, which is not a closing keyword.
 - Record status in the issue, with labels, comments, and checkboxes. Never push a commit only to record status.
 
@@ -30,9 +30,10 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 
 An `awaiting-qualification` issue is already delivered. Do not reimplement it. Its Current acceptance names each remaining check, who runs it, and when it is due.
 
-- If you are the named runner and a check is due, run it, tick its box, and comment with the evidence.
+- If a check is due and its runner is you or a role you fill, such as an agent, run it, tick its box, and comment with the evidence.
 - If a check fails, comment with the evidence, open a `bug` issue for the failure that says `Introduced by: #N`, and keep this one open.
 - When every box is ticked, close the issue with a comment that links the evidence.
+- If it has no Current acceptance, ask the owner which checks remain.
 - Otherwise leave it alone and pick other work.
 
 ## Work maps
