@@ -13,7 +13,7 @@ export const generatedSiteFiles = {
     source: `${JSON.stringify(
       {
         background_color: siteConfig.themeColor,
-        categories: ["developer", "productivity"],
+        categories: siteConfig.categories,
         description: siteConfig.description,
         display: "standalone",
         icons: [

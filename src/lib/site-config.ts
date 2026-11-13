@@ -1,4 +1,6 @@
 export const siteConfig = {
+  /** Web app manifest categories, such as "finance" or "utilities". */
+  categories: ["developer", "productivity"],
   description:
     "A production-minded TanStack Start foundation with a strict, fast feedback loop.",
   /** Header logo and SVG favicon. Replace the file, keep the shape. */
