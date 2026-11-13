@@ -12,7 +12,7 @@ pnpm check      # Check lint, formatting, and type-aware rules
 pnpm docs:budget # Check the size of the docs agents always read
 pnpm typecheck  # Check TypeScript
 pnpm test       # Run unit tests once
-pnpm test:changed <base> # Run the unit tests affected since <base>
+pnpm test:changed [base] # Run the unit tests affected since base
 pnpm build      # Build the production app and prerender public pages
 pnpm seo:verify # Check metadata in the built files
 pnpm start      # Run an existing production build
@@ -47,13 +47,13 @@ A row holds only pointers: owner paths, a guide section, and the check command. 
 
 ## Check your changes
 
-Use a focused test while editing, such as `pnpm test src/lib/text-stats.test.ts` while working on that example. To look for regressions beyond it, run `pnpm test:changed origin/main`: it runs the tests that import, directly or indirectly, a file changed since the merge base, including uncommitted files. With no base it reads only uncommitted changes.
+Use a focused test while editing, such as `pnpm test src/lib/text-stats.test.ts` while working on that example. To look for regressions beyond it, run `git fetch` and then `pnpm test:changed origin/main`: it runs the tests that import, directly or indirectly, a file changed since the merge base, including uncommitted files. With no base it reads only uncommitted changes.
 
 Affected selection is a shortcut, not proof:
 
 - It misses files read at runtime instead of imported, such as assets and fixtures, and changes to the lockfile or `tsconfig.json`. A change to `package.json` or the Vite or Vitest config runs every test.
-- Selecting zero tests fails, as on a clean tree with no base or a change to files no test imports. Zero tests verified nothing; run `pnpm test` instead.
-- When pre-push regularly takes more than about two minutes, [verification at scale](recipes/verification-at-scale.md) moves the hook to affected checks and keeps CI as the full gate.
+- Selecting zero tests fails, as on a clean tree with no base or a change to files no test imports. Run `pnpm test` instead.
+- When pre-push regularly takes more than about two minutes, [verification at scale](recipes/verification-at-scale.md) moves the hook to affected checks, which let zero selected tests pass, and keeps CI as the full gate.
 
 Before pushing, run `pnpm fix` and `pnpm validate`. Refresh route types first when route files changed: the lint and type checks consume them before the build stage runs.
 
