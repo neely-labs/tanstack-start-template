@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { maxTextLength, textInputErrors } from "../../src/lib/text-stats.ts";
+
 // Remove this file with the optional /setup and /runtime example pages.
 test("navigates the examples and validates real server functions", async ({
   page,
@@ -33,7 +35,7 @@ test("navigates the examples and validates real server functions", async ({
   const submit = page.getByRole("button", { name: "Analyze on the server" });
   await input.fill("   ");
   await submit.click();
-  await expect(page.getByText("Enter some text to analyze.")).toBeVisible();
+  await expect(page.getByText(textInputErrors.blank)).toBeVisible();
   await expect(input).toHaveAttribute("aria-invalid", "true");
 
   const submittedText = "TanStack stable upgrade works.";
@@ -48,7 +50,7 @@ test("navigates the examples and validates real server functions", async ({
   await expect(page.locator("dd").nth(1)).toHaveText(`${submittedText.length}`);
   await expect(input).toHaveValue(submittedText);
   await expect(input).toHaveAttribute("aria-invalid", "false");
-  await expect(page.getByText("Enter some text to analyze.")).toHaveCount(0);
+  await expect(page.getByText(textInputErrors.blank)).toHaveCount(0);
 
   await input.fill("Works again");
   await submit.click();
@@ -63,14 +65,14 @@ test("navigates the examples and validates real server functions", async ({
   const headers = new Headers(await rpcRequest.allHeaders());
   headers.delete("content-length");
   const oversized = await request.post(rpcRequest.url(), {
-    data: requestBody.replace(submittedText, "a".repeat(2001)),
+    data: requestBody.replace(submittedText, "a".repeat(maxTextLength + 1)),
     headers: Object.fromEntries(headers),
   });
   // Start returns RPC validation failures in a serialized error envelope.
   expect(oversized.status()).toBe(200);
   const oversizedBody = await oversized.text();
   expect(oversizedBody).toContain('"error"');
-  expect(oversizedBody).toContain("Enter at most 2000 characters.");
+  expect(oversizedBody).toContain(textInputErrors.tooLong);
   expect(oversizedBody).not.toContain('"computedAt"');
 
   headers.set("origin", "https://attacker.example");
@@ -103,7 +105,7 @@ test("submits and corrects the example form with the keyboard", async ({
   await page.keyboard.press("Enter");
   await expect(input).toHaveAttribute("aria-invalid", "true");
   await expect(input).toHaveAttribute("aria-describedby", "analyzer-error");
-  await expect(page.getByText("Enter some text to analyze.")).toBeVisible();
+  await expect(page.getByText(textInputErrors.blank)).toBeVisible();
 
   await input.focus();
   await page.keyboard.press("ControlOrMeta+A");

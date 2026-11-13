@@ -15,7 +15,7 @@ This file points to where each rule lives. A rule is stated once, in the doc tha
 | Need the file that owns a change and the check that proves it | [Find the right files](docs/development.md#find-the-right-files) |
 | Run, check, or debug the app | [Development guide](docs/development.md) |
 | Serve the app beside other checkouts, or wire worktree setup and cleanup hooks | [Concurrent checkouts](docs/concurrent-checkouts.md) |
-| Cross the server/browser boundary, or change identity, metadata, or route visibility | [Architecture](docs/architecture.md) |
+| Cross the server/browser boundary, change identity, metadata, or route visibility, or add a feature that touches a central list or shared rule | [Architecture](docs/architecture.md) |
 | Change anything visible | [DESIGN.md](DESIGN.md) |
 | Consider authentication, persistence, analytics, or other choices left to the product | [Capabilities and Constraints](PRODUCT.md#capabilities-and-constraints) |
 | Add a database, find checks slow, test the date, or test code that runs Git | The matching [recipe](docs/recipes/README.md), only once its trigger applies |
