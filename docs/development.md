@@ -110,4 +110,4 @@ The template commits no skills. To run a [flow walk](agents/delivery.md#flow-wal
 npx skills add nick-neely/agent-skills --skill flow-walk
 ```
 
-It writes `.agents/skills/flow-walk/`, a `.claude/skills/flow-walk` link, and `skills-lock.json`, which `.gitignore` keeps local. Remove it with `npx skills remove flow-walk`. Choosing extra agents during install writes directories Git will show. The `ui-evidence` skill, installed the same way, publishes screenshots to a pull request.
+It writes `.agents/skills/flow-walk/`, a `.claude/skills/flow-walk` link, and `skills-lock.json`, which `.gitignore` keeps local. Remove it with `npx skills remove flow-walk`. Choosing extra agents during install can write directories Git will show. The `ui-evidence` skill, installed the same way, publishes screenshots to a pull request.
