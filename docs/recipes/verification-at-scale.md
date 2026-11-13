@@ -13,7 +13,7 @@ pre-push:
       run: pnpm check && pnpm typecheck && pnpm test --changed origin/main
 ```
 
-Affected selection misses files read at runtime, dependency and config changes, and a branch with nothing to compare. When you run it by hand to check a regression, add `--passWithNoTests=false`: zero selected tests means the selection missed, not that it passed.
+Affected selection misses files read at runtime, dependency and config changes, and a branch with nothing to compare. The hook passes when it selects no tests, so a docs-only push goes through and CI checks it. When you check a regression by hand, run `pnpm test:changed origin/main` instead, which fails on zero selected tests: that means the selection missed, not that it passed.
 
 **Named full-validation checkpoints.** _Measure:_ count the pull requests whose CI failed after local affected checks passed. With affected checks in the hook, full `pnpm validate` still runs at three named points: when a pull request becomes ready for review, after a rebase that brings in dependency or config changes, and in CI on the head to be merged. If more than about one pull request in ten fails CI that way, add a checkpoint or widen the hook.
 
