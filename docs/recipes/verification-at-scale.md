@@ -4,16 +4,19 @@
 
 ## Add
 
-**Affected checks before push.** _Measure:_ time `pnpm validate` on ordinary pushes for a week. _Switch when_ it regularly takes more than about two minutes, or pushes start skipping the hook. Move the `pre-push` job in `lefthook.yml` to lint, types, and the tests affected since the base branch, and keep CI's full `pnpm validate` as the required check:
+**Affected checks before push.** _Measure:_ time `pnpm validate` on ordinary pushes for a week. _Switch when_ it regularly takes more than about two minutes, or pushes start skipping the hook. Move the `pre-push` job in `lefthook.yml` to lint and types on every push plus the tests affected since the base branch, and keep CI's full `pnpm validate` as the required check:
 
 ```yaml
 pre-push:
   jobs:
-    - name: affected checks
-      run: pnpm check && pnpm typecheck && pnpm test --changed origin/main
+    - name: lint and types
+      run: pnpm check && pnpm typecheck
+    - name: affected tests
+      run: pnpm test:changed origin/main
+      exclude: "*.md"
 ```
 
-The hook passes when it selects no tests, so a docs-only push goes through and CI checks it. For what affected selection misses, and for `pnpm test:changed`, which fails on zero tests when you check a regression by hand, see [Check your changes](../development.md#check-your-changes).
+Lefthook skips a job when its `exclude` leaves none of the pushed files, so a Markdown-only push runs no tests and CI checks it. Every other push runs the affected tests and fails when they select none. That includes a push that changes only untested code, such as a new module with no test or a CSS-only change: it fails until you add a relevant test, or run `pnpm validate` and push with `--no-verify`. [Check your changes](../development.md#check-your-changes) lists what affected selection misses.
 
 **Named full-validation checkpoints.** _Measure:_ count the pull requests whose CI failed after local affected checks passed. With affected checks in the hook, full `pnpm validate` still runs at three named points: when a pull request becomes ready for review, after a rebase that brings in dependency or config changes, and in CI on the head to be merged. If more than about one pull request in ten fails CI that way, add a checkpoint or widen the hook.
 
@@ -46,7 +49,7 @@ Run it from an up-to-date checkout. A branch with commits after its merge, an op
 
 ## Prove
 
-- After switching the hook, push a change that breaks one module's test: the push fails. Push a docs-only change: it passes quickly, and CI runs its documentation checks.
+- After switching the hook, push a change that breaks one module's test: the push fails. Push a change to a module no test imports: the push fails with no affected tests. Push a Markdown-only change: the affected tests are skipped, the push passes, and CI runs its documentation checks.
 - Run the reuse script twice on a clean tree: the second run skips. Change one file and it validates again.
 - The sweep removes a worktree whose pull request merged at its head, and keeps one with a later commit, an unmerged one, and a dirty merged one with its refusal printed.
 
