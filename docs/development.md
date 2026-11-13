@@ -91,6 +91,10 @@ CI uploads those files as `browser-failure-evidence` for seven days when browser
 
 The example loader-retry test simulates a failed request inside its browser, then retries the real server. It provides a pattern for failure testing without a production fault endpoint. If an approach fails, inspect the diff and undo only the task's changes, preserving unrelated edits and other tasks' processes.
 
+## Flaky tests
+
+Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.md#category-labels) test shows as a failure instead of a clean pass. When a rerun of the same code passes, open a `flaky` issue that names the test, quotes the failure text, and states the cause, or what is known of it. Each pull request that hit the flake says `Refs #N` for that issue in its description, never `Closes`.
+
 ## Formatting and hooks
 
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.

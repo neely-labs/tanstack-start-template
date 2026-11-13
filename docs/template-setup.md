@@ -81,7 +81,7 @@ gh api --method POST \
 gh ruleset check --default --repo "$repo"
 ```
 
-The baseline protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` check emitted by `.github/workflows/ci.yml`. It starts with zero required approvals so a solo maintainer is not locked out; the project can add approval and code-owner requirements when a review team exists.
+The baseline protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` check emitted by `.github/workflows/ci.yml` without requiring branches to be up to date first ([why](../.github/rulesets/README.md#up-to-date-branches-are-not-required)). It starts with zero required approvals so a solo maintainer is not locked out; the project can add approval and code-owner requirements when a review team exists.
 
 If `gh auth status`, `gh repo view`, or the API call fails, report the exact failure and stop this step. Do not retry by changing permissions or modifying the repository through another account.
 
