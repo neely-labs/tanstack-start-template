@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { checkPageHtml } from "../../scripts/verify-seo-output.mjs";
 import { publicPaths } from "../../src/lib/public-routes.ts";
 import { securityHeaders } from "../../src/lib/security-headers.ts";
 import { siteConfig } from "../../src/lib/site-config.ts";
@@ -16,9 +17,8 @@ test("serves prerendered pages, identity files, and secured API responses", asyn
       for (const [name, value] of Object.entries(securityHeaders)) {
         expect(response.headers()[name.toLowerCase()]).toBe(value);
       }
-      const html = await response.text();
-      expect(html).toContain("<h1");
-      expect(html).toContain(`href="${siteConfig.origin}${routePath}"`);
+      // The served page must pass the same checks as the built file.
+      checkPageHtml(await response.text(), routePath);
     })
   );
 
