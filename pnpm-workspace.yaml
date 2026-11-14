@@ -40,3 +40,8 @@ minimumReleaseAgeExclude:
   - lefthook-windows-x64@2.2.2
   - lefthook@2.2.2
   - oxlint-plugin-react-doctor@0.9.18
+
+overrides:
+  # GHSA-g3hv-75wg-m249 is fixed only in minimatch 11, but @ts-morph/common,
+  # which the shadcn CLI uses, still declares ^10. Drop this once it accepts 11.
+  "minimatch@>=7.0.0 <11.0.1": ^11.0.8
