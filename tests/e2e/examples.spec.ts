@@ -208,14 +208,16 @@ test("hides a failed request's server text and recovers on retry", async ({
   const submit = page.getByRole("button", { name: "Analyze on the server" });
   const submittedText = "Retry after a failure";
   await input.fill(submittedText);
-  await submit.click();
+  await submit.focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByText(analyzerFailure)).toBeVisible();
   await expect(page.getByText(serverText)).toHaveCount(0);
   await expect(input).toHaveValue(submittedText);
   await expect(input).toHaveAttribute("aria-invalid", "false");
 
   failAnalysis = false;
-  await submit.click();
+  await expect(submit).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(page.locator("dd").first()).toHaveText("4");
   await expect(page.getByText(analyzerFailure)).toHaveCount(0);
 });

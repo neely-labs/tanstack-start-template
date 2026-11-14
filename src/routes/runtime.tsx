@@ -232,7 +232,13 @@ function AnalyzerSection() {
           <p className="text-xs text-muted-foreground" id="analyzer-hint">
             Up to {maxTextLength} characters. Validation runs on the server.
           </p>
-          <Button disabled={isPending} type="submit">
+          {/* Focus stays on the button, so Enter can try again after a failure. */}
+          <Button
+            className="aria-disabled:opacity-50"
+            disabled={isPending}
+            focusableWhenDisabled
+            type="submit"
+          >
             {isPending ? "Analyzing…" : "Analyze on the server"}
           </Button>
         </div>
