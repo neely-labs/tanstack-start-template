@@ -181,7 +181,7 @@ Ends when the selected ruleset is visible in `gh ruleset check --default` with b
 
 Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 7. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Until the labels exist, agents following [the issue tracker guide](agents/issue-tracker.md) find no `ready-for-agent` issues and work only on issues the person names.
 
-Run the commands under [Create the labels](agents/triage-labels.md#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
+Run the commands under [Create the labels](tooling.md#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
 
 Ends when `gh label list` shows the six state labels and two category labels. GitHub's default labels can stay beside them.
 
@@ -195,7 +195,7 @@ Keep `AGENTS.md` an index under 4 KB: its always-read pointers, the table of con
 
 `pnpm docs:budget`, part of `pnpm validate`, caps the docs agents read on every task: each file and their total. When the rewrite moves the always-read set or needs different limits, edit `BUDGET` at the top of `scripts/verify-doc-budget.ts`.
 
-Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/architecture.md` for runtime boundaries, the relevant host instructions in `docs/deployment.md`, and `docs/recipes/` for safeguards the product has not needed yet. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 4. `docs/architecture.md` and `docs/development.md` use the example pages as worked examples; keep each rule and drop or replace its example. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
+Keep `README.md` as the project's short entry point. Retain `docs/development.md` for local work, `docs/tooling.md` for hooks, skills, and the label commands, `docs/architecture.md` for runtime boundaries, the relevant host instructions in `docs/deployment.md`, and `docs/recipes/` for safeguards the product has not needed yet. Update their task maps, examples, and links for the new product, removing references to any example files or tests deleted in step 4. `docs/architecture.md` and `docs/development.md` use the example pages as worked examples; keep each rule and drop or replace its example. Preserve route generation, checks, concurrent ports, debugging, and recovery guidance.
 
 Ends when product guidance describes the new application and a fresh agent can still discover how to run, change, verify, and recover it.
 
