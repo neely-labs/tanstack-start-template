@@ -35,4 +35,4 @@ With no `.env` file:
 
 ## Remove
 
-Once the app reads no variable, delete the copied files, the plugin entry, the lint override and the CI `env:` values.
+Once the app reads no variable, delete the copied files, the plugin entry, the lint override and the CI `env:` values. Drop `@t3-oss/env-core` only together with this recipe's folder, which needs it to compile.
