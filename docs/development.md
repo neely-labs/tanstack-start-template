@@ -19,7 +19,7 @@ pnpm validate   # Run the core checks, build, and metadata verification
 pnpm test:e2e   # Check the production app in desktop and mobile Chromium
 ```
 
-For `pnpm dev:local` and the other per-checkout commands, see [concurrent checkouts](concurrent-checkouts.md).
+For `pnpm dev:local` and the other per-checkout commands, see [concurrent checkouts](concurrent-checkouts.md). For the formatter, Git hooks, committed agent skills, and the skills that `pnpm install` asks to approve, see [tooling](tooling.md).
 
 ## Find the right files
 
@@ -92,21 +92,3 @@ The example loader-retry test simulates a failed request inside its browser, the
 ## Flaky tests
 
 Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.md#category-labels) test shows as a failure instead of a clean pass. When a rerun of the same code passes, open a `flaky` issue that names the test, quotes the failure text, and states the cause, or what is known of it. Each pull request that hit the flake says `Refs #N` for that issue in its description, never `Closes`.
-
-## Formatting and hooks
-
-Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
-
-Agent tooling and vendored plugin source are excluded from application quality gates. Review content, accessibility, architecture, and edge cases by hand as well.
-
-## Skills
-
-The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, its copy for Claude Code in `.claude/skills/`, and `skills-lock.json`, which records the source. `npx skills update flow-walk -p` rewrites both copies; review and commit the diff. `scripts/skills.test.ts` checks they match. Remove it with `npx skills remove flow-walk`.
-
-Leave the dependency skills that `pnpm install` lists as awaiting approval unapproved. Approving commits a grant to `pnpm-workspace.yaml` that links their unreviewed skills into every checkout's skill folders.
-
-The optional `ui-evidence` skill publishes screenshots to a pull request and needs tools the template does not install. Install it globally to keep this checkout unchanged:
-
-```bash
-npx skills add nick-neely/agent-skills --skill ui-evidence -g
-```

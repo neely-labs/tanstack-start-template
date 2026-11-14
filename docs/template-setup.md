@@ -181,7 +181,26 @@ Ends when the selected ruleset is visible in `gh ruleset check --default` with b
 
 Labels are GitHub settings and do not travel with a template either. Creating them changes external repository state, so it needs the same explicit yes as step 7. If the answer is no or deferred, skip this step and keep the deferral visible to the owner. Until the labels exist, agents following [the issue tracker guide](agents/issue-tracker.md) find no `ready-for-agent` issues and work only on issues the person names.
 
-Run the commands under [Create the labels](agents/triage-labels.md#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
+Run the commands under [Create the labels](#create-the-labels) from the repository root. If a command fails, report the exact failure and stop this step.
+
+### Create the labels
+
+These commands change repository settings, so run them only with the owner's yes. Run them from the repository root with an account that can manage the repository's labels:
+
+```bash
+repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+gh label create needs-triage --repo "$repo" --force --color D4C5F9 --description "Maintainer needs to evaluate this issue"
+gh label create needs-info --repo "$repo" --force --color FEF2C0 --description "Waiting for more information"
+gh label create ready-for-agent --repo "$repo" --force --color 0E8A16 --description "Fully specified and ready for agent implementation"
+gh label create ready-for-human --repo "$repo" --force --color 1D76DB --description "Requires human implementation or judgment"
+gh label create awaiting-qualification --repo "$repo" --force --color FBCA04 --description "Delivered; open only for the checks its Current acceptance lists"
+gh label create wontfix --repo "$repo" --force --color FFFFFF --description "This will not be worked on"
+gh label create bug --repo "$repo" --force --color D73A4A --description "Something isn't working"
+gh label create flaky --repo "$repo" --force --color D93F0B --description "A test that fails and then passes on the same code"
+gh label list --repo "$repo" --limit 100
+```
+
+`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values.
 
 Ends when `gh label list` shows the six state labels and two category labels. GitHub's default labels can stay beside them.
 
