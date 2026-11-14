@@ -302,10 +302,12 @@ function EndpointSection() {
       </h2>
       <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
         <code className="text-foreground">src/routes/api/health.ts</code>{" "}
-        answers with JSON instead of a document. It shares the same file-based
-        routing, and every response it returns carries the security headers set
-        by the request middleware in{" "}
-        <code className="text-foreground">src/start.ts</code>.
+        answers with JSON instead of a document, and refuses any method but GET
+        and HEAD with a 405. It shares the same file-based routing. Every
+        response the app returns, this one and the not-found page included,
+        carries the security headers set by the request middleware in{" "}
+        <code className="text-foreground">src/start.ts</code>. Nitro&apos;s own
+        error for a request it cannot decode, such as a malformed URL, does not.
       </p>
       <Button
         className="mt-6"

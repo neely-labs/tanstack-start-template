@@ -175,6 +175,8 @@ test("recovers from a loader failure by retrying the real server", async ({
   await expect(page.getByRole("alert")).toBeFocused();
   await expect(page.getByText("Technical details")).toHaveCount(0);
   expect(failedRequests).toBeGreaterThan(0);
+  const noindex = page.locator('head meta[name="robots"][content="noindex"]');
+  await expect(noindex).toHaveCount(1);
 
   failLoader = false;
   await page.keyboard.press("Tab");
@@ -185,6 +187,7 @@ test("recovers from a loader failure by retrying the real server", async ({
   ).toBeVisible();
   await expect(page.getByText(/^client ·/u)).toBeVisible();
   expect(retriedRequests).toBeGreaterThan(0);
+  await expect(noindex).toHaveCount(0);
 });
 
 test("hides a failed request's server text and recovers on retry", async ({

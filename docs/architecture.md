@@ -7,7 +7,9 @@ Use this reference when finding a module, changing public identity or metadata, 
 | Area | Responsibility |
 | --- | --- |
 | `src/routes` | Pages, HTTP routes, loaders, and page metadata |
-| `src/routes/__root.tsx` | Shared document, navigation shell, not-found handling, and error recovery |
+| `src/routes/__root.tsx` | Shared document, navigation shell, and the recovery pages' title |
+| `src/router.tsx`, `src/components/not-found.tsx`, `src/components/error-fallback.tsx` | Router-wide not-found and error pages |
+| `src/lib/report-error.ts` | The one place a caught error is reported |
 | `src/components` and `src/components/ui` | Shared app components and shadcn primitives |
 | `src/lib/site-config.ts` | Public identity, navigation, asset paths, and canonical origin |
 | `src/lib/seo.ts`, `src/lib/site-files.ts`, `src/lib/public-routes.ts` | Page metadata, generated identity files, and public route inventory |
@@ -36,9 +38,15 @@ Parse untrusted input, such as a request body or a JSON file read from disk, wit
 - `getRenderSnapshot` is a GET server function called by a route loader. A prerendered loader runs at build time for the shipped HTML and on the server again when the router revalidates after hydration.
 - `analyzeText` is a POST server function. Its `.validator` takes a Zod schema that rejects invalid input before the handler runs. The page shows a rejection only when `inputRejection` finds a `textInputErrors` message in it, and a generic message for any other failure, so server text never reaches the visitor.
 - `createIsomorphicFn` supplies separate server and browser implementations through one call. Each build keeps the implementation for its environment; server-function handler bodies stay out of the browser bundle.
-- `/api/health` is an HTTP route that returns JSON. Browser checks retain it as their readiness endpoint when example pages are removed.
+- `/api/health` is an HTTP route that returns JSON. Its `ANY` handler answers other methods with 405 and an `Allow` header; without one, Start renders an empty page with 200. Browser checks retain it as their readiness endpoint when example pages are removed.
 
 A route that needs browser APIs can choose `ssr: false` or `ssr: "data-only"`. The current examples use server rendering.
+
+## Errors and recovery
+
+`src/router.tsx` sets `NotFound` and `RouteError` as the router's defaults, so every route shows the same pages on the server and in the browser. `RouteError` passes each error it catches to `reportCaughtError` in `src/lib/report-error.ts`, which logs to the console; connect an error-reporting service there and nowhere else. The app adds no `window.onerror` or `unhandledrejection` listener. A component that throws `notFound()` while rendering passes `{ routeId: rootRouteId }`: the route's error boundary claims a bare one and shows the router's built-in error box.
+
+Both pages render their own `noindex` tag, which React moves into the head. The root route's head gives a missing URL its title. A failed loader answers 500 and keeps the failed route's title. A render error answers 200 with the route's head, and the browser renders the error page. `src/router.test.tsx` server-renders each case with routes that fail on purpose.
 
 ## Forms before hydration
 
@@ -48,7 +56,7 @@ Until hydration the browser owns every field, and a visitor on a slow connection
 
 `src/start.ts` registers request middleware through `createStart`. It adds shared security headers and rejects cross-site server-function requests. Ordinary HTTP routes stay outside that RPC check so non-browser callers can reach endpoints such as health checks.
 
-`src/lib/security-headers.ts` also supplies Nitro's route rules, keeping the same headers on prerendered and static responses. A Content-Security-Policy belongs to the application's requirements and is left for that project to choose.
+`src/lib/security-headers.ts` also supplies Nitro's route rules, keeping the same headers on prerendered and static responses. Nitro's own error for a URL it cannot decode carries none of them. A Content-Security-Policy belongs to the application's requirements and is left for that project to choose.
 
 For the current UI decisions and theme tokens, see [DESIGN.md](../DESIGN.md).
 

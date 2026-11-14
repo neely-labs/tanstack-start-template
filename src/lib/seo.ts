@@ -45,6 +45,43 @@ export function pageTitle(page?: string): string {
   return page === undefined ? siteConfig.name : `${page} | ${siteConfig.name}`;
 }
 
+/** Document titles for the two recovery pages, before the site name. */
+export const recoveryTitles = {
+  error: "Page couldn't load",
+  notFound: "Page not found",
+} as const;
+
+/** The parts of a route match the recovery head reads. */
+interface MatchState {
+  readonly status: string;
+  /**
+   * Set on the match whose not-found boundary renders a missing URL. The field
+   * is the router's own; `src/router.test.tsx` fails if it stops being set.
+   */
+  readonly _notFound?: boolean;
+}
+
+/**
+ * The root route's title for a recovery page, so the tab never shows a bare
+ * URL. A missing URL matches only the root, so this is the page's title. When
+ * a route fails, that route's head still runs and its own title wins. The
+ * recovery components mark their pages `noindex` themselves, because a render
+ * error leaves every match successful and only the component knows.
+ */
+export function recoveryMeta(matches: readonly MatchState[]) {
+  if (matches.some((match) => match.status === "error")) {
+    return [{ title: pageTitle(recoveryTitles.error) }];
+  }
+  if (
+    matches.some(
+      (match) => match.status === "notFound" || match._notFound === true
+    )
+  ) {
+    return [{ title: pageTitle(recoveryTitles.notFound) }];
+  }
+  return [];
+}
+
 export function createSeoHead({
   canonicalPath,
   description,
