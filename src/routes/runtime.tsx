@@ -196,7 +196,9 @@ function AnalyzerSection() {
     },
     initialAnalyzerState
   );
-  const rejected = state.status === "rejected";
+  // A new attempt clears the last message, so a retry visibly runs.
+  const rejected = !isPending && state.status === "rejected";
+  const failed = !isPending && state.status === "failed";
 
   return (
     <section className="mt-16">
@@ -242,7 +244,7 @@ function AnalyzerSection() {
             {state.message}
           </p>
         ) : null}
-        {state.status === "failed" ? (
+        {failed ? (
           <p className="mb-4 text-sm text-destructive">{analyzerFailure}</p>
         ) : null}
         <AnalysisResult

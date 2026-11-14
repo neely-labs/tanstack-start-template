@@ -224,9 +224,10 @@ test("keeps the submitted text read-only while the analysis is pending", async (
   page,
 }) => {
   // A route left unanswered holds its request until the test continues it.
+  let holdAnalysis = false;
   const heldRequests: Route[] = [];
   await page.route("**/_serverFn/**", async (route) => {
-    if (route.request().method() === "POST") {
+    if (holdAnalysis && route.request().method() === "POST") {
       heldRequests.push(route);
     } else {
       await route.continue();
@@ -235,10 +236,17 @@ test("keeps the submitted text read-only while the analysis is pending", async (
   await page.goto("/runtime");
   await expect(page.getByText(/^client ·/u)).toBeVisible();
   const input = page.getByRole("textbox", { name: "Text to analyze" });
+  const submit = page.getByRole("button", { name: "Analyze on the server" });
+  await input.fill("   ");
+  await submit.click();
+  await expect(page.getByText(textInputErrors.blank)).toBeVisible();
+
+  holdAnalysis = true;
   const submittedText = "Held while pending";
   await input.fill(submittedText);
-  await page.getByRole("button", { name: "Analyze on the server" }).click();
+  await submit.click();
   await expect(page.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
+  await expect(page.getByText(textInputErrors.blank)).toHaveCount(0);
   await expect(input).not.toBeEditable();
   await input.focus();
   await page.keyboard.type(" and more");

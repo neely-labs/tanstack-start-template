@@ -42,4 +42,4 @@ export const textInputSchema = z.object({
 });
 
 /** What the analyzer shows for a failure that is not a rejected input. */
-export const analyzerFailure = "The request could not be completed.";
+export const analyzerFailure = "The request could not be completed. Try again.";
