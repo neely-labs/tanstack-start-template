@@ -12,22 +12,31 @@ Closes #
 
 ## Merge danger
 
-- **Door:** <!-- clean two-way, two-way, one-way, or uncertain -->
-- **Rollback:** <!-- Only when the door is not clean two-way; otherwise delete this line. -->
-- **Blast radius:**
-- **Risk tier:** <!-- 0, 1, or 2 -->
-- **Rounds used:** <!-- N of M: review rounds spent against the tier's round budget -->
+<!-- One short phrase per value, never a sentence. Reasons go under Decisions; each review round goes under Verification. -->
+
+**Door:** <!-- clean two-way, two-way, one-way, or uncertain --> · **Risk tier:** <!-- 0, 1, or 2 --> · **Rounds used:** <!-- N of M, such as 2 of 3 -->
+
+- **Blast radius:** <!-- What breaks if this is wrong, such as "docs only" or "CI; a runner outage blocks merges" -->
+- **Rollback:** <!-- Only when the door is not clean two-way, such as "revert, then clear the cache". Otherwise delete this line. -->
 
 ## Verification
 
-<!-- Commit: its SHA, plus "dirty" if the tree had uncommitted changes. Result: ran and skipped counts. Limits: where it ran (local, preview, production) and what it does not show. -->
+<!-- Commit: its SHA, plus "dirty" if the tree had uncommitted changes. Result: ran and skipped counts. Limits: where it ran (local, preview, production) and what it does not show. Reviews: one row per round; at tier 0 the reviewer is the author. -->
 
 <details>
-<summary>Outcome in one line, naming the head commit</summary>
+<summary>Outcome in one line, naming the head commit and the last review</summary>
+
+**Checks**
 
 | Commit | Command | Result | Limits |
 | ------ | ------- | ------ | ------ |
 |        |         |        |        |
+
+**Reviews**
+
+| Round | Reviewer | Head | Outcome |
+| ----- | -------- | ---- | ------- |
+|       |          |      |         |
 
 </details>
 
