@@ -28,8 +28,8 @@ describe("SEO helpers", () => {
   it("keeps visible and social metadata aligned", () => {
     const head = createSeoHead({
       canonicalPath: "/setup",
-      description: "Template decisions and replacement points.",
-      title: pageTitle("About"),
+      description: "The first replacement points.",
+      title: pageTitle("Setup"),
     });
 
     expect(head.links).toContainEqual({
@@ -37,7 +37,7 @@ describe("SEO helpers", () => {
       rel: "canonical",
     });
     expect(head.meta).toContainEqual({
-      content: pageTitle("About"),
+      content: pageTitle("Setup"),
       property: "og:title",
     });
     expect(head.meta).toContainEqual({
@@ -54,10 +54,10 @@ describe("SEO helpers", () => {
     const graph = createGraph([
       createWebsiteSchema(),
       createWebPageSchema({
-        description: "Template decisions.",
-        name: "About",
+        description: "The first replacement points.",
+        name: "Setup",
         path: "/setup",
-        type: "AboutPage",
+        type: "CollectionPage",
       }),
     ]);
 

@@ -1,8 +1,13 @@
+// Checks the production build for `pnpm seo:verify`: each public page's
+// metadata and structured data through `checkPageHtml`, which the fixtures in
+// `verify-seo-output.test.ts` and the browser smoke test also call, then the
+// sitemap, robots.txt, manifest and social image.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { JSDOM } from "jsdom";
+import { z } from "zod";
 
 import { publicPaths } from "../src/lib/public-routes.ts";
 import { webPageTypes } from "../src/lib/seo.ts";
@@ -18,6 +23,17 @@ const twitterCards = new Set([
   "summary_large_image",
 ]);
 const ldJsonSelector = 'script[type="application/ld+json"]';
+const twitterCardSelector = 'meta[name="twitter:card"]';
+// What `createGraph` emits; page nodes are then picked out by their `@type`.
+const graphSchema = z.object({
+  "@graph": z.array(
+    z.looseObject({
+      "@id": z.unknown(),
+      "@type": z.unknown(),
+      url: z.unknown(),
+    })
+  ),
+});
 
 /**
  * @param {string} routePath Public route path.
@@ -34,7 +50,7 @@ function fail(routePath, tag, problem) {
  * @param {string} routePath Public route path.
  * @param {string} selector Selector that must match exactly one element.
  */
-function single(document, routePath, selector) {
+function exactlyOne(document, routePath, selector) {
   const found = document.querySelectorAll(selector);
   if (found.length !== 1) {
     fail(routePath, selector, `appears ${found.length} times, expected 1`);
@@ -50,7 +66,9 @@ function single(document, routePath, selector) {
  * @returns {string} The attribute's value, which must not be empty.
  */
 function attributeOf(document, routePath, selector, attribute) {
-  const value = single(document, routePath, selector).getAttribute(attribute);
+  const value = exactlyOne(document, routePath, selector).getAttribute(
+    attribute
+  );
   if (value === null || value.trim() === "") {
     fail(routePath, selector, `has no ${attribute}`);
   }
@@ -76,20 +94,13 @@ function expectAttribute(document, routePath, selector, attribute, expected) {
 }
 
 /**
- * @param {unknown} value Parsed JSON.
- * @returns {value is Record<string, unknown>} Whether it is a JSON object.
- */
-function isObject(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
  * @param {Document} document Parsed page.
  * @param {string} routePath Public route path.
  * @param {string} pageUrl Absolute URL the page node must carry.
  */
 function checkStructuredData(document, routePath, pageUrl) {
-  const text = single(document, routePath, ldJsonSelector).textContent ?? "";
+  const text =
+    exactlyOne(document, routePath, ldJsonSelector).textContent ?? "";
   /** @type {unknown} */
   let data;
   try {
@@ -97,20 +108,13 @@ function checkStructuredData(document, routePath, pageUrl) {
   } catch {
     fail(routePath, ldJsonSelector, "is not valid JSON");
   }
-  const graph = isObject(data) ? data["@graph"] : undefined;
-  if (!Array.isArray(graph)) {
-    fail(routePath, ldJsonSelector, "has no @graph array");
+  const parsed = graphSchema.safeParse(data);
+  if (!parsed.success) {
+    fail(routePath, ldJsonSelector, "has no @graph array of nodes");
   }
-  /** @type {readonly unknown[]} */
-  const nodes = graph;
-  /** @type {readonly string[]} */
-  const pageTypes = webPageTypes;
-  const pages = nodes
-    .filter(isObject)
-    .filter(
-      (node) =>
-        typeof node["@type"] === "string" && pageTypes.includes(node["@type"])
-    );
+  const pages = parsed.data["@graph"].filter((node) =>
+    webPageTypes.some((pageType) => pageType === node["@type"])
+  );
   if (pages.length !== 1) {
     fail(
       routePath,
@@ -149,7 +153,8 @@ export function checkPageHtml(html, routePath) {
   const pageUrl = `${siteConfig.origin}${routePath}`;
   const imageUrl = `${siteConfig.origin}${siteConfig.socialImage.path}`;
 
-  const title = single(document, routePath, "title").textContent?.trim() ?? "";
+  const title =
+    exactlyOne(document, routePath, "title").textContent?.trim() ?? "";
   if (title === "") {
     fail(routePath, "title", "is empty");
   }
@@ -176,16 +181,11 @@ export function checkPageHtml(html, routePath) {
   ]) {
     expectAttribute(document, routePath, selector, attribute, expected);
   }
-  const card = attributeOf(
-    document,
-    routePath,
-    'meta[name="twitter:card"]',
-    "content"
-  );
+  const card = attributeOf(document, routePath, twitterCardSelector, "content");
   if (!twitterCards.has(card)) {
     fail(
       routePath,
-      'meta[name="twitter:card"]',
+      twitterCardSelector,
       `content "${card}" is not a card type`
     );
   }
