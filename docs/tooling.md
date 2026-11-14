@@ -6,7 +6,7 @@ Use this guide when a commit or push hook runs, when `pnpm install` asks to appr
 
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
 
-Agent tooling and vendored plugin source are excluded from application quality gates. `agent-tooling.ts` lists them for Oxlint and Oxfmt; `tsconfig.json` and `lefthook.yml` restate the list, and `scripts/agent-tooling.test.ts` fails when either misses a pattern. `scripts/anti-slop.test.ts` lints one known violation per enabled anti-slop rule, so an upgrade that stops a rule firing fails. Review content, accessibility, architecture, and edge cases by hand as well.
+Agent tooling and vendored plugin source are excluded from application quality gates. `agent-tooling.ts` lists them; `tsconfig.json` and `lefthook.yml` restate that list, which `scripts/agent-tooling.test.ts` checks. `scripts/anti-slop.test.ts` checks that the vendored rules still fire. Review content, accessibility, architecture, and edge cases by hand as well.
 
 ## Skills
 

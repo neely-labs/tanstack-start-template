@@ -7,29 +7,8 @@ import path from "node:path";
 
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
+import { fixtureEnv } from "./git-fixtures.ts";
 import type { Checkout } from "./local.ts";
-
-// Git fixtures follow docs/recipes/git-fixtures.md: no repository variables,
-// empty global and system config, and discovery stopped at `base`.
-const local = new Set(
-  execFileSync("git", ["rev-parse", "--local-env-vars"], {
-    encoding: "utf-8",
-  }).split("\n")
-);
-
-/** An environment for Git fixtures under `base`, a fresh temporary directory. */
-const fixtureEnv = (base: string): NodeJS.ProcessEnv => ({
-  ...Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !local.has(key))
-  ),
-  GIT_AUTHOR_EMAIL: "test@example.com",
-  GIT_AUTHOR_NAME: "test",
-  GIT_CEILING_DIRECTORIES: base,
-  GIT_COMMITTER_EMAIL: "test@example.com",
-  GIT_COMMITTER_NAME: "test",
-  GIT_CONFIG_GLOBAL: os.devNull,
-  GIT_CONFIG_NOSYSTEM: "1",
-});
 
 const base = fs.realpathSync(
   fs.mkdtempSync(path.join(os.tmpdir(), "local-env-"))
@@ -37,8 +16,8 @@ const base = fs.realpathSync(
 const env = fixtureEnv(base);
 
 // The code under test builds its Git environment from `process.env` when it
-// loads, so the fixture settings go in first. It drops repository variables
-// itself.
+// loads and drops repository variables itself. Stub the fixture settings
+// first, then import it here: a static import would load it before them.
 for (const [key, value] of Object.entries(env)) {
   if (key.startsWith("GIT_")) {
     vi.stubEnv(key, value);

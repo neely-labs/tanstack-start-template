@@ -1,7 +1,7 @@
 // The vendored anti-slop rules in tools/oxlint/anti-slop run only through
 // `oxlint.config.ts`. An Oxlint or `@oxlint/plugins` upgrade, or a config edit,
 // could stop them matching without any other check failing, so this test lints
-// one known violation per enabled rule with the real config. The samples live
+// one known violation per configured rule with the real config. The samples live
 // in a temporary directory outside the repository, so no ignore pattern or
 // file override applies to them.
 import { spawnSync } from "node:child_process";
@@ -77,10 +77,12 @@ describe("anti-slop rules", () => {
   });
 
   it("each have a sample", () => {
-    const enabled = Object.keys(config.rules ?? {})
+    const configured = Object.keys(config.rules ?? {})
       .filter((rule) => rule.startsWith("anti-slop/"))
       .map((rule) => rule.slice("anti-slop/".length));
-    expect(enabled.toSorted()).toStrictEqual(Object.keys(samples).toSorted());
+    expect(configured.toSorted()).toStrictEqual(
+      Object.keys(samples).toSorted()
+    );
   });
 
   it("report each sample's violation", () => {
