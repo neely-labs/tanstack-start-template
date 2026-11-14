@@ -7,6 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { z } from "zod";
+
 export type Checkout = ReturnType<typeof checkoutOf>;
 /** What `dev` started, so status, stop and retire act only on that process. */
 export type Owner = Pick<Checkout, "appPort" | "e2ePort" | "root"> & {
@@ -91,6 +93,15 @@ export function processStart(pid: number) {
   return readOrEmpty(() => execFileSync("ps", args, options)) || undefined;
 }
 
+const ownerSchema: z.ZodType<Owner> = z.object({
+  appPort: z.number(),
+  commit: z.string(),
+  e2ePort: z.number(),
+  pid: z.number().int().positive(),
+  root: z.string(),
+  startedAt: z.string(),
+});
+
 /**
  * Parses the ownership file. A missing or malformed one, or one copied from
  * another checkout, owns nothing.
@@ -102,17 +113,10 @@ export function readOwner(checkout: Checkout): Owner | undefined {
   } catch {
     // No ownership file yet, or one that cannot be read.
   }
-  const fields = new Map(Object.entries(value ?? {}));
-  const owner = {
-    appPort: Number(fields.get("appPort")),
-    commit: String(fields.get("commit")),
-    e2ePort: Number(fields.get("e2ePort")),
-    pid: Number(fields.get("pid")),
-    root: String(fields.get("root")),
-    startedAt: String(fields.get("startedAt")),
-  };
-  const valid = Number.isInteger(owner.pid) && owner.pid > 0;
-  return valid && owner.root === checkout.root ? owner : undefined;
+  const owner = ownerSchema.safeParse(value);
+  return owner.success && owner.data.root === checkout.root
+    ? owner.data
+    : undefined;
 }
 
 /** `stale` means the recorded process id now belongs to another process. */

@@ -12,6 +12,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 import { parseDocument } from "yaml";
+import { z } from "zod";
 
 const root = path.join(import.meta.dirname, "..");
 const lockPath = path.join(root, "skills-lock.json");
@@ -20,14 +21,19 @@ const workspacePath = path.join(root, "pnpm-workspace.yaml");
 /** Dependencies whose skills this project has reviewed and adopted. */
 const approvedSkills = new Set<string>();
 
+const skillsLockSchema = z.object({
+  skills: z.record(z.string(), z.looseObject({})),
+});
+
 /** Each skill in `skills-lock.json` with its entry; none without a lock. */
 function lockedSkills() {
-  const text = fs.existsSync(lockPath)
-    ? fs.readFileSync(lockPath, "utf-8")
-    : "{}";
-  const lock: unknown = JSON.parse(text);
-  const skills: unknown = new Map(Object.entries(lock ?? {})).get("skills");
-  return Object.entries(skills ?? {});
+  if (!fs.existsSync(lockPath)) {
+    return [];
+  }
+  const lock = skillsLockSchema.parse(
+    JSON.parse(fs.readFileSync(lockPath, "utf-8"))
+  );
+  return Object.entries(lock.skills);
 }
 
 /** Each entry under `dir` by relative path: file contents, or "link". */

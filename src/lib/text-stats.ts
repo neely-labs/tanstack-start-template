@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /** Upper bound applied before the server does any work on submitted text. */
 export const maxTextLength = 2000;
 
@@ -8,10 +10,6 @@ export const textInputErrors = {
   blank: "Enter some text to analyze.",
   tooLong: `Enter at most ${maxTextLength} characters.`,
 } as const;
-
-export interface TextInput {
-  text: string;
-}
 
 export interface TextStats {
   characters: number;
@@ -32,23 +30,16 @@ export function summarizeText(text: string): TextStats {
 }
 
 /**
- * The validator seam for the `analyzeText` server function.
- *
- * TanStack Start hands validated data to the handler, so untrusted input is
- * rejected before the handler runs. This template deliberately ships no schema
- * library; a Standard Schema validator drops in here without touching the
- * handler.
+ * The validator for the `analyzeText` server function. TanStack Start runs it
+ * before the handler, so the handler sees only text that passed.
  */
-export function parseTextInput(input: TextInput): TextInput {
-  const text = input.text.trim();
+export const textInputSchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1, textInputErrors.blank)
+    .max(maxTextLength, textInputErrors.tooLong),
+});
 
-  if (text === "") {
-    throw new Error(textInputErrors.blank);
-  }
-
-  if (text.length > maxTextLength) {
-    throw new Error(textInputErrors.tooLong);
-  }
-
-  return { text };
-}
+/** What the analyzer shows for a failure that is not a rejected input. */
+export const analyzerFailure = "The request could not be completed. Try again.";

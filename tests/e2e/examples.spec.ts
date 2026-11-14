@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import type { Route } from "@playwright/test";
 
-import { maxTextLength, textInputErrors } from "../../src/lib/text-stats.ts";
+import {
+  analyzerFailure,
+  maxTextLength,
+  textInputErrors,
+} from "../../src/lib/text-stats.ts";
 
 // Remove this file with the optional /setup and /runtime example pages.
 test("navigates the examples and validates real server functions", async ({
@@ -74,6 +79,22 @@ test("navigates the examples and validates real server functions", async ({
   expect(oversizedBody).toContain('"error"');
   expect(oversizedBody).toContain(textInputErrors.tooLong);
   expect(oversizedBody).not.toContain('"computedAt"');
+
+  // A caller that skips the page can send any shape; the schema rejects it.
+  const fieldWithoutText = requestBody.replace(
+    `"k":["text"],"v":[{"t":1,"s":"${submittedText}"}]`,
+    '"k":[],"v":[]'
+  );
+  expect(fieldWithoutText).not.toBe(requestBody);
+  const malformed = await request.post(rpcRequest.url(), {
+    data: fieldWithoutText,
+    headers: Object.fromEntries(headers),
+  });
+  const malformedBody = await malformed.text();
+  expect(malformedBody).toContain('"error"');
+  expect(malformedBody).toContain("invalid_type");
+  expect(malformedBody).not.toContain("Cannot read properties");
+  expect(malformedBody).not.toContain('"computedAt"');
 
   headers.set("origin", "https://attacker.example");
   headers.set("sec-fetch-site", "cross-site");
@@ -164,4 +185,78 @@ test("recovers from a loader failure by retrying the real server", async ({
   ).toBeVisible();
   await expect(page.getByText(/^client ·/u)).toBeVisible();
   expect(retriedRequests).toBeGreaterThan(0);
+});
+
+test("hides a failed request's server text and recovers on retry", async ({
+  page,
+}) => {
+  const serverText = "connection to db at 10.0.0.5 failed";
+  let failAnalysis = true;
+  // Fault injection stays in this browser. The retry reaches the built server.
+  await page.route("**/_serverFn/**", async (route) => {
+    await (failAnalysis && route.request().method() === "POST"
+      ? route.fulfill({
+          body: serverText,
+          contentType: "text/plain",
+          status: 500,
+        })
+      : route.continue());
+  });
+  await page.goto("/runtime");
+  await expect(page.getByText(/^client ·/u)).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Text to analyze" });
+  const submit = page.getByRole("button", { name: "Analyze on the server" });
+  const submittedText = "Retry after a failure";
+  await input.fill(submittedText);
+  await submit.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(analyzerFailure)).toBeVisible();
+  await expect(page.getByText(serverText)).toHaveCount(0);
+  await expect(input).toHaveValue(submittedText);
+  await expect(input).toHaveAttribute("aria-invalid", "false");
+
+  failAnalysis = false;
+  await expect(submit).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("dd").first()).toHaveText("4");
+  await expect(page.getByText(analyzerFailure)).toHaveCount(0);
+});
+
+test("keeps the submitted text read-only while the analysis is pending", async ({
+  page,
+}) => {
+  // A route left unanswered holds its request until the test continues it.
+  let holdAnalysis = false;
+  const heldRequests: Route[] = [];
+  await page.route("**/_serverFn/**", async (route) => {
+    if (holdAnalysis && route.request().method() === "POST") {
+      heldRequests.push(route);
+    } else {
+      await route.continue();
+    }
+  });
+  await page.goto("/runtime");
+  await expect(page.getByText(/^client ·/u)).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Text to analyze" });
+  const submit = page.getByRole("button", { name: "Analyze on the server" });
+  await input.fill("   ");
+  await submit.click();
+  await expect(page.getByText(textInputErrors.blank)).toBeVisible();
+
+  holdAnalysis = true;
+  const submittedText = "Held while pending";
+  await input.fill(submittedText);
+  await submit.click();
+  await expect(page.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
+  await expect(page.getByText(textInputErrors.blank)).toHaveCount(0);
+  await expect(input).not.toBeEditable();
+  await input.focus();
+  await page.keyboard.type(" and more");
+  await expect(input).toHaveValue(submittedText);
+
+  await expect.poll(() => heldRequests.length).toBe(1);
+  await heldRequests[0]?.continue();
+  await expect(page.locator("dd").first()).toHaveText("3");
+  await expect(input).toHaveValue(submittedText);
+  await expect(input).toBeEditable();
 });

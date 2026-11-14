@@ -189,6 +189,25 @@ describe("local environment", () => {
     expect(readOwner(main)?.pid).toBe(mine);
   });
 
+  it("treats a malformed ownership file as owning nothing", () => {
+    const [main] = repositoryWithWorktree();
+    const mine = startProcess();
+    own(main, mine);
+    const record = fs.readFileSync(main.ownerFile, "utf-8");
+    expect(readOwner(main)?.pid).toBe(mine);
+
+    for (const malformed of [
+      "not json",
+      "null",
+      "[]",
+      record.replace(`"pid":${mine}`, `"pid":"${mine}"`),
+    ]) {
+      fs.writeFileSync(main.ownerFile, malformed);
+      expect(readOwner(main)).toBeUndefined();
+    }
+    expect(serverOf(main)).toStrictEqual({ state: "stopped" });
+  });
+
   it("ignores a record copied from another checkout", async () => {
     const [main, other] = repositoryWithWorktree();
     const theirs = startProcess();

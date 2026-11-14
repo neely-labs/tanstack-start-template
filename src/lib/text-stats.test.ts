@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   maxTextLength,
-  parseTextInput,
   summarizeText,
   textInputErrors,
+  textInputSchema,
 } from "./text-stats.ts";
 
 describe(summarizeText, () => {
@@ -25,23 +25,52 @@ describe(summarizeText, () => {
   });
 });
 
-describe(parseTextInput, () => {
+describe("the text input schema", () => {
   it("trims accepted input", () => {
-    expect(parseTextInput({ text: "  hello  " })).toStrictEqual({
+    expect(textInputSchema.parse({ text: "  hello  " })).toStrictEqual({
       text: "hello",
     });
   });
 
-  it("rejects blank input", () => {
-    expect(() => parseTextInput({ text: "   " })).toThrow(
-      textInputErrors.blank
-    );
+  // Each case is the JSON a caller could send in place of `{ "text": "..." }`.
+  it.each([
+    { json: "null", label: "null" },
+    { json: "5", label: "a primitive" },
+    { json: "[]", label: "an array" },
+    { json: "{}", label: "an object without text" },
+    { json: '{ "text": 5 }', label: "a non-string text" },
+  ])("rejects $label as a validation error", ({ json }) => {
+    const result = textInputSchema.safeParse(JSON.parse(json));
+
+    expect(result.success).toBeFalsy();
+    expect(result.error?.issues[0]?.code).toBe("invalid_type");
   });
 
-  it("rejects input over the length bound", () => {
-    expect(() =>
-      parseTextInput({ text: "a".repeat(maxTextLength + 1) })
-    ).toThrow(textInputErrors.tooLong);
+  it("rejects blank input", () => {
+    const issues = textInputSchema.safeParse({ text: "   " }).error?.issues;
+
+    expect(issues?.map((issue) => issue.message)).toStrictEqual([
+      textInputErrors.blank,
+    ]);
+  });
+
+  it("accepts text at the length bound and rejects one character more", () => {
+    const atBound = "a".repeat(maxTextLength);
+
+    expect(textInputSchema.parse({ text: atBound })).toStrictEqual({
+      text: atBound,
+    });
+    const issues = textInputSchema.safeParse({ text: `${atBound}a` }).error
+      ?.issues;
+    expect(issues?.map((issue) => issue.message)).toStrictEqual([
+      textInputErrors.tooLong,
+    ]);
+  });
+
+  it("checks the length after trimming", () => {
+    const padded = ` ${"a".repeat(maxTextLength)} `;
+
+    expect(textInputSchema.safeParse({ text: padded }).success).toBeTruthy();
   });
 
   it("states the length bound it enforces", () => {

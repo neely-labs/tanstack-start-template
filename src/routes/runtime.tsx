@@ -23,9 +23,10 @@ import {
   analyzeText,
   describeEnvironment,
   getRenderSnapshot,
+  inputRejection,
 } from "@/lib/server-runtime.ts";
 import type { RenderSnapshot, TextAnalysis } from "@/lib/server-runtime.ts";
-import { maxTextLength } from "@/lib/text-stats.ts";
+import { analyzerFailure, maxTextLength } from "@/lib/text-stats.ts";
 
 const description =
   "How this template uses the TanStack Start execution model: server functions, a validated mutation, request middleware, a server route, and isomorphic code.";
@@ -155,18 +156,17 @@ function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
   );
 }
 
-interface AnalyzerState {
-  analysis: TextAnalysis | null;
-  errorMessage: string | null;
-  /** React resets an uncontrolled form after an action, so carry the input. */
-  text: string;
-}
+/**
+ * The analyzer's four states. React resets an uncontrolled form after an
+ * action, so each one carries the submitted text back into the field.
+ */
+type AnalyzerState =
+  | { status: "idle"; text: string }
+  | { analysis: TextAnalysis; status: "succeeded"; text: string }
+  | { message: string; status: "rejected"; text: string }
+  | { status: "failed"; text: string };
 
-const initialAnalyzerState: AnalyzerState = {
-  analysis: null,
-  errorMessage: null,
-  text: "",
-};
+const initialAnalyzerState: AnalyzerState = { status: "idle", text: "" };
 
 function AnalyzerSection() {
   const analyze = useServerFn(analyzeText);
@@ -183,24 +183,22 @@ function AnalyzerSection() {
         submitted === null || submitted instanceof File ? "" : submitted;
 
       try {
-        return {
-          analysis: await analyze({ data: { text } }),
-          errorMessage: null,
-          text,
-        };
+        const analysis = await analyze({ data: { text } });
+        return { analysis, status: "succeeded", text };
       } catch (error) {
-        return {
-          analysis: null,
-          errorMessage:
-            error instanceof Error
-              ? error.message
-              : "The request could not be completed.",
-          text,
-        };
+        // Show only a known rejection; any other server text stays hidden.
+        const message =
+          error instanceof Error ? inputRejection(error) : undefined;
+        return message === undefined
+          ? { status: "failed", text }
+          : { message, status: "rejected", text };
       }
     },
     initialAnalyzerState
   );
+  // A new attempt clears the last message, so a retry visibly runs.
+  const rejected = !isPending && state.status === "rejected";
+  const failed = !isPending && state.status === "failed";
 
   return (
     <section className="mt-16">
@@ -220,33 +218,44 @@ function AnalyzerSection() {
           Text to analyze
         </label>
         <textarea
-          aria-describedby={
-            state.errorMessage === null ? "analyzer-hint" : "analyzer-error"
-          }
-          aria-invalid={state.errorMessage !== null}
-          className="mt-2 block min-h-28 w-full rounded-lg border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-invalid:border-destructive"
+          aria-describedby={rejected ? "analyzer-error" : "analyzer-hint"}
+          aria-invalid={rejected}
+          className="mt-2 block min-h-28 w-full rounded-lg border bg-background px-3 py-2 text-sm read-only:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-invalid:border-destructive"
           defaultValue={state.text}
           id="analyzer-input"
           maxLength={maxTextLength}
           name="text"
+          // Text typed while pending would be lost when the form resets.
+          readOnly={isPending}
         />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground" id="analyzer-hint">
             Up to {maxTextLength} characters. Validation runs on the server.
           </p>
-          <Button disabled={isPending} type="submit">
+          {/* Focus stays on the button, so Enter can try again after a failure. */}
+          <Button
+            className="aria-disabled:opacity-50"
+            disabled={isPending}
+            focusableWhenDisabled
+            type="submit"
+          >
             {isPending ? "Analyzing…" : "Analyze on the server"}
           </Button>
         </div>
       </form>
 
       <output aria-live="polite" className="mt-6 block">
-        {state.errorMessage === null ? null : (
+        {rejected ? (
           <p className="mb-4 text-sm text-destructive" id="analyzer-error">
-            {state.errorMessage}
+            {state.message}
           </p>
-        )}
-        <AnalysisResult analysis={state.analysis} />
+        ) : null}
+        {failed ? (
+          <p className="mb-4 text-sm text-destructive">{analyzerFailure}</p>
+        ) : null}
+        <AnalysisResult
+          analysis={state.status === "succeeded" ? state.analysis : null}
+        />
       </output>
     </section>
   );
