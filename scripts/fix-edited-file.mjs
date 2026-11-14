@@ -4,12 +4,10 @@
  * Formats and lints only the file an agent just edited.
  *
  * Wired to Claude Code's `PostToolUse` hook and Cursor's `afterFileEdit` hook,
- * both of which deliver a JSON payload on stdin. Those hooks previously ran
- * `pnpm run fix`, which re-checked the entire repository after every single
- * edit; this narrows the work to the one file that changed.
+ * both of which deliver a JSON payload on stdin.
  *
- * Type-aware linting is deliberately skipped here because it has to build the
- * whole TypeScript program regardless of how few files are being checked. The
+ * The lint run includes type-aware rules, because `oxlint.config.ts` enables
+ * them for every oxlint run. It skips the type check and other files, so the
  * full gate still runs via `pnpm validate` on pre-push and in CI.
  *
  * Ignored paths (agent tooling, generated files) are handled by the shared

@@ -93,9 +93,6 @@ jobs:
           printf 'docs-only=%s for these changed paths:\n%s\n' "$docs_only" "$changed"
           echo "::$resume::"
 
-      # Reuses the runner's preinstalled Node instead of letting pnpm fetch a
-      # 57 MB tarball on every run, which it did before the store cache restored
-      # and so could never be served from it.
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -111,12 +108,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Formatting and linting cover Markdown too, so documentation still gets
-      # checked; only the type, test, and build gates are skipped. These are the
-      # first two stages of `pnpm validate`, so the two paths cannot drift apart.
-      # The doc budget is a script, not a test, because this path skips tests.
+      # checked; only `pnpm typecheck`, the tests, and the build are skipped.
+      # `pnpm validate` starts with the same script. The doc budget is a script,
+      # not a test, because this path skips tests.
       - name: Check documentation
         if: steps.scope.outputs.docs-only == 'true'
-        run: pnpm check && pnpm docs:budget
+        run: pnpm validate:docs
 
       - name: Validate
         if: steps.scope.outputs.docs-only != 'true'

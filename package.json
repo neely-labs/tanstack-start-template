@@ -19,7 +19,8 @@
     "test:changed": "pnpm test --passWithNoTests=false --changed",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "validate": "pnpm check && pnpm docs:budget && pnpm typecheck && pnpm test && pnpm build && pnpm seo:verify"
+    "validate": "pnpm validate:docs && pnpm typecheck && pnpm test && pnpm build && pnpm seo:verify",
+    "validate:docs": "pnpm check && pnpm docs:budget"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
