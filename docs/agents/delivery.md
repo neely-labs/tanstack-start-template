@@ -31,7 +31,7 @@ The committed [`flow-walk` skill](../tooling.md#skills) carries the full procedu
 
 ## Merge danger
 
-State these in the pull request description before merge.
+State these in the pull request description before merge, each as a short phrase a reviewer can take in at a glance, never a sentence. Reasons for a choice go under Decisions; each review round's reviewer, head, and outcome go under Verification.
 
 - **Door:** one for the whole change, set by its least reversible part.
   - _Clean two-way:_ a revert restores everything; nothing outside the code changed.
@@ -39,7 +39,7 @@ State these in the pull request description before merge.
   - _One-way:_ a revert cannot undo it, as with deleted or rewritten data, a sent message, a charge, or a published release.
   - _Uncertain:_ treat it as one-way until you can tell.
 - **Rollback:** only for a door that is not clean two-way, how to undo or contain the change, such as a revert's cleanup or a one-way step's forward fix.
-- **Blast radius:** what breaks if the change is wrong, such as docs only, one page, every page, stored data, or people outside the project.
+- **Blast radius:** what breaks if the change is wrong, such as docs only, one page, every page, stored data, or people outside the project. Name the likeliest failure when it is not obvious, such as "CI; a runner outage blocks merges".
 - **Risk tier:** the review tier from the table above.
 - **Rounds used:** the review rounds spent against the tier's budget, such as `2 of 3`.
 
