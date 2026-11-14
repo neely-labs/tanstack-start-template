@@ -12,11 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pageTitle, recoveryMeta, recoveryTitles } from "@/lib/seo.ts";
 
-import { recoveryComponents } from "./router.tsx";
+import { getRouter } from "./router.tsx";
 
 const pageHead = () => ({
   meta: [{ title: "Failing page" }, { content: "index", name: "robots" }],
 });
+
+const appRouter = getRouter();
 
 /**
  * Server-renders a URL against the app's recovery components and the root
@@ -55,7 +57,8 @@ async function serverRender(path: string) {
   const handle = createRequestHandler({
     createRouter: () =>
       createRouter({
-        ...recoveryComponents,
+        defaultErrorComponent: appRouter.options.defaultErrorComponent,
+        defaultNotFoundComponent: appRouter.options.defaultNotFoundComponent,
         routeTree: rootRoute.addChildren([loaderFailure, renderFailure]),
       }),
     request: new Request(`http://localhost${path}`),
