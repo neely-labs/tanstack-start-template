@@ -26,9 +26,13 @@ Closes #
 <details>
 <summary>Outcome in one line, naming the head commit and the last review</summary>
 
+**Checks**
+
 | Commit | Command | Result | Limits |
 | ------ | ------- | ------ | ------ |
 |        |         |        |        |
+
+**Reviews**
 
 | Round | Reviewer | Head | Outcome |
 | ----- | -------- | ---- | ------- |
