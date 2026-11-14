@@ -12,7 +12,7 @@ The primary users are experienced TypeScript and React developers, working indiv
 
 TanStack Start Template is a reusable GitHub template for production-minded applications built with coding agents. Its main offering is the delivery practice the template gives those agents: how work is tracked, reviewed, walked, and verified. It also preserves proven runtime, interface, validation, SEO, and deployment decisions while leaving product-specific choices to the application created from it.
 
-Success means a developer can create a new repository, replace the documented identity and example surfaces, and hand a coding agent its first issue, with one validation command as the shared gate, without first rebuilding the project's foundation or its way of working.
+Success means a developer can create a new repository, replace the documented identity and example surfaces, run one validation command, and hand coding agents their first issue without first rebuilding the project's foundation or its way of working.
 
 ## Cross-cutting invariants
 
@@ -20,7 +20,7 @@ Success means a developer can create a new repository, replace the documented id
 
 ## Positioning
 
-The template's main offering is a delivery practice for coding agents: [issue states](docs/agents/triage-labels.md#state-labels) they read, [review depth that follows risk](docs/agents/delivery.md#review-tiers), [fresh-tester flow walks](docs/agents/delivery.md#flow-walk), [a local environment per checkout](docs/concurrent-checkouts.md), and [a doc budget](scripts/verify-doc-budget.ts) on the guidance they read on every task.
+The template's delivery practice for coding agents covers [issue states](docs/agents/triage-labels.md#state-labels) they read, [review depth that follows risk](docs/agents/delivery.md#review-tiers), [fresh-tester flow walks](docs/agents/delivery.md#flow-walk), [a local environment per checkout](docs/concurrent-checkouts.md), and [a doc budget](scripts/verify-doc-budget.ts) on the guidance they read on every task.
 
 Beneath that practice, the template combines a deliberately small application surface with a complete path from local editing through hooks, tests, production output, rendered SEO verification, CI, and Vercel deployment. Its replacement seams and deliberate omissions are documented so infrastructure is reusable without quietly imposing a product model.
 
@@ -37,7 +37,7 @@ Beneath that practice, the template combines a deliberately small application su
 - The baseline uses TanStack Start, React, Nitro, Tailwind CSS, shadcn/ui on Base UI, TypeScript, Vitest, Ultracite, Oxlint, Oxfmt, Lefthook, and pnpm.
 - The browser floor is ES2023: TypeScript's `lib` lets code use built-ins such as `Array#toSorted`, which every major browser has shipped since mid-2023, and the build adds no polyfills.
 - Node.js 24 and the package manager pinned in `package.json` are repository constraints until intentionally upgraded.
-- The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and the agent delivery practice named under Positioning, with its committed skill and checks.
+- The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and the agent delivery practice named under Positioning.
 - Authentication, persistence, analytics, domain models, product copy, deployment credentials, application-specific state management, and an environment-schema library are deliberately undecided. [The recipes](docs/recipes/README.md) hold the safeguards that a database and other later choices bring.
 - The canonical origin, manifest identity, social image, robots policy, example routes, and product guidance must be replaced by each adopted application.
 - Original template code is distributed under the MIT License; vendored source remains under its upstream license.
