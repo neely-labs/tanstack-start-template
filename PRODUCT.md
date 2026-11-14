@@ -12,7 +12,7 @@ The primary users are experienced TypeScript and React developers, working indiv
 
 TanStack Start Template is a reusable GitHub template for production-minded applications built with coding agents. Its main offering is the delivery practice the template gives those agents: how work is tracked, reviewed, walked, and verified. It also preserves proven runtime, interface, validation, SEO, and deployment decisions while leaving product-specific choices to the application created from it.
 
-Success means a developer can create a new repository, replace the documented identity and example surfaces, run one validation command, and hand coding agents their first issue without first rebuilding the project's foundation or its way of working.
+Success for the template means a developer can create a new repository, replace the documented identity and example surfaces, run one validation command, and hand coding agents their first issue without first rebuilding the project's foundation or its way of working.
 
 ## Cross-cutting invariants
 
