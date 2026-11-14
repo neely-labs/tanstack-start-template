@@ -1,3 +1,4 @@
+import type { PublicPath } from "./public-routes.ts";
 import { siteConfig } from "./site-config.ts";
 
 const defaultRobots =
@@ -12,8 +13,11 @@ export type JsonLdValue =
 
 export type StructuredData = Record<string, JsonLdValue>;
 
+/** The schema.org types a page node can take; `pnpm seo:verify` looks for one. */
+export const webPageTypes = ["AboutPage", "CollectionPage", "WebPage"] as const;
+
 interface SeoHeadOptions {
-  canonicalPath: string;
+  canonicalPath: PublicPath;
   description: string;
   noIndex?: boolean;
   structuredData?: StructuredData;
@@ -24,8 +28,8 @@ interface SeoHeadOptions {
 interface WebPageSchemaOptions {
   description: string;
   name: string;
-  path: string;
-  type?: "AboutPage" | "CollectionPage" | "WebPage";
+  path: PublicPath;
+  type?: (typeof webPageTypes)[number];
 }
 
 export function absoluteUrl(path: string): string {

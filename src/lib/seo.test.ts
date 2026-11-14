@@ -27,13 +27,13 @@ describe("SEO helpers", () => {
 
   it("keeps visible and social metadata aligned", () => {
     const head = createSeoHead({
-      canonicalPath: "/about",
+      canonicalPath: "/setup",
       description: "Template decisions and replacement points.",
       title: pageTitle("About"),
     });
 
     expect(head.links).toContainEqual({
-      href: `${siteConfig.origin}/about`,
+      href: `${siteConfig.origin}/setup`,
       rel: "canonical",
     });
     expect(head.meta).toContainEqual({
@@ -56,7 +56,7 @@ describe("SEO helpers", () => {
       createWebPageSchema({
         description: "Template decisions.",
         name: "About",
-        path: "/about",
+        path: "/setup",
         type: "AboutPage",
       }),
     ]);
