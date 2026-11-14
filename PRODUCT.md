@@ -51,7 +51,7 @@ The source repository is named TanStack Start Template. Its voice is concise, ca
 
 - `README.md` introduces the project and links setup, development, architecture, and deployment guidance.
 - `src/routes` contains working example surfaces and global not-found and error recovery behavior.
-- `scripts/verify-seo-output.mjs` checks rendered production metadata, structured data, public routes, and the social image.
+- `scripts/verify-seo-output.ts` checks rendered production metadata, structured data, public routes, and the social image.
 - `.github/workflows/ci.yml` runs the same validation gate used locally.
 - `public/social-card.png` and `assets/source/social-card-background.png` provide a finished example social asset and its recoverable source.
 - Two rehearsals had fresh agents, with no global skills or instructions, take a one-paragraph idea from a scratch copy of the template to a merged first feature, including a run on a second model family and a run with review bots off. They show that the path works; no speed or cost gain has been shown.

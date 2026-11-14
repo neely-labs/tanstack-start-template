@@ -15,7 +15,7 @@ Use this reference when finding a module, changing public identity or metadata, 
 | `src/lib/seo.ts`, `src/lib/site-files.ts`, `src/lib/public-routes.ts` | Page metadata, generated identity files, and public route inventory |
 | `src/lib/text-stats.ts` and `src/lib/server-runtime.ts` | Example input parsing/calculation and server-function adapters |
 | `src/start.ts`, `src/server.ts`, `src/lib/security-headers.ts` | Request middleware, server entry, and headers shared with Nitro |
-| `scripts/verify-seo-output.mjs` | Verification of rendered production metadata and assets |
+| `scripts/verify-seo-output.ts` | Verification of rendered production metadata and assets |
 | `scripts/local.ts` | Per-checkout ports, server ownership, status, and retirement for concurrent worktrees |
 | `scripts/verify-doc-budget.ts` | Size caps on the docs agents read on every task |
 

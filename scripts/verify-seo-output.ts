@@ -35,22 +35,13 @@ const graphSchema = z.object({
   ),
 });
 
-/**
- * @param {string} routePath Public route path.
- * @param {string} tag Selector naming the element at fault.
- * @param {string} problem What is wrong with it.
- * @returns {never} Never returns; always throws.
- */
-function fail(routePath, tag, problem) {
+/** Throws an Error naming the route, the tag at fault and what is wrong. */
+function fail(routePath: string, tag: string, problem: string): never {
   throw new Error(`${routePath}: ${tag} ${problem}`);
 }
 
-/**
- * @param {Document} document Parsed page.
- * @param {string} routePath Public route path.
- * @param {string} selector Selector that must match exactly one element.
- */
-function exactlyOne(document, routePath, selector) {
+/** The one element `selector` matches; more or fewer fails. */
+function exactlyOne(document: Document, routePath: string, selector: string) {
   const found = document.querySelectorAll(selector);
   if (found.length !== 1) {
     fail(routePath, selector, `appears ${found.length} times, expected 1`);
@@ -58,14 +49,13 @@ function exactlyOne(document, routePath, selector) {
   return found[0];
 }
 
-/**
- * @param {Document} document Parsed page.
- * @param {string} routePath Public route path.
- * @param {string} selector Selector that must match exactly one element.
- * @param {string} attribute Attribute read from that element.
- * @returns {string} The attribute's value, which must not be empty.
- */
-function attributeOf(document, routePath, selector, attribute) {
+/** The attribute of the one element `selector` matches, which must not be empty. */
+function attributeOf(
+  document: Document,
+  routePath: string,
+  selector: string,
+  attribute: string
+) {
   const value = exactlyOne(document, routePath, selector).getAttribute(
     attribute
   );
@@ -75,14 +65,14 @@ function attributeOf(document, routePath, selector, attribute) {
   return value;
 }
 
-/**
- * @param {Document} document Parsed page.
- * @param {string} routePath Public route path.
- * @param {string} selector Selector that must match exactly one element.
- * @param {string} attribute Attribute read from that element.
- * @param {string} expected Value the attribute must hold.
- */
-function expectAttribute(document, routePath, selector, attribute, expected) {
+/** Fails unless the attribute of the one element `selector` matches is `expected`. */
+function expectAttribute(
+  document: Document,
+  routePath: string,
+  selector: string,
+  attribute: string,
+  expected: string
+) {
   const value = attributeOf(document, routePath, selector, attribute);
   if (value !== expected) {
     fail(
@@ -93,16 +83,15 @@ function expectAttribute(document, routePath, selector, attribute, expected) {
   }
 }
 
-/**
- * @param {Document} document Parsed page.
- * @param {string} routePath Public route path.
- * @param {string} pageUrl Absolute URL the page node must carry.
- */
-function checkStructuredData(document, routePath, pageUrl) {
+/** Fails unless the JSON-LD graph has one page node, carrying `pageUrl`. */
+function checkStructuredData(
+  document: Document,
+  routePath: string,
+  pageUrl: string
+) {
   const text =
     exactlyOne(document, routePath, ldJsonSelector).textContent ?? "";
-  /** @type {unknown} */
-  let data;
+  let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
@@ -126,7 +115,7 @@ function checkStructuredData(document, routePath, pageUrl) {
   for (const [key, expected] of [
     ["url", pageUrl],
     ["@id", `${pageUrl}#webpage`],
-  ]) {
+  ] as const) {
     if (page?.[key] !== expected) {
       fail(
         routePath,
@@ -141,12 +130,9 @@ function checkStructuredData(document, routePath, pageUrl) {
  * Checks one prerendered public page: every tag `createSeoHead` emits is
  * present once and carries this page's values, not another page's. Throws an
  * Error naming the route and the tag at fault.
- *
- * @param {string} html The page's HTML.
- * @param {string} routePath Public route path the HTML was rendered for.
- * @returns {{ description: string, title: string }} Text for uniqueness checks.
+ * Returns the title and description for the uniqueness checks.
  */
-export function checkPageHtml(html, routePath) {
+export function checkPageHtml(html: string, routePath: string) {
   const { document } = new JSDOM(html).window;
   // Built by concatenation rather than `absoluteUrl`, so a bug in the helper
   // under test cannot also shape what it is checked against.
@@ -178,7 +164,7 @@ export function checkPageHtml(html, routePath) {
     ['meta[property="og:image:width"]', "content", String(width)],
     ['meta[property="og:image:height"]', "content", String(height)],
     ['meta[name="twitter:image"]', "content", imageUrl],
-  ]) {
+  ] as const) {
     expectAttribute(document, routePath, selector, attribute, expected);
   }
   const card = attributeOf(document, routePath, twitterCardSelector, "content");
@@ -194,8 +180,8 @@ export function checkPageHtml(html, routePath) {
   return { description, title };
 }
 
-/** @param {string} routePath Public route path. */
-function htmlOutputPath(routePath) {
+/** Where the build prerenders the page for `routePath`. */
+function htmlOutputPath(routePath: string) {
   return path.resolve(
     ".output/public",
     routePath === "/" ? "index.html" : `${routePath.slice(1)}/index.html`
@@ -203,8 +189,8 @@ function htmlOutputPath(routePath) {
 }
 
 function verifyBuildOutput() {
-  const pageTitles = new Set();
-  const pageDescriptions = new Set();
+  const pageTitles = new Set<string>();
+  const pageDescriptions = new Set<string>();
   for (const routePath of publicPaths) {
     const page = checkPageHtml(
       readFileSync(htmlOutputPath(routePath), "utf-8"),

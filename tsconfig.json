@@ -1,5 +1,5 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "**/*.mjs"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "exclude": [
     "node_modules",
     ".agents",
@@ -16,7 +16,6 @@
     "module": "ESNext",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"],
-    "allowJs": true,
     "paths": {
       "@/*": ["./src/*"]
     },

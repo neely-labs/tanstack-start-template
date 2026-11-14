@@ -48,7 +48,7 @@ const unitTestRules = {
   ...vitest,
   overrides: vitest.overrides?.map((override) => ({
     ...override,
-    files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}"],
+    files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
   })),
 };
 
@@ -81,10 +81,6 @@ export default defineConfig({
     {
       files: ["src/components/ui/**/*.tsx"],
       rules: { "react-doctor/only-export-components": "off" },
-    },
-    {
-      files: ["scripts/**/*.mjs"],
-      rules: { "anti-slop/no-runtime-typeof": "off" },
     },
     {
       // TanStack Start middleware awaits `next()` to obtain the downstream
