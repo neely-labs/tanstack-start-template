@@ -14,17 +14,17 @@ Closes #
 
 <!-- One short phrase per value, never a sentence. Reasons go under Decisions; each review round goes under Verification. -->
 
-**Door:** <!-- clean two-way, two-way, one-way, or uncertain --> · **Risk tier:** <!-- 0, 1, or 2 --> · **Rounds used:** <!-- N of M, such as 2 of 5 -->
+**Door:** <!-- clean two-way, two-way, one-way, or uncertain --> · **Risk tier:** <!-- 0, 1, or 2 --> · **Rounds used:** <!-- N of M, such as 2 of 3 -->
 
-- **Blast radius:** <!-- What breaks if this is wrong, such as "docs only" or "this repo's CI; an outage blocks merges" -->
-- **Rollback:** <!-- Only when the door is not clean two-way, such as "revert; cache expires in 10 days". Otherwise delete this line. -->
+- **Blast radius:** <!-- What breaks if this is wrong, such as "docs only" or "CI; a runner outage blocks merges" -->
+- **Rollback:** <!-- Only when the door is not clean two-way, such as "revert, then clear the cache". Otherwise delete this line. -->
 
 ## Verification
 
 <!-- Commit: its SHA, plus "dirty" if the tree had uncommitted changes. Result: ran and skipped counts. Limits: where it ran (local, preview, production) and what it does not show. Reviews: one row per round; at tier 0 the reviewer is the author. -->
 
 <details>
-<summary>Outcome in one line, naming the head commit</summary>
+<summary>Outcome in one line, naming the head commit and the last review</summary>
 
 | Commit | Command | Result | Limits |
 | ------ | ------- | ------ | ------ |
