@@ -74,10 +74,11 @@ describe("committed skills", () => {
 /**
  * Each package that `pnpm-workspace.yaml` text grants agent skills. pnpm reads
  * YAML 1.1 booleans, so `yes`, `on` and `y` grant too. Only `skills: false`, or
- * an entry without `skills`, is not a grant; anything else counts as one.
+ * an entry without `skills`, is not a grant; anything else counts as one. Keys
+ * stay strings, as pnpm reads them, so a package named `on` is not `true`.
  */
 function skillGrants(text: string) {
-  const doc = parseDocument(text, { version: "1.1" });
+  const doc = parseDocument(text, { stringKeys: true, version: "1.1" });
   if (doc.errors.length > 0) {
     throw doc.errors[0];
   }
@@ -104,7 +105,7 @@ function skillGrants(text: string) {
 
 /** What to do about a grant, shown when the committed file has one. */
 const grantMessage = (name: string) =>
-  `pnpm-workspace.yaml grants agent skills to ${name}, linking them unreviewed into every checkout. Deny it with \`pnpm approve '!${name}' -y\`, which records \`skills: false\` and unlinks them. To adopt them on purpose, add ${name} to approvedSkills in scripts/skills.test.ts; see docs/tooling.md#skills.`;
+  `pnpm-workspace.yaml grants agent skills to ${name}, linking them unreviewed into every checkout. Revert that change, or set \`skills: false\` for ${name} under \`permissions\`, then run \`pnpm install\` to unlink them. To adopt them on purpose, add ${name} to approvedSkills in scripts/skills.test.ts; see docs/tooling.md#skills.`;
 
 const workspace = (permissions: string) =>
   `packages: []\n\npermissions:\n${permissions}\n`;
@@ -201,6 +202,15 @@ describe("dependency skills", () => {
     ]);
   });
 
+  // pnpm keeps an unquoted `on` or `010` as the package's name.
+  it("name a package as written, not as a YAML boolean or number", () => {
+    expect(
+      skillGrants(
+        workspace("  on:\n    skills: true\n  010:\n    skills: true")
+      )
+    ).toStrictEqual(["on", "010"]);
+  });
+
   it("fail loudly on a file they cannot read", () => {
     expect(() => skillGrants("permissions: [ultracite]\n")).toThrow(
       "permissions is not a map"
@@ -220,7 +230,7 @@ describe("dependency skills", () => {
   it("explain how to deny a grant and how to adopt one on purpose", () => {
     const message = grantMessage("ultracite");
     expect(message).toContain("grants agent skills to ultracite");
-    expect(message).toContain("pnpm approve '!ultracite' -y");
+    expect(message).toContain("set `skills: false` for ultracite");
     expect(message).toContain("add ultracite to approvedSkills");
     expect(message).toContain("docs/tooling.md#skills");
   });
