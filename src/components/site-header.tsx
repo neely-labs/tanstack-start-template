@@ -12,7 +12,6 @@ export function SiteHeader() {
           className="inline-flex items-center gap-2.5 rounded-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
           to="/"
         >
-          {/* Decorative: the link is already named by its aria-label. */}
           <img
             alt=""
             className="size-6 shrink-0"

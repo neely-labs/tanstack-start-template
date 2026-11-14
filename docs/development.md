@@ -16,6 +16,7 @@ pnpm build      # Build the production app and prerender public pages
 pnpm seo:verify # Check metadata in the built files
 pnpm start      # Run an existing production build
 pnpm validate   # Run the core checks, build, and metadata verification
+pnpm validate:docs # Run only lint, formatting, and the doc budget, as CI does for docs-only changes
 pnpm test:e2e   # Check the production app in desktop and mobile Chromium
 ```
 

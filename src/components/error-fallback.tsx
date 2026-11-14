@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button.tsx";
 
 interface ErrorFallbackProps {
-  /** Router errors can now contain any thrown value, including null. */
+  /** Any thrown value, including null. */
   error: unknown;
   onRetry: () => void;
   showDetails?: boolean;
