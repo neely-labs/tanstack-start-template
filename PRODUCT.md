@@ -53,7 +53,7 @@ The source repository is named TanStack Start Template. Its voice is concise, ca
 - `scripts/verify-seo-output.mjs` checks rendered production metadata, structured data, public routes, and the social image.
 - `.github/workflows/ci.yml` runs the same validation gate used locally.
 - `public/social-card.png` and `assets/source/social-card-background.png` provide a finished example social asset and its recoverable source.
-- Two rehearsals had fresh agents, with no global skills or instructions, take a one-paragraph idea from a scratch copy of the template to a merged first feature: [#43](https://github.com/neely-labs/tanstack-start-template/issues/43) on two model families, and [#71](https://github.com/neely-labs/tanstack-start-template/issues/71) with review bots off. They show that the path works. [#29](https://github.com/neely-labs/tanstack-start-template/issues/29) records that no speed or cost gain has been shown.
+- Two rehearsals had fresh agents, with no global skills or instructions, take a one-paragraph idea from a scratch copy of the template to a merged first feature, including a run on a second model family and a run with review bots off. They show that the path works; no speed or cost gain has been shown.
 - No customers, testimonials, adoption metrics, performance benchmarks, or product-specific claims are established; future work must not fabricate them.
 
 ## Product Principles

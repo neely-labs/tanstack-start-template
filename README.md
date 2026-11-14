@@ -16,7 +16,7 @@ For the agents working on your project, this template provides:
 - [a local environment per checkout](docs/concurrent-checkouts.md), so several agents can serve and test side by side,
 - and [a doc budget](scripts/verify-doc-budget.ts) that caps the guidance they read on every task.
 
-In two rehearsals ([#43](https://github.com/neely-labs/tanstack-start-template/issues/43), [#71](https://github.com/neely-labs/tanstack-start-template/issues/71)), fresh agents took a one-paragraph idea from this template to a merged first feature. They show that the path works, not that it is faster or cheaper.
+In two rehearsals, fresh agents took a one-paragraph idea from this template to a merged first feature. They show that the path works, not that it is faster or cheaper.
 
 ## Get started
 
