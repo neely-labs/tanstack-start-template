@@ -2,48 +2,52 @@ import { execFileSync, spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { once } from "node:events";
 import fs from "node:fs";
-import { tmpdir } from "node:os";
+import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  checkoutOf,
-  gitEnv,
-  devServer,
-  processStart,
-  readOwner,
-  retire,
-  status,
-  stop,
-} from "./local.ts";
+import { fixtureEnv } from "./git-fixtures.ts";
 import type { Checkout } from "./local.ts";
+
+const base = fs.realpathSync(
+  fs.mkdtempSync(path.join(os.tmpdir(), "local-env-"))
+);
+const env = fixtureEnv(base);
+
+// The code under test builds its Git environment from `process.env` when it
+// loads and drops repository variables itself. Stub the fixture settings
+// first, then import it here: a static import would load it before them.
+for (const [key, value] of Object.entries(env)) {
+  if (key.startsWith("GIT_")) {
+    vi.stubEnv(key, value);
+  }
+}
+const { checkoutOf, devServer, processStart, readOwner, retire, status, stop } =
+  await import("./local.ts");
 
 const temporary: string[] = [];
 const children: ChildProcess[] = [];
 
 /** A committed repository with a second worktree, ignoring local state. */
 function repositoryWithWorktree(): [Checkout, Checkout] {
-  const base = fs.mkdtempSync(path.join(tmpdir(), "local-env-"));
-  temporary.push(base);
-  const main = path.join(base, "main");
+  const dir = fs.mkdtempSync(path.join(base, "repository-"));
+  temporary.push(dir);
+  const main = path.join(dir, "main");
   const run = (...args: string[]) =>
-    execFileSync("git", ["-C", main, ...args], {
-      env: gitEnv,
-      stdio: "ignore",
-    });
+    execFileSync("git", ["-C", main, ...args], { env, stdio: "ignore" });
   fs.mkdirSync(main);
   run("init", "--quiet");
   fs.writeFileSync(path.join(main, ".gitignore"), ".local/\n.output/\n");
   run("add", ".gitignore");
-  run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init");
-  run("worktree", "add", "--quiet", path.join(base, "other"));
-  return [checkoutOf(main), checkoutOf(path.join(base, "other"))];
+  run("commit", "-qm", "init");
+  run("worktree", "add", "--quiet", path.join(dir, "other"));
+  return [checkoutOf(main), checkoutOf(path.join(dir, "other"))];
 }
 
 /** Starts an unrelated long-lived process and returns its id. */
 function startProcess(): number {
-  const child = spawn("sleep", ["30"], { env: gitEnv, stdio: "ignore" });
+  const child = spawn("sleep", ["30"], { env, stdio: "ignore" });
   children.push(child);
   return child.pid ?? 0;
 }
@@ -67,6 +71,11 @@ describe("local environment", () => {
     for (const dir of temporary.splice(0)) {
       fs.rmSync(dir, { force: true, recursive: true });
     }
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+    fs.rmSync(base, { force: true, recursive: true });
   });
 
   it("derives stable ports from each checkout path", () => {
@@ -105,7 +114,7 @@ describe("local environment", () => {
     fs.writeFileSync(path.join(main.root, "notes.txt"), "draft");
     // A user setting that hides untracked files must not hide them here.
     const config = ["config", "status.showUntrackedFiles", "no"];
-    execFileSync("git", ["-C", main.root, ...config], { env: gitEnv });
+    execFileSync("git", ["-C", main.root, ...config], { env });
 
     await expect(retire(main)).rejects.toThrow(/Refusing.*notes\.txt/su);
     expect(isAlive(mine)).toBeTruthy();
@@ -140,7 +149,7 @@ describe("local environment", () => {
 
   it("clears a record whose server already exited", async () => {
     const [main] = repositoryWithWorktree();
-    const exited = spawn("true", { env: gitEnv, stdio: "ignore" });
+    const exited = spawn("true", { env, stdio: "ignore" });
     const exitedPid = exited.pid ?? 0;
     const startedAt = processStart(exitedPid);
     await once(exited, "exit");

@@ -5,11 +5,11 @@ pre-commit:
       glob: "*.{js,cjs,mjs,jsx,ts,tsx,json,jsonc,css,scss,html,md,mdx,yml,yaml}"
       exclude: &generated-and-vendored
         - "src/routeTree.gen.ts"
-        - ".agents/**/*"
-        - ".claude/**/*"
-        - ".codex/**/*"
-        - ".cursor/**/*"
-        - "tools/oxlint/anti-slop/**/*"
+        - ".agents/**"
+        - ".claude/**"
+        - ".codex/**"
+        - ".cursor/**"
+        - "tools/oxlint/anti-slop/**"
       stage_fixed: true
       fail_text: Run `pnpm fix`, review the changes, and stage them again.
 

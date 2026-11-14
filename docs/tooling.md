@@ -6,11 +6,11 @@ Use this guide when a commit or push hook runs, when `pnpm install` asks to appr
 
 Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatting and Tailwind class order. Lefthook formats/lints staged files before commit and runs `pnpm validate` before push. Claude Code and Cursor also format/lint the edited file after each edit; the full gates still apply.
 
-Agent tooling and vendored plugin source are excluded from application quality gates. Review content, accessibility, architecture, and edge cases by hand as well.
+Agent tooling and vendored plugin source are excluded from application quality gates. `agent-tooling.ts` lists them; `tsconfig.json` and `lefthook.yml` restate that list, which `scripts/agent-tooling.test.ts` checks. `scripts/anti-slop.test.ts` checks that the vendored rules still fire. Review content, accessibility, architecture, and edge cases by hand as well.
 
 ## Skills
 
-The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, its copy for Claude Code in `.claude/skills/`, and `skills-lock.json`, which records the source. `npx skills update flow-walk -p` rewrites both copies; review and commit the diff. `scripts/skills.test.ts` checks they match. Remove it with `npx skills remove flow-walk`.
+The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, its copy for Claude Code in `.claude/skills/`, and `skills-lock.json`, which records the source. `npx skills update flow-walk -p` rewrites both copies; review and commit the diff. `scripts/skills.test.ts` checks that both folders hold exactly the locked skills and that the copies match. Remove it with `npx skills remove flow-walk`.
 
 Leave the dependency skills that `pnpm install` lists as awaiting approval unapproved. Approving commits a grant to `pnpm-workspace.yaml` that links their unreviewed skills into every checkout's skill folders. `scripts/skills.test.ts` fails on any grant. To undo one, revert that change or set `skills: false` for the package under `permissions`, then run `pnpm install` to unlink the skills and delete the `.gitignore` pnpm left in each skill folder; `pnpm approve '!<package>'` also works but denies the package's build scripts too. A project that decides to adopt a dependency's skills reviews them and adds the package to `approvedSkills` in that test.
 
