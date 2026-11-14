@@ -44,7 +44,7 @@ A route that needs browser APIs can choose `ssr: false` or `ssr: "data-only"`. T
 
 ## Errors and recovery
 
-`src/router.tsx` sets `NotFound` and `RouteError` as the router's defaults, so every route shows the same pages on the server and in the browser. `RouteError` passes each error it catches to `reportCaughtError` in `src/lib/report-error.ts`, which logs to the console; connect an error-reporting service there and nowhere else. The app adds no `window.onerror` or `unhandledrejection` listener.
+`src/router.tsx` sets `NotFound` and `RouteError` as the router's defaults, so every route shows the same pages on the server and in the browser. `RouteError` passes each error it catches to `reportCaughtError` in `src/lib/report-error.ts`, which logs to the console; connect an error-reporting service there and nowhere else. The app adds no `window.onerror` or `unhandledrejection` listener. A component that throws `notFound()` while rendering passes `{ routeId: rootRouteId }`: the route's error boundary claims a bare one and shows the router's built-in error box.
 
 Both pages render their own `noindex` tag, which React moves into the head. The root route's head gives a missing URL its title. A failed loader answers 500 and keeps the failed route's title. A render error answers 200 with the route's head, and the browser renders the error page. `src/router.test.tsx` server-renders each case with routes that fail on purpose.
 

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
+import { NotFound } from "@/components/not-found.tsx";
 import { SiteFooter } from "@/components/site-footer.tsx";
 import { SiteHeader } from "@/components/site-header.tsx";
 import { recoveryMeta } from "@/lib/seo.ts";
@@ -33,6 +34,10 @@ export const Route = createRootRoute({
       ...recoveryMeta(matches),
     ],
   }),
+  // The router's default renders a missing URL and a not-found that a loader
+  // throws. This one also puts a not-found boundary around every page, for
+  // `notFound({ routeId: rootRouteId })` thrown while a component renders.
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 });
 
