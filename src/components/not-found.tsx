@@ -19,7 +19,7 @@ export function NotFound() {
         {recoveryTitles.notFound}
       </h1>
       <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">
-        This route does not exist. Check the address, or head back to the home
+        This page does not exist. Check the address, or head back to the home
         page.
       </p>
       <Link
