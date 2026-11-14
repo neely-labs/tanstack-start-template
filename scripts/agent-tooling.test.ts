@@ -102,7 +102,13 @@ function lefthookFiles(files: string[]) {
     run: `echo "job${index}: {staged_files}"`,
   }));
   const dir = fixture([]);
-  const env = fixtureEnv(dir);
+  // A developer's `LEFTHOOK=0`, `LEFTHOOK_QUIET` or `LEFTHOOK_CONFIG` would
+  // skip jobs, hide their output or swap the config.
+  const env = Object.fromEntries(
+    Object.entries(fixtureEnv(dir)).filter(
+      ([key]) => !key.startsWith("LEFTHOOK")
+    )
+  );
   execFileSync("git", ["init", "--quiet"], { cwd: dir, env });
   fs.writeFileSync(
     path.join(dir, "lefthook.yml"),
