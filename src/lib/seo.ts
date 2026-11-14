@@ -45,6 +45,44 @@ export function pageTitle(page?: string): string {
   return page === undefined ? siteConfig.name : `${page} | ${siteConfig.name}`;
 }
 
+/** Document titles for the two recovery pages, before the site name. */
+export const recoveryTitles = {
+  error: "Page couldn't load",
+  notFound: "Page not found",
+} as const;
+
+/** The parts of a route match the recovery head reads. */
+interface MatchState {
+  readonly status: string;
+  /** Set on the match whose not-found boundary renders a missing URL. */
+  readonly _notFound?: boolean;
+}
+
+/**
+ * The root route's head tags for a recovery page: a title, so the tab never
+ * shows a bare URL, and `noindex`. A missing URL matches only the root, so
+ * these tags are the page's own. When a route's loader fails, that route's
+ * head still runs and its tags win; the server then answers 500, which
+ * crawlers do not index. A render error is not a failed match, so it keeps the
+ * route's head and the server's 200.
+ */
+export function recoveryMeta(matches: readonly MatchState[]) {
+  const failed = matches.some((match) => match.status === "error");
+  const missing = matches.some(
+    (match) => match.status === "notFound" || match._notFound === true
+  );
+  if (!(failed || missing)) {
+    return [];
+  }
+
+  return [
+    {
+      title: pageTitle(failed ? recoveryTitles.error : recoveryTitles.notFound),
+    },
+    { content: "noindex", name: "robots" },
+  ];
+}
+
 export function createSeoHead({
   canonicalPath,
   description,

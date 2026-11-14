@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { checkPageHtml } from "../../scripts/verify-seo-output.mjs";
 import { publicPaths } from "../../src/lib/public-routes.ts";
 import { securityHeaders } from "../../src/lib/security-headers.ts";
+import { pageTitle, recoveryTitles } from "../../src/lib/seo.ts";
 import { siteConfig } from "../../src/lib/site-config.ts";
 import { generatedSiteFiles } from "../../src/lib/site-files.ts";
 
@@ -38,8 +39,30 @@ test("serves prerendered pages, identity files, and secured API responses", asyn
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
   });
+  const healthHead = await request.head("/api/health");
+  expect(healthHead.status()).toBe(200);
+  expect(healthHead.headers()["content-type"]).toBe("application/json");
+  expect(await healthHead.body()).toHaveLength(0);
+  await Promise.all(
+    ["post", "put", "delete"].map(async (method) => {
+      const refused = await request.fetch("/api/health", { method });
+      expect(refused.status()).toBe(405);
+      expect(refused.headers().allow).toBe("GET, HEAD");
+    })
+  );
+
+  const missing = await request.get("/missing-smoke-route");
+  expect(missing.status()).toBe(404);
+  for (const [name, value] of Object.entries(securityHeaders)) {
+    expect(missing.headers()[name.toLowerCase()]).toBe(value);
+  }
+  // Nitro answers a URL it cannot decode itself, without the app's headers.
   const malformed = await request.get("/%E0%A4%A");
   expect(malformed.status()).toBe(400);
+  expect(malformed.headers()["content-type"]).toContain("application/json");
+  for (const name of Object.keys(securityHeaders)) {
+    expect(malformed.headers()[name.toLowerCase()]).toBeUndefined();
+  }
 
   const image = await request.get(siteConfig.socialImage.path);
   expect(image.status()).toBe(200);
@@ -107,6 +130,11 @@ test("supports keyboard skip, navigation, and not-found recovery", async ({
   await expect(
     page.getByRole("heading", { name: "Page not found" })
   ).toBeVisible();
+  await expect(page).toHaveTitle(pageTitle(recoveryTitles.notFound));
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex"
+  );
   await page.keyboard.press("Tab");
   await expect(skip).toBeFocused();
   await page.keyboard.press("Enter");

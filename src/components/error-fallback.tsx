@@ -1,7 +1,10 @@
 import { IconHome, IconRefresh } from "@tabler/icons-react";
+import { useLocation, useRouter } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button.tsx";
+import { reportCaughtError } from "@/lib/report-error.ts";
 
 interface ErrorFallbackProps {
   /** Any thrown value, including null. */
@@ -73,5 +76,30 @@ export function ErrorFallback({
         ) : null}
       </section>
     </main>
+  );
+}
+
+/**
+ * The router's default error component, so a failed loader or a render error
+ * on any route shows this page, on the server and in the browser alike. It
+ * reports the error once per thrown value. Retrying invalidates the router,
+ * which reruns the loaders and resets the boundary that caught a render error.
+ */
+export function RouteError({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  const path = useLocation({ select: (location) => location.pathname });
+
+  useEffect(() => {
+    reportCaughtError({ boundary: "route", error, path });
+  }, [error, path]);
+
+  return (
+    <ErrorFallback
+      error={error}
+      onRetry={() => {
+        void router.invalidate();
+      }}
+      showDetails={import.meta.env.DEV}
+    />
   );
 }

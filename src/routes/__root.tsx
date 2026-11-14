@@ -1,29 +1,22 @@
-import { IconArrowLeft } from "@tabler/icons-react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import {
   createRootRoute,
   HeadContent,
-  Link,
   ScriptOnce,
   Scripts,
-  useRouter,
 } from "@tanstack/react-router";
-import type { ErrorComponentProps } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import { ErrorFallback } from "@/components/error-fallback.tsx";
 import { SiteFooter } from "@/components/site-footer.tsx";
 import { SiteHeader } from "@/components/site-header.tsx";
-import { buttonVariants } from "@/components/ui/button.tsx";
+import { recoveryMeta } from "@/lib/seo.ts";
 import { siteConfig } from "@/lib/site-config.ts";
 import { themeScript } from "@/lib/theme.ts";
-import { cn } from "@/lib/utils.ts";
 
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
-  errorComponent: RootErrorComponent,
-  head: () => ({
+  head: ({ matches }) => ({
     links: [
       { href: appCss, rel: "stylesheet" },
       { href: "/manifest.json", rel: "manifest" },
@@ -37,47 +30,11 @@ export const Route = createRootRoute({
       { content: siteConfig.name, name: "application-name" },
       { content: siteConfig.name, property: "og:site_name" },
       { content: siteConfig.locale, property: "og:locale" },
+      ...recoveryMeta(matches),
     ],
   }),
-  notFoundComponent: () => (
-    <main
-      className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-start justify-center px-5 py-20 sm:px-8 sm:py-28"
-      id="main-content"
-      tabIndex={-1}
-    >
-      <p className="font-mono text-sm font-medium text-brand">404</p>
-      <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl">
-        Page not found
-      </h1>
-      <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">
-        This route does not exist. Check the address, or head back to the home
-        page.
-      </p>
-      <Link
-        className={cn(buttonVariants({ className: "mt-8", size: "lg" }))}
-        to="/"
-      >
-        <IconArrowLeft aria-hidden="true" data-icon="inline-start" />
-        Return home
-      </Link>
-    </main>
-  ),
   shellComponent: RootDocument,
 });
-
-function RootErrorComponent({ error }: ErrorComponentProps) {
-  const router = useRouter();
-
-  return (
-    <ErrorFallback
-      error={error}
-      onRetry={() => {
-        void router.invalidate();
-      }}
-      showDetails={import.meta.env.DEV}
-    />
-  );
-}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
