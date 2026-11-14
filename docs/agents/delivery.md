@@ -9,7 +9,7 @@ Classify a change by the behavior it can affect, not its size or file type. When
 | Tier | The change can affect | Review it needs | Round budget |
 | --- | --- | --- | --- |
 | 0 | Nothing at runtime: docs, comments, tests, and tooling with no runtime effect | The author reads the final diff and runs the checks; no independent review | 1 |
-| 1 | What people see, with nothing stored or sent: copy, presentation, isolated UI | An independent review by a fresh agent or a different model, repeated after substantive fixes | 2 |
+| 1 | What people see, with nothing stored or sent: copy, presentation, isolated UI | An independent review by a fresh agent or a different model, repeated after substantive fixes | 3 |
 | 2 | Stored state, auth, payments or balances, external effects, or agent authority | Tier 1's review in every round, until a round finds nothing substantive | 5 |
 
 - **External effects** reach beyond the app: email, payments, webhooks, third-party API calls, and published content.
@@ -41,6 +41,7 @@ State these in the pull request description before merge.
 - **Rollback:** only for a door that is not clean two-way, how to undo or contain the change, such as a revert's cleanup or a one-way step's forward fix.
 - **Blast radius:** what breaks if the change is wrong, such as docs only, one page, every page, stored data, or people outside the project.
 - **Risk tier:** the review tier from the table above.
+- **Rounds used:** the review rounds spent against the tier's budget, such as `2 of 3`.
 
 ## Evidence
 

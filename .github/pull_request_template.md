@@ -16,6 +16,7 @@ Closes #
 - **Rollback:** <!-- Only when the door is not clean two-way; otherwise delete this line. -->
 - **Blast radius:**
 - **Risk tier:** <!-- 0, 1, or 2 -->
+- **Rounds used:** <!-- rounds used of the tier's budget, such as 2 of 3 -->
 
 ## Verification
 
