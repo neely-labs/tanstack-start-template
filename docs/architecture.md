@@ -7,7 +7,7 @@ Use this reference when finding a module, changing public identity or metadata, 
 | Area | Responsibility |
 | --- | --- |
 | `src/routes` | Pages, HTTP routes, loaders, and page metadata |
-| `src/routes/__root.tsx` | Shared document, navigation shell, and the recovery pages' title and `noindex` |
+| `src/routes/__root.tsx` | Shared document, navigation shell, and the recovery pages' title |
 | `src/router.tsx`, `src/components/not-found.tsx`, `src/components/error-fallback.tsx` | Router-wide not-found and error pages |
 | `src/lib/report-error.ts` | The one place a caught error is reported |
 | `src/components` and `src/components/ui` | Shared app components and shadcn primitives |
@@ -46,7 +46,7 @@ A route that needs browser APIs can choose `ssr: false` or `ssr: "data-only"`. T
 
 `src/router.tsx` sets `NotFound` and `RouteError` as the router's defaults, so every route shows the same pages on the server and in the browser. `RouteError` passes each error it catches to `reportCaughtError` in `src/lib/report-error.ts`, which logs to the console; connect an error-reporting service there and nowhere else. The app adds no `window.onerror` or `unhandledrejection` listener.
 
-The root route's head gives a missing URL a title and `noindex`. A failed loader answers 500, and the failed route's own head tags win over the root's. A render error answers 200 with the route's head, and the browser renders the error page. `src/router.test.tsx` server-renders each case with routes that fail on purpose.
+Both pages render their own `noindex` tag, which React moves into the head. The root route's head gives a missing URL its title. A failed loader answers 500 and keeps the failed route's title. A render error answers 200 with the route's head, and the browser renders the error page. `src/router.test.tsx` server-renders each case with routes that fail on purpose.
 
 ## Forms before hydration
 
