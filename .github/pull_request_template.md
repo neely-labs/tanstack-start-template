@@ -14,8 +14,9 @@ Closes #
 
 <!-- One short phrase per value, never a sentence. Reasons go under Decisions; each review round goes under Verification. -->
 
-**Door:** <!-- clean two-way, two-way, one-way, or uncertain --> · **Risk tier:** <!-- 0, 1, or 2 --> · **Rounds used:** <!-- N of M, such as 2 of 3 -->
-
+- **Door:** <!-- clean two-way, two-way, one-way, or uncertain -->
+- **Risk tier:** <!-- 0, 1, or 2 -->
+- **Rounds used:** <!-- N of M, such as 2 of 3 -->
 - **Blast radius:** <!-- What breaks if this is wrong, such as "docs only" or "CI; a runner outage blocks merges" -->
 - **Rollback:** <!-- Only when the door is not clean two-way, such as "revert, then clear the cache". Otherwise delete this line. -->
 
