@@ -8,15 +8,16 @@
 // `pnpm-workspace.yaml` and links them, unreviewed, into both skill folders, so
 // these tests fail on any grant the template has not adopted on purpose.
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { parseDocument } from "yaml";
 import { z } from "zod";
 
 const root = path.join(import.meta.dirname, "..");
-const lockPath = path.join(root, "skills-lock.json");
 const workspacePath = path.join(root, "pnpm-workspace.yaml");
+const skillFolders = [".agents/skills", ".claude/skills"];
 
 /** Dependencies whose skills this project has reviewed and adopted. */
 const approvedSkills = new Set<string>();
@@ -25,8 +26,9 @@ const skillsLockSchema = z.object({
   skills: z.record(z.string(), z.looseObject({})),
 });
 
-/** Each skill in `skills-lock.json` with its entry; none without a lock. */
-function lockedSkills() {
+/** Each skill in `skills-lock.json` under `dir` with its entry; none without a lock. */
+function lockedSkills(dir = root) {
+  const lockPath = path.join(dir, "skills-lock.json");
   if (!fs.existsSync(lockPath)) {
     return [];
   }
@@ -34,6 +36,28 @@ function lockedSkills() {
     JSON.parse(fs.readFileSync(lockPath, "utf-8"))
   );
   return Object.entries(lock.skills);
+}
+
+/**
+ * Each entry in a skill folder under `dir` that the lock does not list, and
+ * each locked skill a folder lacks. A skill added by hand, or kept in one
+ * folder only, never reaches the copy checks below.
+ */
+function unlockedSkills(dir = root) {
+  const locked = new Set(lockedSkills(dir).map(([name]) => name));
+  const problems: string[] = [];
+  for (const folder of skillFolders) {
+    const listed = fs.existsSync(path.join(dir, folder))
+      ? fs.readdirSync(path.join(dir, folder))
+      : [];
+    for (const name of listed.filter((entry) => !locked.has(entry))) {
+      problems.push(`${folder}/${name} has no entry in skills-lock.json`);
+    }
+    for (const name of [...locked].filter((entry) => !listed.includes(entry))) {
+      problems.push(`${folder}/${name} is missing for a locked skill`);
+    }
+  }
+  return problems;
 }
 
 /** Each entry under `dir` by relative path: file contents, or "link". */
@@ -57,6 +81,10 @@ const skillDirs = (name: string) => ({
 });
 
 describe("committed skills", () => {
+  it("are exactly the skills in the lock, in both folders", () => {
+    expect(unlockedSkills()).toStrictEqual([]);
+  });
+
   it("install as real directories for every agent", () => {
     for (const [name, skill] of lockedSkills()) {
       const { claude, shared } = skillDirs(name);
@@ -74,6 +102,76 @@ describe("committed skills", () => {
       expect([...files.values()]).not.toContain("link");
       expect(tree(claude)).toStrictEqual(files);
     }
+  });
+});
+
+/** The same skills in both folders. */
+const both = (...names: string[]) => ({
+  ".agents/skills": names,
+  ".claude/skills": names,
+});
+
+describe("the skill inventory", () => {
+  const fixtures: string[] = [];
+  afterEach(() => {
+    for (const dir of fixtures.splice(0)) {
+      fs.rmSync(dir, { force: true, recursive: true });
+    }
+  });
+
+  /** A checkout with `skills` in each folder and, unless undefined, a lock. */
+  function checkout(skills: Record<string, string[]>, lock?: string[]) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "skills-"));
+    fixtures.push(dir);
+    for (const [folder, names] of Object.entries(skills)) {
+      for (const name of names) {
+        fs.mkdirSync(path.join(dir, folder, name), { recursive: true });
+      }
+    }
+    if (lock !== undefined) {
+      const entries = new Map(
+        lock.map((name) => [name, { installMode: "copy" }])
+      );
+      fs.writeFileSync(
+        path.join(dir, "skills-lock.json"),
+        JSON.stringify({ skills: Object.fromEntries(entries), version: 2 })
+      );
+    }
+    return dir;
+  }
+
+  it("accept matching folders and lock", () => {
+    expect(unlockedSkills(checkout(both("a", "b"), ["a", "b"]))).toStrictEqual(
+      []
+    );
+  });
+
+  it("accept a checkout with every skill removed", () => {
+    expect(unlockedSkills(checkout({}))).toStrictEqual([]);
+    expect(unlockedSkills(checkout(both(), []))).toStrictEqual([]);
+  });
+
+  it("reject a skill in only one folder", () => {
+    const dir = checkout({ ".agents/skills": ["a"], ".claude/skills": [] }, [
+      "a",
+    ]);
+    expect(unlockedSkills(dir)).toStrictEqual([
+      ".claude/skills/a is missing for a locked skill",
+    ]);
+  });
+
+  it("reject a skill folder with no lock entry", () => {
+    expect(unlockedSkills(checkout(both("a", "b"), ["a"]))).toStrictEqual([
+      ".agents/skills/b has no entry in skills-lock.json",
+      ".claude/skills/b has no entry in skills-lock.json",
+    ]);
+  });
+
+  it("reject skill folders with no lock file", () => {
+    expect(unlockedSkills(checkout(both("a")))).toStrictEqual([
+      ".agents/skills/a has no entry in skills-lock.json",
+      ".claude/skills/a has no entry in skills-lock.json",
+    ]);
   });
 });
 
