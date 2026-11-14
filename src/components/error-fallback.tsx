@@ -30,6 +30,11 @@ export function ErrorFallback({
       id="main-content"
       tabIndex={-1}
     >
+      {/*
+       * React moves this tag into the document head. A failed route's own
+       * robots tag stays beside it, and crawlers obey the stricter of the two.
+       */}
+      <meta content="noindex" name="robots" />
       <section
         aria-labelledby="error-heading"
         className="w-full max-w-2xl outline-none"
@@ -82,15 +87,16 @@ export function ErrorFallback({
 /**
  * The router's default error component, so a failed loader or a render error
  * on any route shows this page, on the server and in the browser alike. It
- * reports the error once per thrown value. Retrying invalidates the router,
- * which reruns the loaders and resets the boundary that caught a render error.
+ * reports the error when it shows it, from the browser only. Retrying
+ * invalidates the router, which reruns the loaders and resets the boundary
+ * that caught a render error.
  */
 export function RouteError({ error }: ErrorComponentProps) {
   const router = useRouter();
   const path = useLocation({ select: (location) => location.pathname });
 
   useEffect(() => {
-    reportCaughtError({ boundary: "route", error, path });
+    reportCaughtError({ error, path });
   }, [error, path]);
 
   return (

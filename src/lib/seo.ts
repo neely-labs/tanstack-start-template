@@ -54,33 +54,32 @@ export const recoveryTitles = {
 /** The parts of a route match the recovery head reads. */
 interface MatchState {
   readonly status: string;
-  /** Set on the match whose not-found boundary renders a missing URL. */
+  /**
+   * Set on the match whose not-found boundary renders a missing URL. The field
+   * is the router's own; `src/router.test.tsx` fails if it stops being set.
+   */
   readonly _notFound?: boolean;
 }
 
 /**
- * The root route's head tags for a recovery page: a title, so the tab never
- * shows a bare URL, and `noindex`. A missing URL matches only the root, so
- * these tags are the page's own. When a route's loader fails, that route's
- * head still runs and its tags win; the server then answers 500, which
- * crawlers do not index. A render error is not a failed match, so it keeps the
- * route's head and the server's 200.
+ * The root route's title for a recovery page, so the tab never shows a bare
+ * URL. A missing URL matches only the root, so this is the page's title. When
+ * a route fails, that route's head still runs and its own title wins. The
+ * recovery components mark their pages `noindex` themselves, because a render
+ * error leaves every match successful and only the component knows.
  */
 export function recoveryMeta(matches: readonly MatchState[]) {
-  const failed = matches.some((match) => match.status === "error");
-  const missing = matches.some(
-    (match) => match.status === "notFound" || match._notFound === true
-  );
-  if (!(failed || missing)) {
-    return [];
+  if (matches.some((match) => match.status === "error")) {
+    return [{ title: pageTitle(recoveryTitles.error) }];
   }
-
-  return [
-    {
-      title: pageTitle(failed ? recoveryTitles.error : recoveryTitles.notFound),
-    },
-    { content: "noindex", name: "robots" },
-  ];
+  if (
+    matches.some(
+      (match) => match.status === "notFound" || match._notFound === true
+    )
+  ) {
+    return [{ title: pageTitle(recoveryTitles.notFound) }];
+  }
+  return [];
 }
 
 export function createSeoHead({

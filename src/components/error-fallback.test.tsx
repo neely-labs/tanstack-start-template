@@ -81,7 +81,7 @@ function renderBrokenRoute(
   render(<RouterProvider router={router} />);
 }
 
-const reportLine = "Caught by the route boundary at /broken";
+const reportLine = "Caught by the route error page at /broken";
 
 /** The lines the app's reporter logged, without React's own logging. */
 function reports(consoleError: MockInstance<typeof console.error>) {

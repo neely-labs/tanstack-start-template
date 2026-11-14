@@ -21,8 +21,8 @@ const pageHead = () => ({
 const appRouter = getRouter();
 
 /**
- * Server-renders a URL against the app's recovery components and the root
- * head's recovery tags, with routes that fail on purpose. The routes exist only
+ * Server-renders a URL against the app router's recovery components and the
+ * root head's recovery title, with routes that fail on purpose. The routes exist only
  * in this test, so production has no fault endpoint.
  */
 async function serverRender(path: string) {
@@ -88,7 +88,7 @@ describe("server-rendered recovery pages", () => {
 
   it("answers a missing URL with 404, a title, and noindex", async () => {
     await expect(serverRender("/missing")).resolves.toStrictEqual({
-      heading: "Page not found",
+      heading: recoveryTitles.notFound,
       robots: ["noindex"],
       status: 404,
       title: pageTitle(recoveryTitles.notFound),
@@ -96,10 +96,11 @@ describe("server-rendered recovery pages", () => {
   });
 
   it("answers a failed loader with 500 and the error page", async () => {
-    // The failed route's own head still runs and its tags win over the root's.
+    // The failed route's own head still runs, so its title wins over the
+    // root's and its robots tag sits beside the error page's stricter one.
     await expect(serverRender("/loader-failure")).resolves.toStrictEqual({
       heading: "This page couldn&#x27;t finish loading.",
-      robots: ["index"],
+      robots: ["index", "noindex"],
       status: 500,
       title: "Failing page",
     });
