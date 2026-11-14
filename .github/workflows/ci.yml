@@ -93,8 +93,6 @@ jobs:
           printf 'docs-only=%s for these changed paths:\n%s\n' "$docs_only" "$changed"
           echo "::$resume::"
 
-      # Uses the runner's preinstalled Node. pnpm/setup would download Node
-      # before it restores the store cache, so that cache could never serve it.
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
