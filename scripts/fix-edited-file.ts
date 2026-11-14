@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * Formats and lints only the file an agent just edited.
  *

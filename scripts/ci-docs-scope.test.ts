@@ -30,7 +30,7 @@ const stepSchema = z.object({
   shell: z.string().optional(),
 });
 
-/** The workflow step with `id`. Throws, naming the step, if its shape changes. */
+/** The workflow step with `id`. Throws if the workflow or that step changes shape. */
 function readStep(yaml: string, id: string) {
   const steps = Object.values(workflowSchema.parse(parse(yaml)).jobs).flatMap(
     (job) => job.steps

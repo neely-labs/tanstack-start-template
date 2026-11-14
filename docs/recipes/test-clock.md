@@ -33,7 +33,7 @@ Code that reads the time takes a `clock: Clock = systemClock` parameter, and tes
 
 ```ts
 {
-  files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}"],
+  files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
   rules: {
     "no-restricted-properties": [
       "error",
