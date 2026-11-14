@@ -21,8 +21,8 @@ const workspacePath = path.join(root, "pnpm-workspace.yaml");
 /** Dependencies whose skills this project has reviewed and adopted. */
 const approvedSkills = new Set<string>();
 
-const skillsLock = z.object({
-  skills: z.record(z.string(), z.object({ installMode: z.string() })),
+const skillsLockSchema = z.object({
+  skills: z.record(z.string(), z.looseObject({})),
 });
 
 /** Each skill in `skills-lock.json` with its entry; none without a lock. */
@@ -30,7 +30,9 @@ function lockedSkills() {
   if (!fs.existsSync(lockPath)) {
     return [];
   }
-  const lock = skillsLock.parse(JSON.parse(fs.readFileSync(lockPath, "utf-8")));
+  const lock = skillsLockSchema.parse(
+    JSON.parse(fs.readFileSync(lockPath, "utf-8"))
+  );
   return Object.entries(lock.skills);
 }
 

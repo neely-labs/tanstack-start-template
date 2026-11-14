@@ -23,13 +23,10 @@ import {
   analyzeText,
   describeEnvironment,
   getRenderSnapshot,
+  inputRejection,
 } from "@/lib/server-runtime.ts";
 import type { RenderSnapshot, TextAnalysis } from "@/lib/server-runtime.ts";
-import {
-  analyzerFailure,
-  inputRejection,
-  maxTextLength,
-} from "@/lib/text-stats.ts";
+import { analyzerFailure, maxTextLength } from "@/lib/text-stats.ts";
 
 const description =
   "How this template uses the TanStack Start execution model: server functions, a validated mutation, request middleware, a server route, and isomorphic code.";

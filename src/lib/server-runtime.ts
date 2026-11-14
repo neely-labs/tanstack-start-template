@@ -1,6 +1,11 @@
 import { createIsomorphicFn, createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
-import { summarizeText, textInputSchema } from "./text-stats.ts";
+import {
+  summarizeText,
+  textInputErrors,
+  textInputSchema,
+} from "./text-stats.ts";
 import type { TextStats } from "./text-stats.ts";
 
 export interface RenderSnapshot {
@@ -47,3 +52,30 @@ export const analyzeText = createServerFn({ method: "POST" })
     environment: describeEnvironment(),
     stats: summarizeText(data.text),
   }));
+
+const rejectionMessages = new Set<string>(Object.values(textInputErrors));
+
+const issueListSchema = z.array(z.object({ message: z.string() }));
+
+/**
+ * The `textInputErrors` message behind a failed `analyzeText` call, or
+ * `undefined` when the failure is anything else.
+ *
+ * Start sends a schema failure to the client as an `Error` whose message is the
+ * JSON list of the schema's issues. Only messages from `textInputErrors` come
+ * back, so other server text, such as a driver error, never reaches the page.
+ */
+export function inputRejection(error: Error): string | undefined {
+  let issues: unknown;
+  try {
+    issues = JSON.parse(error.message);
+  } catch {
+    return undefined;
+  }
+  const parsed = issueListSchema.safeParse(issues);
+  return parsed.success
+    ? parsed.data
+        .map((issue) => issue.message)
+        .find((message) => rejectionMessages.has(message))
+    : undefined;
+}

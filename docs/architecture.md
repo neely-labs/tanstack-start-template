@@ -31,10 +31,10 @@ Nitro prerenders the public inventory, while the site-files Vite plugin emits id
 
 The `/runtime` example connects three parts: a parser/calculation in `src/lib/text-stats.ts`, server functions in `src/lib/server-runtime.ts`, and the page that calls them.
 
-Parse untrusted input, such as a request body or a file read from disk, with a Zod schema. Zod is the default; another Standard Schema library can replace it without touching a handler.
+Parse untrusted input, such as a request body or a JSON file read from disk, with a Zod schema. Zod is the default; another Standard Schema library can replace a schema passed to `.validator` without touching the handler.
 
 - `getRenderSnapshot` is a GET server function called by a route loader. A prerendered loader runs at build time for the shipped HTML and on the server again when the router revalidates after hydration.
-- `analyzeText` is a POST server function. Its `.validator` takes a Zod schema that rejects invalid input before the handler runs. Start sends a rejection to the client as an `Error` whose message is the schema's issue list, so the page shows a message only when it is one of `textInputErrors` and a generic one for anything else.
+- `analyzeText` is a POST server function. Its `.validator` takes a Zod schema that rejects invalid input before the handler runs. The page shows a rejection only when `inputRejection` finds a `textInputErrors` message in it, and a generic message for any other failure, so server text never reaches the visitor.
 - `createIsomorphicFn` supplies separate server and browser implementations through one call. Each build keeps the implementation for its environment; server-function handler bodies stay out of the browser bundle.
 - `/api/health` is an HTTP route that returns JSON. Browser checks retain it as their readiness endpoint when example pages are removed.
 

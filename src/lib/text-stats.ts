@@ -30,12 +30,8 @@ export function summarizeText(text: string): TextStats {
 }
 
 /**
- * The validator for the `analyzeText` server function, and the template's one
- * way to parse untrusted input.
- *
- * TanStack Start runs it before the handler, so the handler sees only text that
- * passed. Zod is the default; another Standard Schema library can replace it
- * here without touching the handler.
+ * The validator for the `analyzeText` server function. TanStack Start runs it
+ * before the handler, so the handler sees only text that passed.
  */
 export const textInputSchema = z.object({
   text: z
@@ -45,34 +41,5 @@ export const textInputSchema = z.object({
     .max(maxTextLength, textInputErrors.tooLong),
 });
 
-export type TextInput = z.input<typeof textInputSchema>;
-
 /** What the analyzer shows for a failure that is not a rejected input. */
 export const analyzerFailure = "The request could not be completed.";
-
-const rejectionMessages = new Set<string>(Object.values(textInputErrors));
-
-const schemaIssues = z.array(z.object({ message: z.string() }));
-
-/**
- * The `textInputErrors` message behind a failed analysis, or `undefined` when
- * the failure is anything else.
- *
- * Start sends a schema failure to the client as an `Error` whose message is the
- * JSON list of the schema's issues. Only messages from `textInputErrors` come
- * back, so other server text, such as a driver error, never reaches the page.
- */
-export function inputRejection(error: Error): string | undefined {
-  let issues: unknown;
-  try {
-    issues = JSON.parse(error.message);
-  } catch {
-    return undefined;
-  }
-  const parsed = schemaIssues.safeParse(issues);
-  return parsed.success
-    ? parsed.data
-        .map((issue) => issue.message)
-        .find((message) => rejectionMessages.has(message))
-    : undefined;
-}
