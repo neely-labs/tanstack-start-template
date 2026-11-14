@@ -1,6 +1,6 @@
 import { createIsomorphicFn, createServerFn } from "@tanstack/react-start";
 
-import { parseTextInput, summarizeText } from "./text-stats.ts";
+import { summarizeText, textInputSchema } from "./text-stats.ts";
 import type { TextStats } from "./text-stats.ts";
 
 export interface RenderSnapshot {
@@ -36,11 +36,12 @@ export const getRenderSnapshot = createServerFn().handler(
 );
 
 /**
- * A POST server function. `.validator` parses the caller's input before the
- * handler runs, and the handler body never reaches the client bundle.
+ * A POST server function. `.validator` parses the caller's input with the Zod
+ * schema before the handler runs, and the handler body never reaches the
+ * client bundle.
  */
 export const analyzeText = createServerFn({ method: "POST" })
-  .validator(parseTextInput)
+  .validator(textInputSchema)
   .handler(({ data }): TextAnalysis => ({
     computedAt: new Date().toISOString(),
     environment: describeEnvironment(),
