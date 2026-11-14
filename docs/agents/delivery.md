@@ -67,7 +67,7 @@ Confirm the pull request merged and that the local branch's tip matches the merg
 
 ## Guards
 
-Before trusting a new check or regression test, show it failing once, per behavior or acceptance criterion rather than per test case. Break the behavior it guards, or run it on the base commit that has the problem, and record the failing run in the evidence. Then restore the code and show it passing. A guard that has never failed may not test anything.
+Before trusting a new check or regression test, show it failing once, per behavior or acceptance criterion rather than per test case. Commit first, then break the behavior it guards and confirm with `git diff` that the break applied, or run it on the base commit that has the problem. Record the failing run in the evidence, restore from the commit, and show it passing. A guard that has never failed may not test anything.
 
 ## Real devices
 

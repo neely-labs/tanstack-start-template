@@ -206,8 +206,10 @@ Ends when product guidance describes the new application and a fresh agent can s
 Then search the whole repository, hidden directories included, for text that still describes the template or links a deleted file:
 
 ```bash
-rg -n -i --hidden -g '!.git' 'this template|the template|template-(setup|publishing)'
+rg -n -i --hidden -g '!.git' 'this template|the template|template-(setup|publishing)' .
 ```
+
+Keep the final `.`: without a path, `rg` searches standard input whenever it is not a terminal, as in an agent's shell, and waits there.
 
 Keep only deliberate mentions, such as the template origin, the footer credit, license notices, and placeholders the person chose to keep.
 
