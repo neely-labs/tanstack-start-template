@@ -5,6 +5,7 @@ Each recipe covers a safeguard that only pays off after a later choice, such as 
 | Recipe | Trigger |
 | --- | --- |
 | [Persistence](persistence.md) | The first feature that reads or writes a database |
+| [Environment](environment.md) | The first environment variable the app reads |
 | [Verification at scale](verification-at-scale.md) | Checks or worktrees grow until a measurement says they cost too much |
 | [Test clock](test-clock.md) | The first test whose result depends on the current date or time |
 | [Git fixtures](git-fixtures.md) | A test that runs `git` |

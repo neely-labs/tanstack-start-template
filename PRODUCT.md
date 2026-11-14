@@ -38,7 +38,8 @@ Beneath that practice, the template combines a deliberately small application su
 - The browser floor is ES2023: TypeScript's `lib` lets code use built-ins such as `Array#toSorted`, which every major browser has shipped since mid-2023, and the build adds no polyfills.
 - Node.js 24 and the package manager pinned in `package.json` are repository constraints until intentionally upgraded.
 - The template supplies shared shell, example routes, accessible recovery states, SEO helpers, public-route inventory, worked examples of the TanStack Start execution model, global request middleware, production build output, CI, and the agent delivery practice named under Positioning.
-- Authentication, persistence, analytics, domain models, product copy, deployment credentials, application-specific state management, and an environment-schema library are deliberately undecided. [The recipes](docs/recipes/README.md) hold the safeguards that a database and other later choices bring.
+- Authentication, persistence, analytics, domain models, product copy, deployment credentials, and application-specific state management are deliberately undecided. [The recipes](docs/recipes/README.md) hold the safeguards that a database and other later choices bring.
+- The environment-schema library is chosen when the app reads its first variable; [the environment recipe](docs/recipes/environment.md) makes T3 Env with Zod the default.
 - The canonical origin, manifest identity, social image, robots policy, example routes, and product guidance must be replaced by each adopted application.
 - Original template code is distributed under the MIT License; vendored source remains under its upstream license.
 
