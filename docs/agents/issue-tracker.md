@@ -4,9 +4,10 @@ Work for this repository lives in GitHub Issues. Use the `gh` CLI. Issues own or
 
 ## Pick up work
 
-1. Work on the issue the person names. Otherwise take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it. An issue without acceptance criteria is not ready: ask for them, or move it to `needs-triage` and pick another.
-2. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the issue body or in its entry on the work map may name an open issue.
-3. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
+1. If the person names an issue or other specific work, such as a work map, work on that and skip to step 3.
+2. Otherwise, first list open `awaiting-qualification` issues and handle each due check in them as [awaiting qualification](#awaiting-qualification) says. Then take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it. An issue without acceptance criteria is not ready: ask for them, or move it to `needs-triage` and pick another.
+3. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the issue body or in its entry on the work map may name an open issue.
+4. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
 
 When the person asks for work that has no issue yet, file one with acceptance criteria and claim it; [triage labels](triage-labels.md#state-labels) gives its label. [Template setup](../template-setup.md) is the exception and lands without an issue.
 
@@ -34,6 +35,7 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 An `awaiting-qualification` issue is already delivered. Do not reimplement it. Its Current acceptance names each remaining check, who runs it, and when it is due.
 
 - If a check is due and its runner is you or a role you fill, such as an agent, run it, tick its box, and comment with the evidence.
+- If a check is due but you cannot run it, because its runner is the owner or someone else, or it needs access or approval you do not have, tell the person which check is due and why you cannot run it.
 - If a check fails, comment with the evidence, open a `bug` issue for the failure that says `Introduced by: #N`, and keep this one open.
 - When every box is ticked, close the issue with a comment that links the evidence.
 - If it has no Current acceptance, ask the owner which checks remain.
@@ -53,6 +55,7 @@ A map is one issue that coordinates related work. Its body states a **Goal** and
 | Task | Command |
 | --- | --- |
 | Read an issue | `gh issue view <n> --comments` |
+| List issues awaiting qualification | `gh issue list --label awaiting-qualification --state open` |
 | List ready, unclaimed work | `gh issue list --label ready-for-agent --search "no:assignee sort:created-asc"` |
 | List a map's children | `gh issue view <map> --json subIssues --jq '.subIssues.nodes[] \| {number, state, title}'` |
 | Change state | `gh issue edit <n> --remove-label <old> --add-label <new>` |
