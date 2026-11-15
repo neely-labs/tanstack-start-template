@@ -4,10 +4,11 @@ Work for this repository lives in GitHub Issues. Use the `gh` CLI. Issues own or
 
 ## Pick up work
 
-1. If the person names an issue or other specific work, such as a work map, work on that and skip to step 3.
-2. Otherwise, first list open `awaiting-qualification` issues and handle each due check in them as [awaiting qualification](#awaiting-qualification) says. Then take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it. An issue without acceptance criteria is not ready: ask for them, or move it to `needs-triage` and pick another.
-3. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the issue body or in its entry on the work map may name an open issue.
-4. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
+1. Work on the issue the person names, or on other specific work they name, such as a work map.
+2. When they name nothing, first list open `awaiting-qualification` issues and handle each due check in them as [awaiting qualification](#awaiting-qualification) says, leaving checks that are not yet due. Then take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it.
+3. An issue without acceptance criteria is not ready, even a named one: ask for them, or move it to `needs-triage` and pick another.
+4. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the issue body or in its entry on the work map may name an open issue.
+5. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
 
 When the person asks for work that has no issue yet, file one with acceptance criteria and claim it; [triage labels](triage-labels.md#state-labels) gives its label. [Template setup](../template-setup.md) is the exception and lands without an issue.
 
