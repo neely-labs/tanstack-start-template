@@ -93,16 +93,19 @@ jobs:
           printf 'docs-only=%s for these changed paths:\n%s\n' "$docs_only" "$changed"
           echo "::$resume::"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-
-      - name: Set up pnpm
+      # Also installs the Node version in .nvmrc, so no other step sets up Node.
+      - name: Set up pnpm and Node.js
         uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
         with:
+          node-version-file: .nvmrc
           cache: true
           install: false
+
+      # The runner has its own Node too, so log which one later steps run.
+      - name: Show Node.js version
+        run: |
+          command -v node
+          node --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
