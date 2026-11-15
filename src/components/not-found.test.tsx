@@ -35,6 +35,8 @@ describe(NotFound, () => {
     await expect(
       screen.findByRole("heading", { level: 1, name: recoveryTitles.notFound })
     ).resolves.toBeDefined();
+    // The root shell renders the one main landmark around this page.
+    expect(screen.queryByRole("main")).toBeNull();
     expect(
       screen.getByRole("link", { name: "Return home" }).getAttribute("href")
     ).toBe("/");

@@ -37,6 +37,8 @@ describe(ErrorFallback, () => {
     expect(
       screen.getByRole("link", { name: "Return home" }).getAttribute("href")
     ).toBe("/");
+    // The root shell renders the one main landmark around this page.
+    expect(screen.queryByRole("main")).toBeNull();
   });
 
   it("shows safe technical detail only when requested", () => {

@@ -42,6 +42,8 @@ const buttonStyles = cva(
 /**
  * The button classes, merged so a variant's border or background replaces the
  * base's. A link styled as a button uses these directly, with no other merge.
+ * This wrapper is a local change to the shadcn source: re-add it after the CLI
+ * overwrites this file, or `button.test.ts` fails.
  */
 function buttonVariants(...args: Parameters<typeof buttonStyles>) {
   return cn(buttonStyles(...args));
