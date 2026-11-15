@@ -16,6 +16,20 @@ describe(summarizeText, () => {
     });
   });
 
+  it.each([
+    {
+      expected: 28,
+      label: "accents, an emoji modifier and Japanese",
+      text: "Café naïve résumé 👋🏽 日本語のテキスト",
+    },
+    { expected: 1, label: "a combining mark", text: "é".normalize("NFD") },
+  ])(
+    "counts characters as a person sees them, with $label",
+    ({ expected, text }) => {
+      expect(summarizeText(text).characters).toBe(expected);
+    }
+  );
+
   it("reports zero reading time for empty text", () => {
     expect(summarizeText("   ")).toStrictEqual({
       characters: 0,

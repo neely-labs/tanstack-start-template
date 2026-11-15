@@ -203,7 +203,8 @@ function AnalyzerSection() {
           className="mt-2 block min-h-28 w-full rounded-lg border bg-background px-3 py-2 text-sm read-only:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-invalid:border-destructive"
           defaultValue={state.text}
           id="analyzer-input"
-          maxLength={maxTextLength}
+          // No maxLength: it would cut a long paste short without a word. The
+          // server's limit applies instead, and its message says what to fix.
           name="text"
           // Text typed while pending would be lost when the form resets.
           readOnly={isPending}
