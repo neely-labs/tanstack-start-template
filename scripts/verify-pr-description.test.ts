@@ -244,6 +244,13 @@ describe(check, () => {
     );
   });
 
+  it("still finds a code fence after a multiline code span holding a comment opener", () => {
+    const body = describeWith({
+      Summary: `${summary}\n\nRecognizes the \`<!--\ndelimiter\` in prose.\n\n\`\`\`md\n## Example heading\n\`\`\``,
+    });
+    expect(check(body, template)).toStrictEqual([]);
+  });
+
   it("never lets a backtick inside a code fence open a code span outside it", () => {
     const body = describeWith({
       "UI evidence":

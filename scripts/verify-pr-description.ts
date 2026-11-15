@@ -60,10 +60,13 @@ function escapeCode(text: string) {
 function fencedLines(raws: string[]) {
   let fence = "";
   let inComment = false;
+  // Prose since the last fence, scanned whole: a code span can cross lines.
+  let prose: string[] = [];
   return raws.map((raw) => {
     const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
     if (!inComment && fence === "" && delimiter !== "") {
       fence = delimiter;
+      prose = [];
       return true;
     }
     if (fence !== "") {
@@ -72,7 +75,11 @@ function fencedLines(raws: string[]) {
       }
       return true;
     }
-    for (const [token] of escapeCode(raw).matchAll(/<!--|--!?>/gu)) {
+    prose.push(raw);
+    inComment = false;
+    for (const [token] of escapeCode(prose.join("\n")).matchAll(
+      /<!--|--!?>/gu
+    )) {
       inComment = token === "<!--";
     }
     return false;
