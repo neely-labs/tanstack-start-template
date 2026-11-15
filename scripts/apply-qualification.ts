@@ -41,7 +41,8 @@ export const TARGET_LABEL = "awaiting-qualification";
 
 const LABELS_DOC = "docs/tooling.md#create-the-labels";
 const CURRENT_ACCEPTANCE = "Current acceptance";
-const BODY_MARKER = /^<!--\s*qualification:\s*pr=(?<pr>\d+)\s*-->$/u;
+/** A body marker's comment text. */
+const BODY_MARKER = /^qualification:\s*pr=(?<pr>\d+)$/u;
 /** The identity of the workflow's GITHUB_TOKEN, which writes its comments. */
 const WORKFLOW_AUTHOR = "github-actions[bot]";
 
@@ -105,16 +106,28 @@ const plural = (count: number, word: string) =>
 const checklist = (checks: string[]) =>
   checks.map((text) => `- [ ] ${text}`).join("\n");
 
+/** A comment marker's text; the marker is this inside `<!-- -->`. */
+const markerText = (kind: CommentKind, pr: number) =>
+  `qualification:${kind} pr=${pr}`;
 const commentMarker = (kind: CommentKind, pr: number) =>
-  `<!-- qualification:${kind} pr=${pr} -->`;
+  `<!-- ${markerText(kind, pr)} -->`;
 
 /**
- * The line as a marker, or undefined. The script writes every marker alone at
- * column 0, so any leading character, such as an indent that makes it code, a
- * list continuation or a quote, means it is not one; trailing space is allowed.
+ * The text of the HTML comment that fills `line`, or undefined. The splitter
+ * decides what is a comment, so one in a code fence or code span, or inside
+ * an earlier open comment, never counts. The script writes every marker as a
+ * whole line at column 0, so any leading character, such as an indent that
+ * makes it code, a list continuation or a quote, rules it out too.
  */
-const asMarker = (line: MarkdownLine) =>
-  line.fenced || !line.raw.startsWith("<!--") ? undefined : line.raw.trimEnd();
+function asMarker(line: MarkdownLine) {
+  const [comment] = line.comments;
+  const alone =
+    line.comments.length === 1 &&
+    comment?.end === line.number - 1 &&
+    line.text.trim() === "" &&
+    line.raw.startsWith("<!--");
+  return alone ? comment.text : undefined;
+}
 
 /** Whether an earlier run posted the comment of `kind` for pull request `pr`. */
 const posted = (comments: Comment[], kind: CommentKind, pr: number) =>
@@ -123,7 +136,7 @@ const posted = (comments: Comment[], kind: CommentKind, pr: number) =>
       comment.bot &&
       comment.author === WORKFLOW_AUTHOR &&
       lines(comment.body).some(
-        (line) => asMarker(line) === commentMarker(kind, pr)
+        (line) => asMarker(line) === markerText(kind, pr)
       )
   );
 

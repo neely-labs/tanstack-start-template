@@ -306,6 +306,41 @@ describe(plan, () => {
     expect(result.update?.body).toBeUndefined();
   });
 
+  /** Each place `<!-- M -->` is text, not an HTML comment; M stands for the marker's inner text. */
+  const literal: [string, string][] = [
+    ["a backtick fence", "```\n<!-- M -->\n```"],
+    ["a tilde fence", "~~~\n<!-- M -->\n~~~"],
+    ["code indented by spaces", "    <!-- M -->"],
+    ["code indented by a tab", "\t<!-- M -->"],
+    ["a one-line code span", "`<!-- M -->`"],
+    ["a one-line double-backtick span", "``<!-- M -->``"],
+    ["a multi-line code span", "`example\n<!-- M -->\nend`"],
+    ["a multi-line double-backtick span", "``example\n<!-- M -->\nend``"],
+    ["an HTML comment already open", "<!-- note\n<!-- M -->"],
+    ["a blockquote", "> <!-- M -->"],
+    ["a list continuation", "- item\n  <!-- M -->"],
+  ];
+
+  it.each(literal)(
+    "ignores a workflow comment's moved marker in %s",
+    (_, context) => {
+      const comment = byWorkflow(
+        context.replace("M", "qualification:moved pr=57")
+      );
+      expect(plan(situation({ comments: [comment] })).outcome).toBe("moved");
+    }
+  );
+
+  it.each(literal)(
+    "treats a Current acceptance whose body marker sits in %s as someone else's",
+    (_, context) => {
+      const body = `## Current acceptance\n\n${context.replace("M", "qualification: pr=57")}`;
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result.outcome).toBe("conflict");
+      expect(result.update).toBeUndefined();
+    }
+  );
+
   it("never reopens a closed issue: comments once and reports it", () => {
     const closed = issue({ state: "closed" });
     const result = plan(situation({ issue: closed }));
