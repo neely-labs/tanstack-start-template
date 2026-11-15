@@ -49,6 +49,9 @@ interface Section {
 const CODE_SPAN =
   /(?<!`)(?<run>`+)(?!`)(?:(?!\n[ \t]*\n)[\s\S])+?(?<!`)\k<run>(?!`)/gu;
 
+/** Where an HTML comment ends: `-->`, or `--!>` as HTML also allows. */
+const COMMENT_END = /--!?>/u;
+
 function escapeCode(text: string) {
   return text.replaceAll(CODE_SPAN, (span) => span.replaceAll("<", "&lt;"));
 }
@@ -69,7 +72,7 @@ function fencedLines(raws: string[]) {
       }
       return true;
     }
-    for (const [token] of escapeCode(raw).matchAll(/<!--|-->/gu)) {
+    for (const [token] of escapeCode(raw).matchAll(/<!--|--!?>/gu)) {
       inComment = token === "<!--";
     }
     return false;
@@ -120,11 +123,11 @@ function lines(markdown: string): Line[] {
           line.comments.push(open);
         }
       } else {
-        const close = rest.indexOf("-->");
+        const close = COMMENT_END.exec(rest);
         open.end = at;
-        open.text = `${open.text}\n${close === -1 ? rest : rest.slice(0, close)}`;
-        rest = close === -1 ? "" : rest.slice(close + 3);
-        if (close !== -1) {
+        open.text = `${open.text}\n${close === null ? rest : rest.slice(0, close.index)}`;
+        rest = close === null ? "" : rest.slice(close.index + close[0].length);
+        if (close !== null) {
           open.text = open.text.trim();
           open = undefined;
         }

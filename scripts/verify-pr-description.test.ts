@@ -252,6 +252,15 @@ describe(check, () => {
     expect(check(body, template)).toStrictEqual([]);
   });
 
+  it("ends a comment at --!> as HTML does", () => {
+    const body = describeWith({
+      Summary: summary.replace("Closes #1", "<!-- note --!>\n\nCloses #"),
+    });
+    expect(check(body, template)).toStrictEqual([
+      expect.stringMatching(/an issue reference has no number/u),
+    ]);
+  });
+
   it("ignores a marker written as inline code", () => {
     const body = describeWith({
       Decisions: `${decisions}\n\nThe publisher writes after \`<!-- ui-evidence:start -->\`.`,
