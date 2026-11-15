@@ -13,6 +13,14 @@ import type { Issue, Situation } from "./apply-qualification.ts";
 
 const byName = (left: string, right: string) => left.localeCompare(right);
 
+/** A comment the workflow's own token wrote. */
+const byWorkflow = (body: string) => ({
+  author: "github-actions[bot]",
+  body,
+  bot: true,
+});
+const byPerson = (body: string) => ({ author: "someone", body, bot: false });
+
 const original = `Ship the weekly digest.
 
 ## Acceptance criteria
@@ -116,8 +124,10 @@ describe(plan, () => {
     const result = plan(
       situation({
         comments: [
-          "Looks good",
-          "<!-- qualification:moved pr=57 -->\nMoved to `awaiting-qualification` by #57.",
+          byPerson("Looks good"),
+          byWorkflow(
+            "<!-- qualification:moved pr=57 -->\nMoved to `awaiting-qualification` by #57."
+          ),
         ],
         issue: issue({
           assignees: ["someone"],
@@ -166,7 +176,10 @@ describe(plan, () => {
         expect(result.comment).toContain(`- [ ] ${text}`);
       }
       const again = plan(
-        situation({ comments: [result.comment ?? ""], issue: issue({ body }) })
+        situation({
+          comments: [byWorkflow(result.comment ?? "")],
+          issue: issue({ body }),
+        })
       );
       expect(again).toMatchObject({ failed: true, outcome: "conflict" });
       expect(again.comment).toBeUndefined();
@@ -176,7 +189,7 @@ describe(plan, () => {
   it("changes nothing on a re-run after success even when a person deleted the body marker", () => {
     const result = plan(
       situation({
-        comments: ["<!-- qualification:moved pr=57 -->\nMoved."],
+        comments: [byWorkflow("<!-- qualification:moved pr=57 -->\nMoved.")],
         issue: issue({
           body: applied.replace("<!-- qualification: pr=57 -->\n\n", ""),
         }),
@@ -215,13 +228,51 @@ describe(plan, () => {
       expect(
         plan(
           situation({
-            comments: [result.comment ?? ""],
+            comments: [byWorkflow(result.comment ?? "")],
             issue: issue({ body }),
           })
         ).comment
       ).toBeUndefined();
     }
   );
+
+  it.each([
+    ["a person", [byPerson("<!-- qualification:moved pr=57 -->\nMoved.")]],
+    [
+      "the workflow, quoting it",
+      [byWorkflow("> <!-- qualification:moved pr=57 -->")],
+    ],
+    [
+      "the workflow, inside a code fence",
+      [byWorkflow("```\n<!-- qualification:moved pr=57 -->\n```")],
+    ],
+  ])("ignores a moved marker written by %s", (_, comments) => {
+    const result = plan(situation({ comments }));
+    expect(result.outcome).toBe("moved");
+    expect(result.update?.body).toBe(applied);
+    expect(result.comment).toBeDefined();
+  });
+
+  it.each([
+    [
+      "a fenced example",
+      `${original}\n\n\`\`\`md\n## Current acceptance\n\n<!-- qualification: pr=57 -->\n\`\`\``,
+    ],
+    [
+      "a section that is not Current acceptance",
+      `${original}\n\n## Notes\n\n<!-- qualification: pr=57 -->`,
+    ],
+    [
+      "quoted text",
+      `${original}\n\nSee \`<!-- qualification: pr=57 -->\` for the marker.`,
+    ],
+  ])("does not take a body marker in %s as its own", (_, body) => {
+    const result = plan(situation({ issue: issue({ body }) }));
+    expect(result.outcome).toBe("moved");
+    expect(
+      result.update?.body?.startsWith(`${body}\n\n## Current acceptance`)
+    ).toBeTruthy();
+  });
 
   it("never reopens a closed issue: comments once and reports it", () => {
     const closed = issue({ state: "closed" });
@@ -231,7 +282,7 @@ describe(plan, () => {
     expect(result.comment).toMatch(/^<!-- qualification:closed pr=57 -->\n/u);
     expect(result.comment).toContain(`- [ ] ${checks[0]}`);
     const again = plan(
-      situation({ comments: [result.comment ?? ""], issue: closed })
+      situation({ comments: [byWorkflow(result.comment ?? "")], issue: closed })
     );
     expect(again.comment).toBeUndefined();
   });
@@ -297,16 +348,37 @@ describe(readBackProblems, () => {
       )
     ).toStrictEqual([
       "the body does not hold the Current acceptance it wrote",
-      'the state labels are "ready-for-agent", not "awaiting-qualification"',
+      'the labels are "bug", "ready-for-agent", not "awaiting-qualification", "bug"',
       'the assignees are "octo-agent", not none',
     ]);
   });
 
-  it("expects the state labels unchanged when the update leaves labels out", () => {
+  it("compares every label, not only the state ones", () => {
+    expect(
+      readBackProblems(
+        intent,
+        issue({ assignees: [], body: applied, labels: [TARGET_LABEL] }),
+        []
+      )
+    ).toStrictEqual([
+      'the labels are "awaiting-qualification", not "awaiting-qualification", "bug"',
+    ]);
+    expect(
+      readBackProblems(
+        { assignees: [], body: applied },
+        issue({ assignees: [], body: applied, labels: ["ready-for-agent"] }),
+        ["ready-for-agent", "bug"]
+      )
+    ).toStrictEqual([
+      'the labels are "ready-for-agent", not "bug", "ready-for-agent"',
+    ]);
+  });
+
+  it("expects the labels unchanged when the update leaves them out", () => {
     const withoutLabels = { assignees: [], body: applied };
     const read = issue({ assignees: [], body: applied });
     expect(
-      readBackProblems(withoutLabels, read, ["ready-for-agent"])
+      readBackProblems(withoutLabels, read, ["ready-for-agent", "bug"])
     ).toStrictEqual([]);
     expect(readBackProblems(withoutLabels, read, [])).toHaveLength(1);
   });

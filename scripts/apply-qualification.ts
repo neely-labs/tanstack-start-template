@@ -10,12 +10,20 @@
 // records the finished move, after which the issue is never touched again. The
 // marker `<!-- qualification: pr=N -->` in the body records that pull request N
 // wrote its Current acceptance, so a re-run after a failed run only finishes the
-// labels and assignees. Run: `node scripts/apply-qualification.ts <body-file>`
-// with REPO (owner/name) and NUMBER (the pull request) set.
+// labels and assignees. Each marker counts only as its own line outside code
+// fences: a comment's only from the workflow's token (github-actions[bot]), and
+// the body's only under a Current acceptance heading.
+//
+// GitHub has no conditional issue update, so the script reads the issue again
+// just before writing and re-plans once if it changed. A write that lands
+// between that read and the update is still lost; the workflow's shared
+// concurrency group keeps its own runs from being that write. Run:
+// `node scripts/apply-qualification.ts <body-file>` with REPO (owner/name) and
+// NUMBER (the pull request) set.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
-import { headingTexts, split } from "./markdown-lines.ts";
+import { anyHeadingOf, headingTexts, lines, split } from "./markdown-lines.ts";
 import type { Declaration } from "./qualification.ts";
 import { TEMPLATE_PATH, readQualification } from "./verify-pr-description.ts";
 
@@ -32,7 +40,9 @@ export const TARGET_LABEL = "awaiting-qualification";
 
 const LABELS_DOC = "docs/tooling.md#create-the-labels";
 const CURRENT_ACCEPTANCE = "Current acceptance";
-const BODY_MARKER = /<!--\s*qualification:\s*pr=(?<pr>\d+)\s*-->/gu;
+const BODY_MARKER = /^<!--\s*qualification:\s*pr=(?<pr>\d+)\s*-->$/u;
+/** The identity of the workflow's GITHUB_TOKEN, which writes its comments. */
+const WORKFLOW_AUTHOR = "github-actions[bot]";
 
 export interface Issue {
   number: number;
@@ -50,13 +60,19 @@ export interface Update {
   assignees: string[];
 }
 
+export interface Comment {
+  author: string;
+  /** Written by a bot account, such as the workflow's token. */
+  bot: boolean;
+  body: string;
+}
+
 /** What the apply step knows about one declared issue before changing it. */
 export interface Situation {
   pr: number;
   declaration: Declaration;
   issue: Issue;
-  /** The bodies of the issue's comments. */
-  comments: string[];
+  comments: Comment[];
   labelExists: boolean;
 }
 
@@ -91,13 +107,35 @@ const checklist = (checks: string[]) =>
 const commentMarker = (kind: CommentKind, pr: number) =>
   `<!-- qualification:${kind} pr=${pr} -->`;
 
+/** The lines of `markdown` outside code fences, trimmed. */
+const unfenced = (markdown: string) =>
+  lines(markdown).flatMap((line) => (line.fenced ? [] : line.raw.trim()));
+
 /** Whether an earlier run posted the comment of `kind` for pull request `pr`. */
-const posted = (comments: string[], kind: CommentKind, pr: number) =>
-  comments.some((body) => body.includes(commentMarker(kind, pr)));
+const posted = (comments: Comment[], kind: CommentKind, pr: number) =>
+  comments.some(
+    (comment) =>
+      comment.bot &&
+      comment.author === WORKFLOW_AUTHOR &&
+      unfenced(comment.body).includes(commentMarker(kind, pr))
+  );
+
+/** Whether pull request `pr` wrote a Current acceptance into `body`: its marker line under that heading. */
+function wroteBody(body: string, pr: number) {
+  let heading: string | undefined;
+  return lines(body).some((line) => {
+    heading = anyHeadingOf(line) ?? heading;
+    return (
+      !line.fenced &&
+      heading?.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase() &&
+      Number(BODY_MARKER.exec(line.raw.trim())?.groups?.pr) === pr
+    );
+  });
+}
 
 /** The marked comment of `kind` to post, or undefined when an earlier run posted it. */
 function commentToPost(
-  comments: string[],
+  comments: Comment[],
   kind: CommentKind,
   pr: number,
   text: string
@@ -180,9 +218,7 @@ export function plan(situation: Situation): Plan {
   const { comments, declaration, issue, pr } = situation;
   const { checks } = declaration;
   const name = `#${issue.number}`;
-  const ours = [...issue.body.matchAll(BODY_MARKER)].some(
-    (match) => Number(match.groups?.pr) === pr
-  );
+  const ours = wroteBody(issue.body, pr);
   const opening = `#${pr} merged with qualification checks for this issue, but`;
   if (issue.isPullRequest) {
     return {
@@ -237,7 +273,7 @@ const quoted = (names: string[]) =>
 
 /**
  * Each way the issue read back after `update` differs from it. `before` holds
- * the issue's labels before the update, whose state labels stay when it sets none.
+ * the issue's labels before the update, which stay when it sets none.
  */
 export function readBackProblems(
   update: Update,
@@ -251,12 +287,10 @@ export function readBackProblems(
   ) {
     problems.push("the body does not hold the Current acceptance it wrote");
   }
-  const states = read.labels.filter(isState).toSorted(byName);
-  const expected = (update.labels ?? before).filter(isState).toSorted(byName);
-  if (states.join("\n") !== expected.join("\n")) {
-    problems.push(
-      `the state labels are ${quoted(states)}, not ${quoted(expected)}`
-    );
+  const labels = read.labels.toSorted(byName);
+  const expected = (update.labels ?? before).toSorted(byName);
+  if (labels.join("\n") !== expected.join("\n")) {
+    problems.push(`the labels are ${quoted(labels)}, not ${quoted(expected)}`);
   }
   if (read.assignees.length > 0) {
     problems.push(`the assignees are ${quoted(read.assignees)}, not none`);
@@ -346,13 +380,38 @@ export function decodeIssue(json: string): Issue {
   };
 }
 
-/** The bodies of a comment list read with `--paginate --slurp`, which nests each page in one array. */
-export function decodeComments(json: string): string[] {
+/** A comment list read with `--paginate --slurp`, which nests each page in one array. */
+export function decodeComments(json: string): Comment[] {
   const pages: unknown = JSON.parse(json);
   if (!Array.isArray(pages)) {
     throw new TypeError("the comments endpoint returned no list");
   }
-  return fieldOf(pages.flat(), "body");
+  const comments: Comment[] = [];
+  const items: unknown[] = pages.flat();
+  for (const item of items) {
+    if (item instanceof Object) {
+      const user =
+        "user" in item && item.user instanceof Object ? [item.user] : [];
+      comments.push({
+        author: fieldOf(user, "login")[0] ?? "",
+        body: fieldOf([item], "body")[0] ?? "",
+        bot: fieldOf(user, "type")[0] === "Bot",
+      });
+    }
+  }
+  return comments;
+}
+
+/** Whether two reads of an issue agree on everything a plan depends on. */
+function sameIssue(left: Issue, right: Issue) {
+  const key = (read: Issue) =>
+    JSON.stringify([
+      read.state,
+      read.body,
+      read.labels.toSorted(byName),
+      read.assignees.toSorted(byName),
+    ]);
+  return key(left) === key(right);
 }
 
 /** Applies one declaration; returns its plan and any problem from carrying it out. */
@@ -363,20 +422,45 @@ function applyOne(
   labelExists: () => boolean
 ) {
   const endpoint = `repos/${repo}/issues/${declaration.issue}`;
-  const issue = decodeIssue(api(endpoint));
-  if (issue.isPullRequest) {
-    return plan({ comments: [], declaration, issue, labelExists: true, pr });
+  const first = decodeIssue(api(endpoint));
+  if (first.isPullRequest) {
+    return plan({
+      comments: [],
+      declaration,
+      issue: first,
+      labelExists: true,
+      pr,
+    });
   }
-  const comments = decodeComments(
-    api(`${endpoint}/comments?per_page=100`, { paginate: true })
-  );
-  const result = plan({
-    comments,
-    declaration,
-    issue,
-    labelExists: labelExists(),
-    pr,
-  });
+  const planFrom = (read: Issue) =>
+    plan({
+      comments: decodeComments(
+        api(`${endpoint}/comments?per_page=100`, { paginate: true })
+      ),
+      declaration,
+      issue: read,
+      labelExists: labelExists(),
+      pr,
+    });
+  let issue = first;
+  let result = planFrom(issue);
+  // Read again just before writing, so a change since the plan is not
+  // overwritten: re-plan once from it, and give up if it changes again.
+  for (let attempt = 0; result.update !== undefined; attempt += 1) {
+    const fresh = decodeIssue(api(endpoint));
+    if (sameIssue(fresh, issue)) {
+      break;
+    }
+    if (attempt > 0) {
+      return {
+        ...result,
+        failed: true,
+        message: `#${declaration.issue}: changed again while it was being applied, so it was left as it is; re-run this job`,
+      };
+    }
+    issue = fresh;
+    result = planFrom(issue);
+  }
   const post = () => {
     if (result.comment !== undefined) {
       api(`${endpoint}/comments`, {
@@ -454,24 +538,24 @@ if (import.meta.main) {
     body,
     fs.readFileSync(TEMPLATE_PATH, "utf-8")
   );
-  let lines = [
+  let results = [
     {
       failed: false,
       message: `#${pr} has no Qualification section; nothing to apply.`,
     },
   ];
   if (present && problems.length > 0) {
-    lines = problems.map((problem) => ({
+    results = problems.map((problem) => ({
       failed: true,
       message: `The Qualification section cannot be applied, so no issue changed: ${problem}`,
     }));
   } else if (present) {
-    lines = apply(repo, pr, declarations);
+    results = apply(repo, pr, declarations);
   }
-  const failed = lines.filter((line) => line.failed).length;
+  const failed = results.filter((line) => line.failed).length;
   const report = [
     `Qualification for #${pr}: ${failed === 0 ? "applied" : plural(failed, "failure")}`,
-    ...lines.map(
+    ...results.map(
       (line) => `- ${line.failed ? "Failed" : "OK"}: ${line.message}`
     ),
     ...(failed === 0

@@ -30,6 +30,7 @@ const workflowSchema = z.looseObject({
   concurrency: z.looseObject({
     "cancel-in-progress": z.boolean(),
     group: z.string(),
+    queue: z.string().optional(),
   }),
   jobs: z.record(
     z.string(),
@@ -82,8 +83,12 @@ describe("the qualification workflow's shape", () => {
     expect(onlyJob().permissions).toBeUndefined();
   });
 
-  it("queues re-runs instead of cancelling one in progress", () => {
-    expect(workflow().concurrency["cancel-in-progress"]).toBeFalsy();
+  it("runs one at a time across pull requests, queueing the rest instead of cancelling any", () => {
+    const { concurrency } = workflow();
+    // One group for every run: nothing per pull request in its name.
+    expect(concurrency.group).not.toMatch(/pull_request|github\.ref/u);
+    expect(concurrency.queue).toBe("max");
+    expect(concurrency["cancel-in-progress"]).toBeFalsy();
   });
 
   it("checks out the default branch only, without keeping the token", () => {
@@ -170,11 +175,22 @@ if ((match = /^pulls\/(\d+)$/.exec(path)) && method === "GET") {
   print({ name });
 } else if ((match = /^issues\/(\d+)\/comments$/.exec(path))) {
   const list = (state.comments[match[1]] ??= []);
-  if (method === "POST") { list.push({ body: sent.body }); save(); print({ body: sent.body }); }
-  else print([list.slice(0, 2), list.slice(2)]);
+  if (state.racer?.issue === Number(match[1])) state.racer.armed = true;
+  if (method === "POST") {
+    const comment = { body: sent.body, user: { login: "github-actions[bot]", type: "Bot" } };
+    list.push(comment); save(); print(comment);
+  } else { save(); print([list.slice(0, 2), list.slice(2)]); }
 } else if ((match = /^issues\/(\d+)$/.exec(path))) {
   const issue = state.issues[match[1]];
   if (!issue) notFound();
+  // Another writer lands on each issue request after the comments were read.
+  const racer = state.racer;
+  if (racer?.issue === issue.number && racer.armed && racer.writes.length > 0) {
+    const write = racer.writes.shift();
+    if (write.body !== undefined) issue.body = write.body;
+    if (write.assignees !== undefined) issue.assignees = write.assignees.map((login) => ({ login }));
+    save();
+  }
   if (method === "PATCH") {
     if (!state.ignorePatch?.includes(issue.number)) {
       if (sent.body !== undefined) issue.body = sent.body;
@@ -211,7 +227,16 @@ interface FakeState {
   /** The description in the merge event's payload; the live one is in `pulls`. */
   merged?: string | null;
   issues: Record<string, FakeIssue>;
-  comments: Record<string, { body: string }[]>;
+  comments: Record<
+    string,
+    { body: string; user: { login: string; type: string } }[]
+  >;
+  /** A second writer that changes the issue on each request after its comments were read. */
+  racer?: {
+    issue: number;
+    armed: boolean;
+    writes: { body?: string; assignees?: string[] }[];
+  };
   labels: string[];
   calls: string[];
   patches: {
@@ -285,7 +310,10 @@ function baseState(body: string | null): FakeState {
   return {
     calls: [],
     comments: {
-      "12": [{ body: "First." }, { body: "Second." }, { body: "Third." }],
+      "12": ["First.", "Second.", "Third."].map((text) => ({
+        body: text,
+        user: { login: "octo-person", type: "User" },
+      })),
     },
     issues: {
       "12": openIssue(12),
@@ -531,6 +559,56 @@ describe("the qualification workflow's apply step", () => {
       /#12: read back wrong after the update: the body/u
     );
     expect(marked(state, "12", "moved")).toStrictEqual([]);
+  });
+
+  it("re-plans from a second writer's change and overwrites none of it", () => {
+    const state = baseState(
+      description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
+    );
+    const other = `Issue 12.\n\n## Current acceptance\n\nStatus: delivered in #60; open for 1 later check.\n\n<!-- qualification: pr=60 -->\n\n- [ ] Its check.`;
+    state.racer = { armed: false, issue: 12, writes: [{ body: other }] };
+    const run = runApply(state);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toMatch(
+      /#12: left unchanged because the issue already has a Current acceptance/u
+    );
+    expect(state.issues["12"]?.body).toBe(other);
+    expect(state.patches).toStrictEqual([]);
+    expect(marked(state, "12", "conflict")).toHaveLength(1);
+  });
+
+  it("fails without writing when the issue changes again while it re-plans", () => {
+    const state = baseState(
+      description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
+    );
+    state.racer = {
+      armed: false,
+      issue: 12,
+      writes: [{ assignees: ["first"] }, { assignees: ["second"] }],
+    };
+    const run = runApply(state);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toMatch(
+      /#12: changed again while it was being applied/u
+    );
+    expect(state.patches).toStrictEqual([]);
+    expect(state.issues["12"]?.assignees).toStrictEqual([{ login: "second" }]);
+  });
+
+  it("does not take a person's quoted moved marker as the move", () => {
+    const state = baseState(
+      description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
+    );
+    state.comments["12"]?.push({
+      body: "<!-- qualification:moved pr=57 -->",
+      user: { login: "octo-person", type: "User" },
+    });
+    const run = runApply(state);
+    expect(run.status).toBe(0);
+    expect(labelsOf(state.issues["12"])).toStrictEqual([
+      "flaky",
+      "awaiting-qualification",
+    ]);
   });
 
   it("does nothing for a description without a Qualification section", () => {

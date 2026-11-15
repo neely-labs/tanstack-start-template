@@ -12,9 +12,12 @@ on:
   pull_request_target:
     types: [closed]
 
-# Runs for the same pull request queue rather than cancel: a re-run must finish.
+# One run at a time across every pull request, so two merges never write the
+# same issue at once. `queue: max` keeps up to 100 runs waiting in order; the
+# default keeps one and cancels older pending runs. None cancels a running one.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}
+  queue: max
   cancel-in-progress: false
 
 permissions:

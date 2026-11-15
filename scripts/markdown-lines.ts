@@ -145,11 +145,14 @@ export function headingOf(line: MarkdownLine) {
   )?.groups;
 }
 
+/** A heading's text at any level, or undefined for another line. */
+export function anyHeadingOf(line: MarkdownLine) {
+  return /^ {0,3}#{1,6}[ \t]+(?<heading>.*?)(?:[ \t]+#+)?[ \t]*$/u.exec(
+    line.text
+  )?.groups?.heading;
+}
+
 /** The text of each heading in `markdown`, at any level, outside code fences and comments. */
 export function headingTexts(markdown: string) {
-  return lines(markdown).flatMap(
-    (line) =>
-      /^ {0,3}#{1,6}[ \t]+(?<heading>.*?)(?:[ \t]+#+)?[ \t]*$/u.exec(line.text)
-        ?.groups?.heading ?? []
-  );
+  return lines(markdown).flatMap((line) => anyHeadingOf(line) ?? []);
 }
