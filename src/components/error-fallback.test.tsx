@@ -34,6 +34,11 @@ describe(ErrorFallback, () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(retryCount).toBe(1);
+    expect(
+      screen.getByRole("link", { name: "Return home" }).getAttribute("href")
+    ).toBe("/");
+    // The root shell renders the one main landmark around this page.
+    expect(screen.queryByRole("main")).toBeNull();
   });
 
   it("shows safe technical detail only when requested", () => {

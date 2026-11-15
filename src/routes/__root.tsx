@@ -51,14 +51,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <a
-          className="sr-only fixed top-3 left-3 z-50 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground focus:not-sr-only"
+          className="fixed top-3 left-3 z-50 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground not-focus:sr-only"
           href="#main-content"
         >
           Skip to content
         </a>
         <div className="flex min-h-svh flex-col">
           <SiteHeader />
-          {children}
+          {/* The skip link's target. Every page renders inside it. */}
+          <main
+            className="flex flex-1 flex-col"
+            id="main-content"
+            tabIndex={-1}
+          >
+            {children}
+          </main>
           <SiteFooter />
         </div>
         {import.meta.env.DEV ? (

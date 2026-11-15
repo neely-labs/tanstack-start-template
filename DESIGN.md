@@ -11,4 +11,7 @@ The starter uses shadcn/ui on Base UI with the Rhea style, Mist neutral tokens, 
 - Layout uses clear reading widths, restrained borders, and one elevation level for contained operational surfaces.
 - Focus states, keyboard navigation, reduced-motion behavior, and responsive composition are requirements.
 - Global not-found and error states preserve the shared shell and provide an obvious recovery action.
+- The root shell renders the one `<main>`, the skip link's target, around every page; a page or recovery state renders a plain wrapper inside it, never its own `<main>`.
+- A link that looks like a button is a `Link` or `<a>` styled with `buttonVariants`. Base UI's `Button` rendering an `<a>` gives it `role="button"`, so assistive technology announces a button.
+- A link's accessible name is its visible text. Put extra context, such as "opens in a new tab", in visually hidden text after it rather than in `aria-label`.
 - Product-specific visual direction belongs in this document after the starter is adopted. Do not treat the example landing page as a brand.

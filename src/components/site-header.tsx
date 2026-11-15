@@ -8,7 +8,6 @@ export function SiteHeader() {
     <header className="border-b bg-background/95">
       <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
         <Link
-          aria-label={`${siteConfig.name} home`}
           className="inline-flex items-center gap-2.5 rounded-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
           to="/"
         >
@@ -19,7 +18,8 @@ export function SiteHeader() {
             src={siteConfig.icon.path}
             width={24}
           />
-          <span className="hidden sm:inline">{siteConfig.name}</span>
+          <span className="sr-only sm:not-sr-only">{siteConfig.name}</span>
+          <span className="sr-only"> home</span>
         </Link>
         <div className="flex items-center gap-1 sm:gap-2">
           <nav aria-label="Primary navigation">

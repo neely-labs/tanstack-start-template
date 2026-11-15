@@ -3,7 +3,7 @@ import { useLocation, useRouter } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
-import { Button } from "@/components/ui/button.tsx";
+import { Button, buttonVariants } from "@/components/ui/button.tsx";
 import { reportCaughtError } from "@/lib/report-error.ts";
 
 interface ErrorFallbackProps {
@@ -25,11 +25,7 @@ export function ErrorFallback({
   }, []);
 
   return (
-    <main
-      className="mx-auto flex w-full max-w-4xl flex-1 items-center px-5 py-20 sm:px-8 sm:py-28"
-      id="main-content"
-      tabIndex={-1}
-    >
+    <div className="mx-auto flex w-full max-w-4xl flex-1 items-center px-5 py-20 sm:px-8 sm:py-28">
       {/*
        * React moves this tag into the document head. A failed route's own
        * robots tag stays beside it, and crawlers obey the stricter of the two.
@@ -57,15 +53,13 @@ export function ErrorFallback({
             <IconRefresh aria-hidden="true" data-icon="inline-start" />
             Try again
           </Button>
-          <Button
-            nativeButton={false}
-            render={<a aria-label="Return home" href="/" />}
-            size="lg"
-            variant="outline"
+          <a
+            className={buttonVariants({ size: "lg", variant: "outline" })}
+            href="/"
           >
             <IconHome aria-hidden="true" data-icon="inline-start" />
             Return home
-          </Button>
+          </a>
         </div>
         {showDetails ? (
           <details className="mt-8 border-t pt-5 text-sm text-muted-foreground">
@@ -80,7 +74,7 @@ export function ErrorFallback({
           </details>
         ) : null}
       </section>
-    </main>
+    </div>
   );
 }
 

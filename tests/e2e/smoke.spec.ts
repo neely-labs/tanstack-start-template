@@ -18,8 +18,14 @@ test("serves prerendered pages, identity files, and secured API responses", asyn
       for (const [name, value] of Object.entries(securityHeaders)) {
         expect(response.headers()[name.toLowerCase()]).toBe(value);
       }
+      const html = await response.text();
       // The served page must pass the same checks as the built file.
-      checkPageHtml(await response.text(), routePath);
+      checkPageHtml(html, routePath);
+      // The skip link's target: the one main landmark, which the root renders.
+      const mains = html.match(/<main\b[^>]*>/gu) ?? [];
+      expect(mains).toHaveLength(1);
+      expect(mains[0]).toContain('id="main-content"');
+      expect(mains[0]).toContain('tabindex="-1"');
     })
   );
 
@@ -111,6 +117,8 @@ test("supports keyboard skip, navigation, and not-found recovery", async ({
   const skip = page.getByRole("link", { name: "Skip to content" });
   await page.keyboard.press("Tab");
   await expect(skip).toBeFocused();
+  // Shown over the page, so focusing it does not push the layout down.
+  await expect(skip).toHaveCSS("position", "fixed");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("main")).toBeFocused();
 
