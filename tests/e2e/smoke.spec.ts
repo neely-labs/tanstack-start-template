@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { checkPageHtml } from "../../scripts/verify-seo-output.mjs";
+import { checkPageHtml } from "../../scripts/verify-seo-output.ts";
 import { publicPaths } from "../../src/lib/public-routes.ts";
 import { securityHeaders } from "../../src/lib/security-headers.ts";
 import { pageTitle, recoveryTitles } from "../../src/lib/seo.ts";

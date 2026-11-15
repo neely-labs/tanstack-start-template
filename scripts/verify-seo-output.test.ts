@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { siteConfig } from "../src/lib/site-config.ts";
-import { checkPageHtml } from "./verify-seo-output.mjs";
+import { checkPageHtml } from "./verify-seo-output.ts";
 
 const { origin, socialImage } = siteConfig;
 const pageUrl = `${origin}/runtime`;

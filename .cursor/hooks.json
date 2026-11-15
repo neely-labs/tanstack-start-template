@@ -2,7 +2,7 @@
   "hooks": {
     "afterFileEdit": [
       {
-        "command": "node scripts/fix-edited-file.mjs"
+        "command": "node scripts/fix-edited-file.ts"
       }
     ]
   },

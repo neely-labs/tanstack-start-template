@@ -7,76 +7,47 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
+import { parse } from "yaml";
+import { z } from "zod";
 
 const workflowPath = path.join(
   import.meta.dirname,
   "../.github/workflows/ci.yml"
 );
 
-interface Step {
-  env: Record<string, string>;
-  run: string;
-  shell?: string;
-}
+const workflowSchema = z.object({
+  jobs: z.record(
+    z.string(),
+    z.object({
+      steps: z.array(z.looseObject({ id: z.string().optional() })).default([]),
+    })
+  ),
+});
 
-interface Key {
-  nested: string[];
-  value: string;
-}
+const stepSchema = z.object({
+  env: z.record(z.string(), z.string()).default({}),
+  run: z.string(),
+  shell: z.string().optional(),
+});
 
-const indentOf = (line: string) => line.length - line.trimStart().length;
-
-/** The step with `id` as its keys, each with the lines nested under it. */
-function stepKeys(yaml: string, id: string): Map<string, Key> {
-  const lines = yaml.split("\n");
-  const idLine = lines.findIndex((line) => line.trim() === `id: ${id}`);
-  let start = idLine;
-  while (start > 0 && !lines[start].trimStart().startsWith("- ")) {
-    start -= 1;
-  }
-  if (idLine === -1 || !lines[start].trimStart().startsWith("- ")) {
-    throw new Error(`No step with id ${id} in ${workflowPath}`);
-  }
-  const keyIndent = indentOf(lines[start]) + 2;
-  const keys = new Map<string, Key>();
-  let current: Key | undefined;
-  for (const [offset, raw] of lines.slice(start).entries()) {
-    // The first key shares its line with the step's `- `.
-    const line =
-      offset === 0 ? " ".repeat(keyIndent) + raw.trimStart().slice(2) : raw;
-    if (current && (line.trim() === "" || indentOf(line) > keyIndent)) {
-      current.nested.push(line);
-      continue;
-    }
-    const match = /^(?<key>[\w-]+):\s*(?<value>.*)$/u.exec(line.trim());
-    if (indentOf(line) !== keyIndent || !match?.groups) {
-      break;
-    }
-    current = { nested: [], value: match.groups.value };
-    keys.set(match.groups.key, current);
-  }
-  return keys;
-}
-
-/** The workflow step with `id`, read by indentation. Throws if its shape changes. */
-function readStep(yaml: string, id: string): Step {
-  const keys = stepKeys(yaml, id);
-  const run = keys.get("run");
-  if (run?.value !== "|") {
-    throw new Error(`The step with id ${id} needs a \`run: |\` block`);
-  }
-  const contentIndent = Math.min(
-    ...run.nested.filter((line) => line.trim()).map(indentOf)
+/** The workflow step with `id`. Throws if the workflow or that step changes shape. */
+function readStep(yaml: string, id: string) {
+  const steps = Object.values(workflowSchema.parse(parse(yaml)).jobs).flatMap(
+    (job) => job.steps
   );
-  const env = (keys.get("env")?.nested ?? []).flatMap((line) => {
-    const pair = /^(?<name>\w+):\s*(?<expr>.*)$/u.exec(line.trim());
-    return pair?.groups ? [[pair.groups.name, pair.groups.expr] as const] : [];
-  });
-  return {
-    env: Object.fromEntries(env),
-    run: `${run.nested.map((line) => line.slice(contentIndent)).join("\n")}\n`,
-    shell: keys.get("shell")?.value,
-  };
+  const found = steps.filter((candidate) => candidate.id === id);
+  if (found.length !== 1) {
+    throw new Error(
+      `Expected one step with id ${id} in ${workflowPath}, found ${found.length}`
+    );
+  }
+  const step = stepSchema.safeParse(found[0]);
+  if (!step.success) {
+    throw new Error(
+      `The step with id ${id} needs a \`run\` script and string \`env\` values: ${z.prettifyError(step.error)}`
+    );
+  }
+  return step.data;
 }
 
 /** Replaces each `${{ name }}` from `context`, as Actions does: an unset name is empty. */
