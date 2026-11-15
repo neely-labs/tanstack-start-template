@@ -424,8 +424,11 @@ describe(check, () => {
   });
 
   it("still checks Decisions when the author kept a template comment in it", () => {
+    const [comment] =
+      /(?<=## Decisions\n\n)<!--[\s\S]*?-->/u.exec(template) ?? [];
+    expect(comment).toBeDefined();
     const body = describeWith({
-      Decisions: `## Decisions\n\n<!-- Choices you made on the owner's behalf: one short line each, stating the choice only. The collapsed block holds each choice's reason, each review or walk finding you declined with why, and any walk notes. Delete whatever stays empty, the whole block included. -->\n\n- \n\n## Notes`,
+      Decisions: `## Decisions\n\n${comment}\n\n- \n\n## Notes`,
     });
     const problems = check(body, template);
     expect(problems).toHaveLength(2);
