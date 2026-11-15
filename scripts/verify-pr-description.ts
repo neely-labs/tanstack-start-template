@@ -20,7 +20,7 @@ const FIELDS_SECTION = "Merge danger";
 const OPTIONAL_FIELDS = new Set(["Rollback"]);
 /** The section that holds the evidence publisher's markers. */
 const MARKER_SECTION = "UI evidence";
-const MARKER = /<!--\s*ui-evidence:(?<kind>start|end)\s*-->/gu;
+const MARKER = /^ui-evidence:(?<kind>start|end)$/u;
 
 interface Line {
   /** 1-based line number in the description. */
@@ -30,8 +30,8 @@ interface Line {
   text: string;
   /** Inside a fenced code block, delimiters included. */
   fenced: boolean;
-  /** Starts a comment that is not inside another one. */
-  opensComment: boolean;
+  /** Each HTML comment that opens on this line: its trimmed text and the index of its last line. */
+  comments: { text: string; end: number }[];
 }
 
 interface Section {
@@ -42,51 +42,58 @@ interface Section {
   body: Line[];
 }
 
+/** HTML inside inline code is text, so escape it before reading comments and tags. */
+function withoutCodeHtml(raw: string) {
+  return raw.replaceAll(/(?<run>`+).+?\k<run>/gu, (span) =>
+    span.replaceAll("<", "&lt;")
+  );
+}
+
 function lines(markdown: string): Line[] {
   let fence = "";
-  let inComment = false;
+  let open: { text: string; end: number } | undefined;
   return markdown.split(/\r?\n/u).map((raw, at) => {
+    const line: Line = {
+      comments: [],
+      fenced: true,
+      number: at + 1,
+      raw,
+      text: "",
+    };
     const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
-    const opensFence = !inComment && fence === "" && delimiter !== "";
-    if (opensFence || fence !== "") {
-      if (opensFence) {
-        fence = delimiter;
-      } else if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
+    if (open === undefined && fence === "" && delimiter !== "") {
+      fence = delimiter;
+      return line;
+    }
+    if (fence !== "") {
+      if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
         fence = "";
       }
-      return {
-        fenced: true,
-        number: at + 1,
-        opensComment: false,
-        raw,
-        text: "",
-      };
+      return line;
     }
-    const opensComment = !inComment && raw.trimStart().startsWith("<!--");
-    let text = "";
-    let rest = raw;
+    line.fenced = false;
+    let rest = withoutCodeHtml(raw);
     while (rest !== "") {
-      if (inComment) {
-        const close = rest.indexOf("-->");
-        if (close === -1) {
-          rest = "";
-        } else {
-          inComment = false;
-          rest = rest.slice(close + 3);
+      if (open === undefined) {
+        const start = rest.indexOf("<!--");
+        line.text += start === -1 ? rest : rest.slice(0, start);
+        rest = start === -1 ? "" : rest.slice(start + 4);
+        if (start !== -1) {
+          open = { end: at, text: "" };
+          line.comments.push(open);
         }
       } else {
-        const open = rest.indexOf("<!--");
-        if (open === -1) {
-          text += rest;
-          rest = "";
-        } else {
-          text += rest.slice(0, open);
-          inComment = true;
-          rest = rest.slice(open + 4);
+        const close = rest.indexOf("-->");
+        open.end = at;
+        open.text = `${open.text}\n${close === -1 ? rest : rest.slice(0, close)}`;
+        rest = close === -1 ? "" : rest.slice(close + 3);
+        if (close !== -1) {
+          open.text = open.text.trim();
+          open = undefined;
         }
       }
     }
-    return { fenced: false, number: at + 1, opensComment, raw, text };
+    return line;
   });
 }
 
@@ -171,73 +178,62 @@ function expectations(template: string) {
     }
   }
   const comments = new Set(
-    all.filter((line) => line.opensComment).map((line) => line.raw.trim())
+    all.flatMap((line) => line.comments.map((comment) => comment.text))
   );
   return { comments, fields, headings, labels };
 }
 
-/** The ui-evidence markers on a line, outside inline code. */
+/** The ui-evidence markers on a line. */
 function markersOn(line: Line) {
-  if (line.fenced) {
-    return [];
-  }
-  return [...line.raw.replaceAll(/`[^`]*`/gu, "").matchAll(MARKER)].map(
-    (match) => match.groups?.kind ?? ""
+  return line.comments.flatMap(
+    (comment) => MARKER.exec(comment.text)?.groups?.kind ?? []
+  );
+}
+
+/** Whether `close` ends the bot block `open` starts, in the closing styles bots use. */
+function endsBlock(open: string, close: string) {
+  const endOf = "end of ";
+  return (
+    close === `/${open}` ||
+    (open.includes("start") && close === open.replace("start", "end")) ||
+    (close.startsWith(endOf) && open.endsWith(close.slice(endOf.length)))
   );
 }
 
 /**
- * Drops what bots appended after the template's last heading. Between two
- * template headings or ui-evidence markers, a bot block runs from the first
- * comment the template lacks, such as `<!-- codesmith:footer -->`, to the last
- * comment, such as `<!-- /codesmith:footer -->`. Anything after it is checked,
- * and so is a footer that does not start with a comment.
+ * Drops what bots appended after the template's last heading: each block from a
+ * comment the template lacks to its closing comment, such as
+ * `<!-- codesmith:footer -->` to `<!-- /codesmith:footer -->`. Anything outside
+ * such a pair is checked, including a footer that does not open with a comment.
  */
 function withoutBotBlocks(
   all: Line[],
   headings: string[],
-  comments: Set<string>
+  templateComments: Set<string>
 ) {
   const last = all.findIndex(
     (line) => headingOf(line)?.heading === headings.at(-1)
   );
-  if (last === -1) {
-    return all;
-  }
+  const opened = all.flatMap((line, at) =>
+    last !== -1 && at > last
+      ? line.comments.map((comment) => ({ ...comment, at }))
+      : []
+  );
   const dropped = new Set<number>();
-  let opened = -1;
-  let closed = -1;
-  const settle = () => {
-    if (opened !== -1) {
-      for (let at = opened; at <= closed; at += 1) {
+  for (const [index, open] of opened.entries()) {
+    const close = opened
+      .slice(index + 1)
+      .find((candidate) => endsBlock(open.text, candidate.text));
+    const isBot =
+      !dropped.has(open.at) &&
+      !templateComments.has(open.text) &&
+      !MARKER.test(open.text);
+    if (isBot && close !== undefined) {
+      for (let { at } = open; at <= close.end; at += 1) {
         dropped.add(at);
       }
     }
-    opened = -1;
-    closed = -1;
-  };
-  for (let at = last + 1; at < all.length; at += 1) {
-    const line = all[at];
-    const heading = headingOf(line);
-    if (
-      markersOn(line).length > 0 ||
-      (heading?.marker === "##" && headings.includes(heading.heading))
-    ) {
-      settle();
-    } else {
-      if (
-        opened === -1 &&
-        line.opensComment &&
-        !comments.has(line.raw.trim())
-      ) {
-        opened = at;
-      }
-      if (opened !== -1 && !line.fenced && line.raw.includes("-->")) {
-        closed = at;
-      }
-    }
   }
-  settle();
   return all.filter((_, at) => !dropped.has(at));
 }
 
