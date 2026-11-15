@@ -1,6 +1,6 @@
 # Tooling
 
-Use this guide when a commit or push hook runs, when `pnpm install` asks to approve skills, when you update a committed skill, or when you create or rename the issue labels. For the checks every change needs, see [the development guide](development.md).
+Use this guide when a commit or push hook runs, when `pnpm install` asks to approve skills, when you update a committed skill, when you create or rename the issue labels, or when a Qualification run fails. For the checks every change needs, see [the development guide](development.md).
 
 ## Formatting and hooks
 
@@ -37,4 +37,17 @@ gh label create flaky --repo "$repo" --force --color D93F0B --description "A tes
 gh label list --repo "$repo" --limit 100
 ```
 
-`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values.
+`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values. A renamed state label also changes `STATE_LABELS` in `scripts/apply-qualification.ts`, which a test keeps equal to these commands.
+
+## Qualification workflow
+
+`.github/workflows/qualification.yml` runs `scripts/apply-qualification.ts` when a pull request merges into the default branch. For each issue under the description's Qualification section, it makes one update: it appends a Current acceptance holding the declared checks and a `<!-- qualification: pr=N -->` marker, replaces every state label with `awaiting-qualification`, and clears the assignees. It reads the issue back, then comments once that it moved it.
+
+It works through every declared issue and fails at the end if any failed:
+
+- A closed issue stays closed; it gets a comment with the checks, and the run still passes.
+- An issue that already has a Current acceptance from another delivery or an edit stays unchanged; it gets a comment with the checks to reconcile, and the run fails.
+- A number that names a pull request fails the run.
+- When the `awaiting-qualification` label is missing, it writes the Current acceptance and clears the assignees, leaves the labels, and fails. Create the labels as above.
+
+A re-run never changes an issue it already moved, ticked boxes and later edits included, and never repeats a comment, so after fixing a cause, re-run the job. To move an issue by hand instead, append the Current acceptance that [triage labels](agents/triage-labels.md#awaiting-qualification) shows, swap its state label for `awaiting-qualification`, and clear its assignees. No workflow undoes a move when a delivery is reverted.

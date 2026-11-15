@@ -54,7 +54,7 @@ For #
 
 ## Decisions
 
-<!-- First, each item that needs the owner's decision or a person's eye, opening with **Owner decision:** or **Needs your eye:**. That includes a walk note marked `owner decision`, a behavior this change made worse and left that way, and each check a person still has to make. Then the choices you made on the owner's behalf, one short line each. A line states what you chose, and over what when that is not obvious, so a reader can disagree without opening the block; a topic such as "Checked some extra cases" is not a choice. The collapsed block holds each choice's reason, each review or walk finding you declined with why, and the other walk notes. Delete whatever stays empty, the whole block included. -->
+<!-- First, each item that needs the owner's decision or a person's eye, opening with **Owner decision:** or **Needs your eye:**. That includes a walk note marked `owner decision`, a behavior this change made worse and left that way, and each check a person still has to make before merge; one after merge goes under Qualification. Then the choices you made on the owner's behalf, one short line each. A line states what you chose, and over what when that is not obvious, so a reader can disagree without opening the block; a topic such as "Checked some extra cases" is not a choice. The collapsed block holds each choice's reason, each review or walk finding you declined with why, and the other walk notes. Delete whatever stays empty, the whole block included. -->
 
 - <!-- One choice, such as "Kept the old route as a redirect instead of deleting it" -->
 
