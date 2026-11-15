@@ -4,7 +4,9 @@ name: Qualification
 # declares to awaiting-qualification (scripts/apply-qualification.ts).
 # pull_request_target runs this file and the script from the default branch with
 # a token that can write issues, so nothing here checks out or runs pull request
-# code, and the description reaches the script only as a file.
+# code, and the description reaches the script only as a file. It is the
+# description in the merge event, which the required pr-description check
+# passed; a re-run reuses that event, so an edit after merge never applies.
 # scripts/qualification-workflow.test.ts pins this shape and runs the apply step.
 on:
   pull_request_target:
@@ -40,7 +42,6 @@ jobs:
           cache: false
           install: false
 
-      # Reads the description now, so a re-run applies the current text.
       - name: Apply the Qualification section
         id: apply
         shell: bash
@@ -49,7 +50,7 @@ jobs:
           REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh api "repos/$REPO/pulls/$NUMBER" --jq '.body // ""' >"$RUNNER_TEMP/body.md"
+          jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH" >"$RUNNER_TEMP/body.md"
           # Text from the description must print as text, not run as a workflow command.
           resume=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')
           echo "::stop-commands::$resume"

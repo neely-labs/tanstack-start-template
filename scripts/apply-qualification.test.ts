@@ -7,7 +7,7 @@ import {
   STATE_LABELS,
   TARGET_LABEL,
   plan,
-  verify,
+  readBackProblems,
 } from "./apply-qualification.ts";
 import type { Issue, Situation } from "./apply-qualification.ts";
 
@@ -173,6 +173,56 @@ describe(plan, () => {
     }
   );
 
+  it("changes nothing on a re-run after success even when a person deleted the body marker", () => {
+    const result = plan(
+      situation({
+        comments: ["<!-- qualification:moved pr=57 -->\nMoved."],
+        issue: issue({
+          body: applied.replace("<!-- qualification: pr=57 -->\n\n", ""),
+        }),
+      })
+    );
+    expect(result.outcome).toBe("unchanged");
+    expect(result.update).toBeUndefined();
+    expect(result.comment).toBeUndefined();
+  });
+
+  it.each(["#", "###", "######"])(
+    "sees a %s Current acceptance heading as existing",
+    (marker) => {
+      const body = `${original}\n\n${marker} Current acceptance\n\n- [ ] Owner checks.`;
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
+      expect(result.update).toBeUndefined();
+    }
+  );
+
+  it.each([
+    [
+      "a code fence",
+      `${original}\n\n\`\`\`ts\nconst open = true;`,
+      /code fence/u,
+    ],
+    ["a comment", `${original}\n\n<!-- a note left open`, /HTML comment/u],
+  ])(
+    "does not append to a body that ends inside %s, and comments the checks once",
+    (_, body, reason) => {
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result).toMatchObject({ failed: true, outcome: "unclosed" });
+      expect(result.update).toBeUndefined();
+      expect(result.message).toMatch(reason);
+      expect(result.comment).toContain(`- [ ] ${checks[0]}`);
+      expect(
+        plan(
+          situation({
+            comments: [result.comment ?? ""],
+            issue: issue({ body }),
+          })
+        ).comment
+      ).toBeUndefined();
+    }
+  );
+
   it("never reopens a closed issue: comments once and reports it", () => {
     const closed = issue({ state: "closed" });
     const result = plan(situation({ issue: closed }));
@@ -217,7 +267,7 @@ describe(plan, () => {
   });
 });
 
-describe(verify, () => {
+describe(readBackProblems, () => {
   const intent = {
     assignees: [],
     body: applied,
@@ -226,7 +276,7 @@ describe(verify, () => {
 
   it("passes an issue that matches the update", () => {
     expect(
-      verify(
+      readBackProblems(
         intent,
         issue({
           assignees: [],
@@ -240,7 +290,7 @@ describe(verify, () => {
 
   it("names each part that differs", () => {
     expect(
-      verify(
+      readBackProblems(
         intent,
         issue({ body: original, labels: ["bug", "ready-for-agent"] }),
         []
@@ -255,8 +305,10 @@ describe(verify, () => {
   it("expects the state labels unchanged when the update leaves labels out", () => {
     const withoutLabels = { assignees: [], body: applied };
     const read = issue({ assignees: [], body: applied });
-    expect(verify(withoutLabels, read, ["ready-for-agent"])).toStrictEqual([]);
-    expect(verify(withoutLabels, read, [])).toHaveLength(1);
+    expect(
+      readBackProblems(withoutLabels, read, ["ready-for-agent"])
+    ).toStrictEqual([]);
+    expect(readBackProblems(withoutLabels, read, [])).toHaveLength(1);
   });
 });
 

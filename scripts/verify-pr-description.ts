@@ -6,12 +6,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { headingOf, lines } from "./markdown-lines.ts";
+import type { MarkdownLine as Line } from "./markdown-lines.ts";
 import {
   QUALIFICATION_SECTION,
   checkReferences,
   parseQualification,
 } from "./qualification.ts";
-import type { DescriptionLine } from "./qualification.ts";
 
 export const TEMPLATE_PATH = path.join(
   import.meta.dirname,
@@ -32,136 +33,12 @@ const OPTIONAL_FIELDS = new Set(["Rollback"]);
 const MARKER_SECTION = "UI evidence";
 const MARKER = /^ui-evidence:(?<kind>start|end)$/u;
 
-interface Line extends DescriptionLine {
-  /** The line without HTML comments, with `<` in code spans escaped; empty inside a code fence. */
-  text: string;
-  /** Each HTML comment that opens on this line: its trimmed text and the index of its last line. */
-  comments: { text: string; end: number }[];
-}
-
 interface Section {
   heading: string;
   /** `#` or `##`, as written. */
   marker: string;
   line: number;
   body: Line[];
-}
-
-/**
- * A code span: a backtick run, then text up to the same run, within one
- * paragraph. HTML inside one is text, so it is escaped before parsing.
- */
-const CODE_SPAN =
-  /(?<!`)(?<run>`+)(?!`)(?:(?!\n[ \t]*\n)[\s\S])+?(?<!`)\k<run>(?!`)/gu;
-
-/** Where an HTML comment ends: `-->`, or `--!>` as HTML also allows. */
-const COMMENT_END = /--!?>/u;
-
-function escapeCode(text: string) {
-  return text.replaceAll(CODE_SPAN, (span) => span.replaceAll("<", "&lt;"));
-}
-
-/** Which lines sit in a code fence, delimiters included; a fence cannot open inside a comment. */
-function fencedLines(raws: string[]) {
-  let fence = "";
-  let inComment = false;
-  // Prose since the last fence, scanned whole: a code span can cross lines.
-  let prose: string[] = [];
-  return raws.map((raw) => {
-    const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
-    if (!inComment && fence === "" && delimiter !== "") {
-      fence = delimiter;
-      prose = [];
-      return true;
-    }
-    if (fence !== "") {
-      if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
-        fence = "";
-      }
-      return true;
-    }
-    prose.push(raw);
-    inComment = false;
-    for (const [token] of escapeCode(prose.join("\n")).matchAll(
-      /<!--|--!?>/gu
-    )) {
-      inComment = token === "<!--";
-    }
-    return false;
-  });
-}
-
-/** Each line with code-span HTML escaped; spans never cross a fence or a blank line. */
-function escapedLines(raws: string[], fenced: boolean[]) {
-  const escaped = [...raws];
-  let start = 0;
-  for (let at = 0; at <= raws.length; at += 1) {
-    if ((at === raws.length || fenced[at]) && at > start) {
-      const run = escapeCode(raws.slice(start, at).join("\n")).split("\n");
-      escaped.splice(start, run.length, ...run);
-    }
-    if (fenced[at]) {
-      start = at + 1;
-    }
-  }
-  return escaped;
-}
-
-function lines(markdown: string): Line[] {
-  let open: { text: string; end: number } | undefined;
-  const raws = markdown.split(/\r?\n/u);
-  const fenced = fencedLines(raws);
-  const escaped = escapedLines(raws, fenced);
-  return raws.map((raw, at) => {
-    const line: Line = {
-      commented: false,
-      comments: [],
-      fenced: true,
-      number: at + 1,
-      raw,
-      text: "",
-    };
-    if (fenced[at]) {
-      return line;
-    }
-    line.fenced = false;
-    let rest = escaped[at] ?? "";
-    line.commented = open !== undefined;
-    while (rest !== "") {
-      if (open === undefined) {
-        const start = rest.indexOf("<!--");
-        line.text += start === -1 ? rest : rest.slice(0, start);
-        rest = start === -1 ? "" : rest.slice(start + 4);
-        if (start !== -1) {
-          line.commented = true;
-          open = { end: at, text: "" };
-          line.comments.push(open);
-        }
-      } else {
-        const close = COMMENT_END.exec(rest);
-        open.end = at;
-        open.text = `${open.text}\n${close === null ? rest : rest.slice(0, close.index)}`;
-        rest = close === null ? "" : rest.slice(close.index + close[0].length);
-        if (close !== null) {
-          open.text = open.text.trim();
-          open = undefined;
-        }
-      }
-    }
-    return line;
-  });
-}
-
-/** A level 1 or 2 heading's marker and text. */
-function headingOf(line: Line) {
-  return /^ {0,3}(?<marker>##?)[ \t]+(?<heading>.*?)(?:[ \t]+#+)?[ \t]*$/u.exec(
-    line.text
-  )?.groups;
-}
-
-/** The text of each level 1 or 2 heading in `markdown`, outside code fences and comments. */
-export function headingTexts(markdown: string) {
-  return lines(markdown).flatMap((line) => headingOf(line)?.heading ?? []);
 }
 
 /** Level 1 and 2 headings and the lines under each; lines before the first are dropped. */

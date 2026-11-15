@@ -1,24 +1,23 @@
 // Applies a merged pull request's Qualification section: each declared open
 // issue gets a Current acceptance holding the declared checks, the
 // awaiting-qualification label in place of its state label, and no assignees.
-// .github/workflows/qualification.yml runs it on merge with the description in
-// a file; the parser is the one scripts/verify-pr-description.ts checks it with.
-// Every GitHub call goes through `gh api`, which the tests replace with a fake.
+// .github/workflows/qualification.yml runs it on merge with the description
+// from the merge event, so it applies the text the pr-description check passed,
+// never a later edit; the parser is the one that check uses. Every GitHub call
+// goes through `gh api`, which the tests replace with a fake.
 //
-// A re-run is safe. The marker `<!-- qualification: pr=N -->` records that
-// pull request N wrote the issue's Current acceptance, and a comment marked
-// `<!-- qualification:moved pr=N -->` records the finished move, after which the
-// issue is never touched again. Run: `node scripts/apply-qualification.ts
-// <body-file>` with REPO (owner/name) and NUMBER (the pull request) set.
+// A re-run is safe. A comment marked `<!-- qualification:moved pr=N -->`
+// records the finished move, after which the issue is never touched again. The
+// marker `<!-- qualification: pr=N -->` in the body records that pull request N
+// wrote its Current acceptance, so a re-run after a failed run only finishes the
+// labels and assignees. Run: `node scripts/apply-qualification.ts <body-file>`
+// with REPO (owner/name) and NUMBER (the pull request) set.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
+import { headingTexts, split } from "./markdown-lines.ts";
 import type { Declaration } from "./qualification.ts";
-import {
-  TEMPLATE_PATH,
-  headingTexts,
-  readQualification,
-} from "./verify-pr-description.ts";
+import { TEMPLATE_PATH, readQualification } from "./verify-pr-description.ts";
 
 /** The labels of which an open issue carries exactly one: docs/agents/triage-labels.md. */
 export const STATE_LABELS = [
@@ -67,6 +66,7 @@ export interface Plan {
     | "unchanged"
     | "closed"
     | "conflict"
+    | "unclosed"
     | "pull-request"
     | "missing-label";
   failed: boolean;
@@ -75,6 +75,9 @@ export interface Plan {
   /** A comment to post, absent when the issue already has it. */
   comment?: string;
 }
+
+/** The comments the apply step posts, each at most once per pull request. */
+type CommentKind = "moved" | "closed" | "conflict" | "unclosed";
 
 const STATES: ReadonlySet<string> = new Set(STATE_LABELS);
 const isState = (label: string) => STATES.has(label);
@@ -85,15 +88,20 @@ const plural = (count: number, word: string) =>
 const checklist = (checks: string[]) =>
   checks.map((text) => `- [ ] ${text}`).join("\n");
 
-const commentMarker = (kind: string, pr: number) =>
+const commentMarker = (kind: CommentKind, pr: number) =>
   `<!-- qualification:${kind} pr=${pr} -->`;
 
 /** Whether an earlier run posted the comment of `kind` for pull request `pr`. */
-const posted = (comments: string[], kind: string, pr: number) =>
+const posted = (comments: string[], kind: CommentKind, pr: number) =>
   comments.some((body) => body.includes(commentMarker(kind, pr)));
 
-/** The comment of `kind`, or undefined when an earlier run already posted it. */
-function once(comments: string[], kind: string, pr: number, text: string) {
+/** The marked comment of `kind` to post, or undefined when an earlier run posted it. */
+function commentToPost(
+  comments: string[],
+  kind: CommentKind,
+  pr: number,
+  text: string
+) {
   return posted(comments, kind, pr)
     ? undefined
     : `${commentMarker(kind, pr)}\n${text}`;
@@ -108,77 +116,38 @@ function currentAcceptance(pr: number, checks: string[]) {
   ].join("\n\n");
 }
 
-/** What to do with one declared issue. Pure, so every path is testable. */
-export function plan(situation: Situation): Plan {
+/** Why a new Current acceptance cannot go into `body`, or undefined when it can. */
+function blocker(body: string, pr: number) {
+  const { unclosed } = split(body);
+  if (unclosed !== undefined) {
+    return {
+      kind: "unclosed" as const,
+      reason: `the issue body ends inside an unclosed ${unclosed}, which would hide an appended Current acceptance`,
+    };
+  }
+  const exists = headingTexts(body).some(
+    (heading) => heading.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase()
+  );
+  return exists
+    ? {
+        kind: "conflict" as const,
+        reason: `the issue already has a Current acceptance that #${pr} did not write`,
+      }
+    : undefined;
+}
+
+/** The plan for an open issue this pull request has not finished moving. */
+function move(situation: Situation, ours: boolean): Plan {
   const { comments, declaration, issue, labelExists, pr } = situation;
   const { checks } = declaration;
   const name = `#${issue.number}`;
-  const writers = [...issue.body.matchAll(BODY_MARKER)].map((match) =>
-    Number(match.groups?.pr)
-  );
-  const ours = writers.includes(pr);
-  const unchanged: Plan = {
-    failed: false,
-    message: `${name}: already applied by #${pr}; left unchanged`,
-    outcome: "unchanged",
-  };
-  if (issue.isPullRequest) {
-    return {
-      failed: true,
-      message: `${name} is a pull request, not an issue; declare only issues under Qualification`,
-      outcome: "pull-request",
-    };
-  }
-  if (issue.state === "closed") {
-    return ours
-      ? unchanged
-      : {
-          comment: once(
-            comments,
-            "closed",
-            pr,
-            `#${pr} merged with qualification checks for this issue, but the issue is closed, so the qualification workflow left it closed. If the checks still matter, reopen it and add them to its Current acceptance:\n\n${checklist(checks)}`
-          ),
-          failed: false,
-          message: `${name}: closed, so left closed and commented with its checks`,
-          outcome: "closed",
-        };
-  }
-  if (ours && posted(comments, "moved", pr)) {
-    return unchanged;
-  }
-  const hasAcceptance = headingTexts(issue.body).some(
-    (heading) => heading.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase()
-  );
-  if (!ours && hasAcceptance) {
-    return {
-      comment: once(
-        comments,
-        "conflict",
-        pr,
-        `#${pr} merged with qualification checks for this issue, but the issue already has a Current acceptance that #${pr} did not write, so the qualification workflow left the issue unchanged. Reconcile these checks into it by hand, then move the issue to \`${TARGET_LABEL}\`:\n\n${checklist(checks)}`
-      ),
-      failed: true,
-      message: `${name}: already has a Current acceptance from another delivery or an edit; left unchanged and commented with the checks to reconcile`,
-      outcome: "conflict",
-    };
-  }
-  // A marker without the moved comment means an earlier run wrote the body but
-  // did not finish, so only the labels and assignees remain.
-  const body = ours
-    ? undefined
-    : [issue.body.trimEnd(), currentAcceptance(pr, checks)]
-        .filter(Boolean)
-        .join("\n\n");
   const update: Update = { assignees: [] };
-  if (body !== undefined) {
-    update.body = body;
-  }
-  if (labelExists) {
-    update.labels = [
-      ...issue.labels.filter((label) => !isState(label)),
-      TARGET_LABEL,
-    ];
+  // Our marker without the moved comment: an earlier run wrote the body but did
+  // not finish, so only the labels and assignees remain.
+  if (!ours) {
+    update.body = [issue.body.trimEnd(), currentAcceptance(pr, checks)]
+      .filter(Boolean)
+      .join("\n\n");
   }
   if (!labelExists) {
     return {
@@ -188,8 +157,12 @@ export function plan(situation: Situation): Plan {
       update,
     };
   }
+  update.labels = [
+    ...issue.labels.filter((label) => !isState(label)),
+    TARGET_LABEL,
+  ];
   return {
-    comment: once(
+    comment: commentToPost(
       comments,
       "moved",
       pr,
@@ -202,16 +175,75 @@ export function plan(situation: Situation): Plan {
   };
 }
 
+/** What to do with one declared issue. Pure, so every path is testable. */
+export function plan(situation: Situation): Plan {
+  const { comments, declaration, issue, pr } = situation;
+  const { checks } = declaration;
+  const name = `#${issue.number}`;
+  const ours = [...issue.body.matchAll(BODY_MARKER)].some(
+    (match) => Number(match.groups?.pr) === pr
+  );
+  const opening = `#${pr} merged with qualification checks for this issue, but`;
+  if (issue.isPullRequest) {
+    return {
+      failed: true,
+      message: `${name} is a pull request, not an issue; declare only issues under Qualification`,
+      outcome: "pull-request",
+    };
+  }
+  // The moved comment, not the body marker, records success: a person may
+  // have edited the marker away since.
+  if (posted(comments, "moved", pr) || (ours && issue.state === "closed")) {
+    return {
+      failed: false,
+      message: `${name}: already applied by #${pr}; left unchanged`,
+      outcome: "unchanged",
+    };
+  }
+  if (issue.state === "closed") {
+    return {
+      comment: commentToPost(
+        comments,
+        "closed",
+        pr,
+        `${opening} the issue is closed, so the qualification workflow left it closed. If the checks still matter, reopen it and add them to its Current acceptance:\n\n${checklist(checks)}`
+      ),
+      failed: false,
+      message: `${name}: closed, so left closed and commented with its checks`,
+      outcome: "closed",
+    };
+  }
+  const blocked = ours ? undefined : blocker(issue.body, pr);
+  if (blocked !== undefined) {
+    return {
+      comment: commentToPost(
+        comments,
+        blocked.kind,
+        pr,
+        `${opening} ${blocked.reason}, so the qualification workflow left the issue unchanged. Add these checks to it by hand, then move the issue to \`${TARGET_LABEL}\`:\n\n${checklist(checks)}`
+      ),
+      failed: true,
+      message: `${name}: left unchanged because ${blocked.reason}; commented with the checks to add by hand`,
+      outcome: blocked.kind,
+    };
+  }
+  return move(situation, ours);
+}
+
 const byName = (left: string, right: string) => left.localeCompare(right);
 
 const quoted = (names: string[]) =>
   names.length === 0 ? "none" : names.map((item) => `"${item}"`).join(", ");
 
 /**
- * How the issue read back after `update` differs from it. `before` holds the
- * issue's state labels before the update, which stay when it sets no labels.
+ * Each way the issue read back after `update` differs from it. `before` holds
+ * the issue's labels before the update, whose state labels stay when it sets none.
  */
-export function verify(update: Update, read: Issue, before: string[]) {
+export function readBackProblems(
+  update: Update,
+  read: Issue,
+  before: string[]
+) {
   const problems: string[] = [];
   if (
     update.body !== undefined &&
@@ -358,7 +390,7 @@ function applyOne(
     return result;
   }
   api(endpoint, { input: result.update, method: "PATCH" });
-  const problems = verify(
+  const problems = readBackProblems(
     result.update,
     decodeIssue(api(endpoint)),
     issue.labels
@@ -446,7 +478,7 @@ if (import.meta.main) {
       ? []
       : [
           "",
-          "Fix each cause, then re-run this job, or move the rest by hand as docs/tooling.md#qualification-workflow says. A re-run leaves issues already moved unchanged.",
+          "Re-run this job once a transient or setup cause, such as a missing label, is fixed; a re-run applies the description as merged and leaves issues already moved unchanged. Otherwise move the issue by hand as docs/tooling.md#qualification-workflow says.",
         ]),
   ].join("\n");
   console.log(report);

@@ -637,6 +637,14 @@ describe("the Qualification section", () => {
       qualification.replace("rehearsal.", "rehearsal. <!-- soon -->"),
       /keep comments on their own lines/u,
     ],
+    [
+      "a comment opener in a check's code span, which could write a marker into the issue",
+      qualification.replace(
+        "rehearsal.",
+        "rehearsal. `<!-- qualification: pr=9 -->`"
+      ),
+      /a check may not contain "<!--"/u,
+    ],
   ])("rejects %s", (_, section, message) => {
     expect(check(declare(section), template)).toContainEqual(
       expect.stringMatching(message)

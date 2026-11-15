@@ -1,6 +1,7 @@
 // Pins the shape of .github/workflows/qualification.yml, then runs its real
 // apply step with a fake `gh` that keeps issues, labels and comments in a JSON
-// file the way GitHub's REST API does, so each run can be read back.
+// file the way GitHub's REST API does, so each run can be read back. Needs
+// `bash` and `jq`, which the step uses to read the event payload.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,6 +10,8 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { z } from "zod";
+
+import { STATE_LABELS } from "./apply-qualification.ts";
 
 const root = path.join(import.meta.dirname, "..");
 const workflowPath = path.join(root, ".github/workflows/qualification.yml");
@@ -120,6 +123,14 @@ describe("the qualification workflow's shape", () => {
       expect(step.run ?? "").not.toContain("${{");
     }
   });
+
+  it("reads the description from the merge event's payload, not the live pull request", () => {
+    const scripts = onlyJob()
+      .steps.map((step) => step.run ?? "")
+      .join("\n");
+    expect(scripts).toContain('"$GITHUB_EVENT_PATH"');
+    expect(scripts).not.toMatch(/pulls\//u);
+  });
 });
 
 // A stand-in for `gh api` over a JSON file holding pulls, issues, comments and
@@ -197,6 +208,8 @@ interface FakeIssue {
 
 interface FakeState {
   pulls: Record<string, { body: string | null }>;
+  /** The description in the merge event's payload; the live one is in `pulls`. */
+  merged?: string | null;
   issues: Record<string, FakeIssue>;
   comments: Record<string, { body: string }[]>;
   labels: string[];
@@ -208,16 +221,7 @@ interface FakeState {
   ignorePatch?: number[];
 }
 
-const ALL_LABELS = [
-  "needs-triage",
-  "needs-info",
-  "ready-for-agent",
-  "ready-for-human",
-  "awaiting-qualification",
-  "wontfix",
-  "bug",
-  "flaky",
-];
+const ALL_LABELS = [...STATE_LABELS, "bug", "flaky"];
 
 function openIssue(number: number, overrides: Partial<FakeIssue> = {}) {
   return {
@@ -329,6 +333,17 @@ function runApply(state: FakeState) {
   );
   const script = path.join(dir, "step.sh");
   fs.writeFileSync(script, step.run);
+  const event = path.join(dir, "event.json");
+  fs.writeFileSync(
+    event,
+    JSON.stringify({
+      pull_request: {
+        body:
+          state.merged === undefined ? state.pulls["57"]?.body : state.merged,
+        number: 57,
+      },
+    })
+  );
   const result = spawnSync(
     "bash",
     ["--noprofile", "--norc", "-eo", "pipefail", script],
@@ -338,6 +353,7 @@ function runApply(state: FakeState) {
       env: {
         ...env,
         FAKE_GH_STATE: stateFile,
+        GITHUB_EVENT_PATH: event,
         GITHUB_STEP_SUMMARY: summary,
         HOME: dir,
         PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
@@ -411,7 +427,7 @@ describe("the qualification workflow's apply step", () => {
       /OK: #12: moved to awaiting-qualification with 2 checks/u,
       /OK: #14: closed/u,
       /Failed: #15 is a pull request/u,
-      /Failed: #16: already has a Current acceptance/u,
+      /Failed: #16: left unchanged because the issue already has a Current acceptance/u,
       /Failed: #17: GET repos\/owner\/repo\/issues\/17 failed: .*HTTP 404/u,
     ];
     expect(expected.filter((line) => !line.test(run.stdout))).toStrictEqual([]);
@@ -522,7 +538,7 @@ describe("the qualification workflow's apply step", () => {
     const run = runApply(state);
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("#57 has no Qualification section");
-    expect(state.calls).toStrictEqual(["GET repos/owner/repo/pulls/57"]);
+    expect(state.calls).toStrictEqual([]);
   });
 
   it("changes no issue when the declaration breaks the verifier's rules", () => {
@@ -534,6 +550,24 @@ describe("the qualification workflow's apply step", () => {
     expect(run.stdout).toMatch(
       /cannot be applied, so no issue changed: .*ticked/u
     );
-    expect(state.calls).toStrictEqual(["GET repos/owner/repo/pulls/57"]);
+    expect(state.calls).toStrictEqual([]);
+  });
+
+  it("applies the description as merged, never an edit made after merge", () => {
+    const state = baseState(
+      description(
+        "## Qualification\n\nFor #12:\n\n- [ ] Edited after merge.",
+        [12]
+      )
+    );
+    state.merged = description(
+      "## Qualification\n\nFor #12:\n\n- [ ] Merged check.",
+      [12]
+    );
+    const run = runApply(state);
+    expect(run.status).toBe(0);
+    expect(state.issues["12"]?.body).toContain("- [ ] Merged check.");
+    expect(state.issues["12"]?.body).not.toContain("Edited after merge.");
+    expect(state.calls).not.toContain("GET repos/owner/repo/pulls/57");
   });
 });

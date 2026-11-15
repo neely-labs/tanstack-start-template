@@ -4,20 +4,9 @@
 // handoff: scripts/verify-pr-description.ts rejects a malformed declaration
 // before merge, and scripts/apply-qualification.ts applies it on merge.
 
-export const QUALIFICATION_SECTION = "Qualification";
+import type { MarkdownLine } from "./markdown-lines.ts";
 
-/** One description line, as scripts/verify-pr-description.ts splits it. */
-export interface DescriptionLine {
-  /** 1-based line number in the description. */
-  number: number;
-  raw: string;
-  /** The line without HTML comments; empty inside a code fence. */
-  text: string;
-  /** Inside a fenced code block, delimiters included. */
-  fenced: boolean;
-  /** Some part of the line sits inside an HTML comment. */
-  commented: boolean;
-}
+export const QUALIFICATION_SECTION = "Qualification";
 
 /** One issue the pull request moves to awaiting-qualification, and its checks. */
 export interface Declaration {
@@ -35,11 +24,7 @@ const OTHER_CONTENT = `"## ${QUALIFICATION_SECTION}" holds only "For #N:" lines 
 const CHECK = /^\s*[-*+]\s+\[(?<mark>[ xX])\](?:\s+(?<text>.*?))?\s*$/u;
 
 /** A `For` line's problem, or null once it opened a new declaration. */
-function readFor(
-  line: DescriptionLine,
-  ref: string,
-  declarations: Declaration[]
-) {
+function readFor(line: MarkdownLine, ref: string, declarations: Declaration[]) {
   const issue = Number(ISSUE_REF.exec(ref)?.groups?.issue ?? Number.NaN);
   if (OTHER_REPO.test(ref)) {
     return `"For ${ref}:" names another repository; declare issues in this one as "For #N:"`;
@@ -56,7 +41,7 @@ function readFor(
 
 /** A check line's problem, or null once it joined the open declaration. */
 function readCheck(
-  line: DescriptionLine,
+  line: MarkdownLine,
   mark: string,
   group: Declaration | undefined,
   afterFor: boolean
@@ -73,13 +58,18 @@ function readCheck(
   if (text === "") {
     return "a check has no text; name the check, who runs it, and when";
   }
+  // Even in a code span: the issue gets the text as written, and a comment
+  // there could forge the marker that records which pull request applied it.
+  if (text.includes("<!--")) {
+    return 'a check may not contain "<!--", even in code';
+  }
   group.checks.push(text);
   return null;
 }
 
 /** One non-blank line's problem, if any; a valid line joins `declarations`. */
 function readLine(
-  line: DescriptionLine,
+  line: MarkdownLine,
   declarations: Declaration[],
   afterFor: boolean
 ) {
@@ -102,7 +92,7 @@ function readLine(
 }
 
 /** The declarations in the section's lines, and each way they break the format. */
-export function parseQualification(body: DescriptionLine[]) {
+export function parseQualification(body: MarkdownLine[]) {
   const declarations: Declaration[] = [];
   const problems: string[] = [];
   const firstFor = body.findIndex(
@@ -142,7 +132,7 @@ const CODE = /`[^`\n]*`/gu;
  */
 export function checkReferences(
   declarations: Declaration[],
-  summary: DescriptionLine[],
+  summary: MarkdownLine[],
   description: string
 ) {
   const problems: string[] = [];
