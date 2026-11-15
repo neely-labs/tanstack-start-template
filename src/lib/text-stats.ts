@@ -17,11 +17,13 @@ export const textInputErrors = {
 } as const;
 
 /**
- * Splits text into the characters a person sees, such as 👋🏽 or é. Built on
+ * These split text into the characters a person sees, such as 👋🏽 or é, and the
+ * words, including words in scripts written without spaces. Built on
  * first use rather than at import: the page imports this module for its limit
  * and copy, and browsers at the ES2023 floor can lack `Intl.Segmenter`.
  */
 let graphemes: Intl.Segmenter | undefined;
+let wordSegments: Intl.Segmenter | undefined;
 
 export interface TextStats {
   characters: number;
@@ -31,8 +33,14 @@ export interface TextStats {
 
 export function summarizeText(text: string): TextStats {
   const trimmed = text.trim();
-  const words = trimmed === "" ? 0 : trimmed.split(/\s+/u).length;
   graphemes ??= new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  wordSegments ??= new Intl.Segmenter(undefined, { granularity: "word" });
+  let words = 0;
+  for (const segment of wordSegments.segment(trimmed)) {
+    if (segment.isWordLike === true) {
+      words += 1;
+    }
+  }
 
   return {
     characters: [...graphemes.segment(trimmed)].length,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   maxTextLength,
@@ -13,6 +13,38 @@ describe(summarizeText, () => {
       characters: 21,
       readingMinutes: 1,
       words: 4,
+    });
+  });
+
+  it.each([
+    {
+      expected: 10,
+      label: "Japanese written without spaces",
+      text: "日本語のテキストです。今日はいい天気ですね。",
+    },
+    { expected: 2, label: "Chinese", text: "你好世界" },
+    { expected: 4, label: "Thai", text: "สวัสดีครับ ยินดีต้อนรับ" },
+    {
+      expected: 6,
+      label: "mixed scripts and an emoji",
+      text: "Café naïve résumé 👋🏽 日本語のテキスト",
+    },
+    { expected: 2, label: "an apostrophe", text: "don't stop" },
+  ])("counts words as a reader sees them, in $label", ({ expected, text }) => {
+    expect(summarizeText(text).words).toBe(expected);
+  });
+
+  it("splits words at hyphens and @, as the word segmenter does", () => {
+    // Intended: words come from Intl.Segmenter, which treats "-" and "@" as
+    // boundaries. Splitting on spaces instead would miscount unspaced scripts.
+    expect(summarizeText("e-mail me at a@b.com").words).toBe(6);
+  });
+
+  it("counts no words in punctuation alone", () => {
+    expect(summarizeText("?!")).toStrictEqual({
+      characters: 2,
+      readingMinutes: 0,
+      words: 0,
     });
   });
 
@@ -36,6 +68,25 @@ describe(summarizeText, () => {
       readingMinutes: 0,
       words: 0,
     });
+  });
+});
+
+describe("the text stats module", () => {
+  it("imports without Intl.Segmenter, as the page does in older browsers", async () => {
+    const segmenter = Intl.Segmenter;
+    Reflect.deleteProperty(Intl, "Segmenter");
+    vi.resetModules();
+    try {
+      const fresh = await import("./text-stats.ts");
+
+      expect(fresh.textInputErrors.tooLong).toContain(`${fresh.maxTextLength}`);
+    } finally {
+      Object.defineProperty(Intl, "Segmenter", {
+        configurable: true,
+        value: segmenter,
+        writable: true,
+      });
+    }
   });
 });
 
