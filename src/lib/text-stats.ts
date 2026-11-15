@@ -1,9 +1,17 @@
 import { z } from "zod";
 
-/** Upper bound applied before the server does any work on submitted text. */
+/**
+ * Upper bound applied before the server does any work on submitted text. It
+ * counts UTF-16 code units, as `String#length` and Zod's `.max` do, because it
+ * bounds cost and storage rather than what a person sees. The displayed count
+ * can be lower for text with emoji or combining marks.
+ */
 export const maxTextLength = 2000;
 
 const wordsPerMinute = 220;
+
+/** Splits text into the characters a person sees, such as 👋🏽 or é. */
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 /** What the analyzer tells a person whose input it rejects. Tests read it here. */
 export const textInputErrors = {
@@ -22,7 +30,7 @@ export function summarizeText(text: string): TextStats {
   const words = trimmed === "" ? 0 : trimmed.split(/\s+/u).length;
 
   return {
-    characters: trimmed.length,
+    characters: [...graphemes.segment(trimmed)].length,
     readingMinutes:
       words === 0 ? 0 : Math.max(1, Math.round(words / wordsPerMinute)),
     words,

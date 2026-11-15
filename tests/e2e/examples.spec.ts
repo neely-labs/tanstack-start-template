@@ -80,6 +80,15 @@ test("navigates the examples and validates real server functions", async ({
   await expect(measure(page, "Words")).toHaveText("2");
   await expect(input).toHaveValue("Works again");
 
+  // A paste over the limit stays whole, so the server's message explains it.
+  const oversizedText = "a".repeat(maxTextLength + 1);
+  await input.clear();
+  await page.keyboard.insertText(oversizedText);
+  await submit.click();
+  await expect(page.getByText(textInputErrors.tooLong)).toBeVisible();
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(input).toHaveValue(oversizedText);
+
   const requestBody = rpcRequest.postData();
   if (requestBody === null) {
     throw new Error("The server-function request must include its input.");
@@ -87,16 +96,6 @@ test("navigates the examples and validates real server functions", async ({
   expect(requestBody).toContain(submittedText);
   const headers = new Headers(await rpcRequest.allHeaders());
   headers.delete("content-length");
-  const oversized = await request.post(rpcRequest.url(), {
-    data: requestBody.replace(submittedText, "a".repeat(maxTextLength + 1)),
-    headers: Object.fromEntries(headers),
-  });
-  // Start returns RPC validation failures in a serialized error envelope.
-  expect(oversized.status()).toBe(200);
-  const oversizedBody = await oversized.text();
-  expect(oversizedBody).toContain('"error"');
-  expect(oversizedBody).toContain(textInputErrors.tooLong);
-  expect(oversizedBody).not.toContain('"computedAt"');
 
   // A caller that skips the page can send any shape; the schema rejects it.
   const fieldWithoutText = requestBody.replace(
