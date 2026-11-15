@@ -10,7 +10,6 @@ import {
   pageTitle,
 } from "@/lib/seo.ts";
 import { siteConfig } from "@/lib/site-config.ts";
-import { cn } from "@/lib/utils.ts";
 
 const description =
   "The first replacement points for turning this TanStack Start template into your own application.";
@@ -75,11 +74,7 @@ const steps = [
 
 function SetupPage() {
   return (
-    <main
-      className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28"
-      id="main-content"
-      tabIndex={-1}
-    >
+    <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28">
       <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
         Make it yours.
       </h1>
@@ -111,15 +106,13 @@ function SetupPage() {
           ))}
         </ol>
         <a
-          className={cn(
-            buttonVariants({ className: "mt-8", variant: "outline" })
-          )}
+          className={buttonVariants({ className: "mt-8", variant: "outline" })}
           href={`${siteConfig.templateUrl}/blob/main/docs/template-setup.md`}
         >
           Read the full setup guide
           <IconArrowUpRight aria-hidden="true" data-icon="inline-end" />
         </a>
       </section>
-    </main>
+    </div>
   );
 }

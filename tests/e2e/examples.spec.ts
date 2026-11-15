@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 
 import {
   analyzerFailure,
@@ -8,6 +8,14 @@ import {
 } from "../../src/lib/text-stats.ts";
 
 // Remove this file with the optional /setup and /runtime example pages.
+
+/** An analyzer measure's value, found by its label rather than its position. */
+function measure(page: Page, label: string) {
+  return page
+    .locator("dl > div")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .getByRole("definition");
+}
 test("navigates the examples and validates real server functions", async ({
   page,
   request,
@@ -35,6 +43,14 @@ test("navigates the examples and validates real server functions", async ({
   await expect(page.getByText(/^client ·/u)).toBeVisible();
   await expect(page.getByText(/^server · Node/u)).toBeVisible();
   await expect(page.getByText("Waiting for hydration")).toHaveCount(0);
+  // The server knows nothing of the browser, so its HTML holds the placeholder.
+  const serverHtml = await request.get("/runtime");
+  expect(await serverHtml.text()).toContain("Waiting for hydration");
+  const health = page.getByRole("link", { name: /Open \/api\/health/u });
+  await expect(health).toHaveAccessibleName(
+    "Open /api/health (opens in a new tab)"
+  );
+  await expect(health).toHaveAttribute("target", "_blank");
 
   const input = page.getByRole("textbox", { name: "Text to analyze" });
   const submit = page.getByRole("button", { name: "Analyze on the server" });
@@ -51,15 +67,17 @@ test("navigates the examples and validates real server functions", async ({
   );
   await submit.click();
   const rpcRequest = await serverRequest;
-  await expect(page.locator("dd").nth(0)).toHaveText("4");
-  await expect(page.locator("dd").nth(1)).toHaveText(`${submittedText.length}`);
+  await expect(measure(page, "Words")).toHaveText("4");
+  await expect(measure(page, "Characters")).toHaveText(
+    `${submittedText.length}`
+  );
   await expect(input).toHaveValue(submittedText);
   await expect(input).toHaveAttribute("aria-invalid", "false");
   await expect(page.getByText(textInputErrors.blank)).toHaveCount(0);
 
   await input.fill("Works again");
   await submit.click();
-  await expect(page.locator("dd").nth(0)).toHaveText("2");
+  await expect(measure(page, "Words")).toHaveText("2");
   await expect(input).toHaveValue("Works again");
 
   const requestBody = rpcRequest.postData();
@@ -134,7 +152,7 @@ test("submits and corrects the example form with the keyboard", async ({
   await page.keyboard.press("Tab");
   await expect(submit).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.locator("dd").first()).toHaveText("3");
+  await expect(measure(page, "Words")).toHaveText("3");
   await expect(input).toHaveAttribute("aria-invalid", "false");
   await expect(input).toHaveValue("Keyboard submission works");
 });
@@ -174,6 +192,9 @@ test("recovers from a loader failure by retrying the real server", async ({
   ).toBeVisible();
   await expect(page.getByRole("alert")).toBeFocused();
   await expect(page.getByText("Technical details")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Return home", exact: true })
+  ).toHaveAttribute("href", "/");
   expect(failedRequests).toBeGreaterThan(0);
   const noindex = page.locator('head meta[name="robots"][content="noindex"]');
   await expect(noindex).toHaveCount(1);
@@ -221,7 +242,7 @@ test("hides a failed request's server text and recovers on retry", async ({
   failAnalysis = false;
   await expect(submit).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.locator("dd").first()).toHaveText("4");
+  await expect(measure(page, "Words")).toHaveText("4");
   await expect(page.getByText(analyzerFailure)).toHaveCount(0);
 });
 
@@ -259,7 +280,7 @@ test("keeps the submitted text read-only while the analysis is pending", async (
 
   await expect.poll(() => heldRequests.length).toBe(1);
   await heldRequests[0]?.continue();
-  await expect(page.locator("dd").first()).toHaveText("3");
+  await expect(measure(page, "Words")).toHaveText("3");
   await expect(input).toHaveValue(submittedText);
   await expect(input).toBeEditable();
 });

@@ -35,7 +35,6 @@ describe(NotFound, () => {
     await expect(
       screen.findByRole("heading", { level: 1, name: recoveryTitles.notFound })
     ).resolves.toBeDefined();
-    expect(screen.getByRole("main").getAttribute("id")).toBe("main-content");
     expect(
       screen.getByRole("link", { name: "Return home" }).getAttribute("href")
     ).toBe("/");

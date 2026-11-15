@@ -1,10 +1,10 @@
 import { IconArrowUpRight, IconServerBolt } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useHydrated } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useActionState, useSyncExternalStore } from "react";
+import { useActionState } from "react";
 
 import { Badge } from "@/components/ui/badge.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { Button, buttonVariants } from "@/components/ui/button.tsx";
 import {
   Card,
   CardContent,
@@ -54,11 +54,7 @@ function RuntimePage() {
   const snapshot = Route.useLoaderData();
 
   return (
-    <main
-      className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28"
-      id="main-content"
-      tabIndex={-1}
-    >
+    <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28">
       <Badge variant="secondary">Execution model</Badge>
       <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
         Code that knows where it runs.
@@ -72,32 +68,14 @@ function RuntimePage() {
       <EnvironmentSection snapshot={snapshot} />
       <AnalyzerSection />
       <EndpointSection />
-    </main>
+    </div>
   );
-}
-
-/** The environment description never changes, so nothing has to be observed. */
-function subscribeToEnvironment() {
-  return () => {
-    // No teardown: there is no subscription to cancel.
-  };
-}
-
-/**
- * Used on the server and during hydration, which keeps the first client render
- * identical to the server markup. React swaps in the client branch on the
- * commit that follows.
- */
-function getServerEnvironment() {
-  return null;
 }
 
 function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
-  const clientEnvironment = useSyncExternalStore(
-    subscribeToEnvironment,
-    describeEnvironment,
-    getServerEnvironment
-  );
+  // False on the server and while hydrating, so the first browser render
+  // matches the server markup; React swaps in the client branch right after.
+  const hydrated = useHydrated();
 
   return (
     <section className="mt-16">
@@ -138,7 +116,11 @@ function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {clientEnvironment === null ? (
+            {hydrated ? (
+              <p className="font-mono text-sm break-all">
+                {describeEnvironment()}
+              </p>
+            ) : (
               <p className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
                 <span
                   aria-hidden="true"
@@ -146,8 +128,6 @@ function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
                 />
                 Waiting for hydration
               </p>
-            ) : (
-              <p className="font-mono text-sm break-all">{clientEnvironment}</p>
             )}
           </CardContent>
         </Card>
@@ -309,23 +289,17 @@ function EndpointSection() {
         <code className="text-foreground">src/start.ts</code>. Nitro&apos;s own
         error for a request it cannot decode, such as a malformed URL, does not.
       </p>
-      <Button
-        className="mt-6"
-        nativeButton={false}
-        render={
-          <a
-            aria-label="Open the health endpoint in a new tab"
-            href="/api/health"
-            rel="noreferrer"
-            target="_blank"
-          />
-        }
-        variant="outline"
+      <a
+        className={buttonVariants({ className: "mt-6", variant: "outline" })}
+        href="/api/health"
+        rel="noreferrer"
+        target="_blank"
       >
         <IconServerBolt aria-hidden="true" data-icon="inline-start" />
         Open /api/health
+        <span className="sr-only"> (opens in a new tab)</span>
         <IconArrowUpRight aria-hidden="true" data-icon="inline-end" />
-      </Button>
+      </a>
     </section>
   );
 }

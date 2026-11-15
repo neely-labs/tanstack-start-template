@@ -26,7 +26,6 @@ import {
   pageTitle,
 } from "@/lib/seo.ts";
 import { siteConfig } from "@/lib/site-config.ts";
-import { cn } from "@/lib/utils.ts";
 
 const foundation = [
   {
@@ -75,7 +74,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   return (
-    <main className="flex-1" id="main-content" tabIndex={-1}>
+    <div className="flex-1">
       <section className="relative isolate overflow-hidden">
         {/* Decorative backdrop: a faint dot grid that fades out at the edges. */}
         <div
@@ -109,17 +108,12 @@ function HomePage() {
               in.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                className={cn(buttonVariants({ size: "lg" }))}
-                to="/runtime"
-              >
+              <Link className={buttonVariants({ size: "lg" })} to="/runtime">
                 See it run
                 <IconArrowRight aria-hidden="true" data-icon="inline-end" />
               </Link>
               <a
-                className={cn(
-                  buttonVariants({ size: "lg", variant: "outline" })
-                )}
+                className={buttonVariants({ size: "lg", variant: "outline" })}
                 href="#included"
               >
                 What is included
@@ -193,6 +187,6 @@ function HomePage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

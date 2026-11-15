@@ -34,6 +34,9 @@ describe(ErrorFallback, () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(retryCount).toBe(1);
+    expect(
+      screen.getByRole("link", { name: "Return home" }).getAttribute("href")
+    ).toBe("/");
   });
 
   it("shows safe technical detail only when requested", () => {
