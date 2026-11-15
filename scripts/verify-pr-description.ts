@@ -26,7 +26,7 @@ interface Line {
   /** 1-based line number in the description. */
   number: number;
   raw: string;
-  /** The line with HTML comments removed; empty inside a code fence. */
+  /** The line without HTML comments, with `<` in code spans escaped; empty inside a code fence. */
   text: string;
   /** Inside a fenced code block, delimiters included. */
   fenced: boolean;
