@@ -18,6 +18,7 @@ Use this reference when finding a module, changing public identity or metadata, 
 | `scripts/verify-seo-output.ts` | Verification of rendered production metadata and assets |
 | `scripts/local.ts` | Per-checkout ports, server ownership, status, and retirement for concurrent worktrees |
 | `scripts/verify-doc-budget.ts` | Size caps on the docs agents read on every task |
+| `scripts/verify-pr-description.ts` | Pull request description sections and placeholders, checked against `.github/pull_request_template.md` |
 
 TanStack Router generates `src/routeTree.gen.ts` from the route files. Work in the source routes and let Vite regenerate it.
 

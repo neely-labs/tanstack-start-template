@@ -1,0 +1,46 @@
+name: PR description
+
+# A separate workflow so that editing only the description reruns this check,
+# not the build and browser tests in ci.yml, which skip the `edited` event.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+# A newer edit or push cancels the older run for the same pull request.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-description:
+    # Bots such as Dependabot write their own descriptions. A skipped job counts
+    # as passing if this check is required.
+    if: github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Only Node is needed: the script uses no dependencies.
+      - name: Set up Node.js
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      # Read the description now rather than from the event, so a rerun checks
+      # the current text, not the text when the run was queued.
+      - name: Check the description against the template
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/$REPO/pulls/$NUMBER" --jq '.body // ""' >"$RUNNER_TEMP/body.md"
+          node scripts/verify-pr-description.ts "$RUNNER_TEMP/body.md"

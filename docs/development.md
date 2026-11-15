@@ -18,6 +18,7 @@ pnpm start      # Run an existing production build
 pnpm validate   # Run the core checks, build, and metadata verification
 pnpm validate:docs # Run check and docs:budget, as CI does for docs-only changes
 pnpm test:e2e   # Check the production app in desktop and mobile Chromium
+pnpm pr:verify <file | -> # Check a pull request description against the template
 ```
 
 For `pnpm dev:local` and the other per-checkout commands, see [concurrent checkouts](concurrent-checkouts.md). For the formatter, Git hooks, committed agent skills, and the skills that `pnpm install` asks to approve, see [tooling](tooling.md).
@@ -38,6 +39,7 @@ Each row names the files that own an area and the focused check that proves a ch
 | Always-read docs and their size limits | `BUDGET` in `scripts/verify-doc-budget.ts` | `pnpm docs:budget`; `pnpm test scripts/verify-doc-budget.test.ts` for the script itself |
 | Add or change a form | [Forms before hydration](architecture.md#forms-before-hydration) and [the forms recipe](recipes/forms.md) | `pnpm build && pnpm test:e2e` with the recipe's test copied into `tests/e2e/` |
 | Which changes CI treats as documentation-only | The `scope` step in `.github/workflows/ci.yml` | `pnpm test scripts/ci-docs-scope.test.ts` |
+| Pull request description sections | `.github/pull_request_template.md`, `scripts/verify-pr-description.ts`, `.github/workflows/pr-description.yml` | `pnpm test scripts/verify-pr-description.test.ts` |
 
 A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, next to the code. Add a row when the app gains its own module, and remove rows for example files the project deletes.
 

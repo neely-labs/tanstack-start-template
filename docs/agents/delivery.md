@@ -59,6 +59,7 @@ A pull request is ready to merge when all of these hold on its current head:
 - Required checks are green on that head.
 - Review at its tier is complete, each finding is fixed or answered with a written reason, and the author has resolved each thread after answering it.
 - The merge danger is stated, and the evidence names that head.
+- The `pr-description` check is green; it stays red until the description is complete. To run it locally: `gh pr view <n> --json body --jq .body | pnpm pr:verify -`.
 
 Squash-merge, pinned to that head: `gh pr merge <n> --squash --match-head-commit <sha>`.
 
