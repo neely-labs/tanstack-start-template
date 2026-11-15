@@ -42,16 +42,19 @@ interface Section {
   body: Line[];
 }
 
-/** HTML inside inline code is text, so escape it before reading comments and tags. */
-function withoutCodeHtml(raw: string) {
-  return raw.replaceAll(/(?<run>`+).+?\k<run>/gu, (span) =>
-    span.replaceAll("<", "&lt;")
-  );
-}
+/**
+ * A code span: a backtick run, then text up to the same run, within one
+ * paragraph. HTML inside one is text, so it is escaped before parsing.
+ */
+const CODE_SPAN =
+  /(?<!`)(?<run>`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])+?(?<!`)\k<run>(?!`)/gu;
 
 function lines(markdown: string): Line[] {
   let fence = "";
   let open: { text: string; end: number } | undefined;
+  const escaped = markdown
+    .replaceAll(CODE_SPAN, (span) => span.replaceAll("<", "&lt;"))
+    .split(/\r?\n/u);
   return markdown.split(/\r?\n/u).map((raw, at) => {
     const line: Line = {
       comments: [],
@@ -72,7 +75,7 @@ function lines(markdown: string): Line[] {
       return line;
     }
     line.fenced = false;
-    let rest = withoutCodeHtml(raw);
+    let rest = escaped[at] ?? "";
     while (rest !== "") {
       if (open === undefined) {
         const start = rest.indexOf("<!--");

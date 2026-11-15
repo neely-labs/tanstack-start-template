@@ -229,6 +229,21 @@ describe(check, () => {
     );
   });
 
+  it("reads HTML inside a code span that crosses a line break as text", () => {
+    const body = describeWith({
+      Summary: `${summary}\n\nRecognizes the \`<!--\ndelimiter\` in prose.`,
+    });
+    expect(check(body, template)).toStrictEqual([]);
+    const coded = verification
+      .replace("<details>", "`<details>\n`")
+      .replace("</details>", "`</details>\n`");
+    expect(
+      check(describeWith({ Verification: coded }), template)
+    ).toContainEqual(
+      expect.stringMatching(/"## Verification" .* lost its <details> block/u)
+    );
+  });
+
   it("ignores a marker written as inline code", () => {
     const body = describeWith({
       Decisions: `${decisions}\n\nThe publisher writes after \`<!-- ui-evidence:start -->\`.`,
