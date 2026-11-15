@@ -246,6 +246,18 @@ describe(plan, () => {
       "the workflow, inside a code fence",
       [byWorkflow("```\n<!-- qualification:moved pr=57 -->\n```")],
     ],
+    [
+      "the workflow, as an indented code block",
+      [byWorkflow("    <!-- qualification:moved pr=57 -->")],
+    ],
+    [
+      "the workflow, indented with a tab",
+      [byWorkflow("\t<!-- qualification:moved pr=57 -->")],
+    ],
+    [
+      "the workflow, in a list item",
+      [byWorkflow("- item\n  <!-- qualification:moved pr=57 -->")],
+    ],
   ])("ignores a moved marker written by %s", (_, comments) => {
     const result = plan(situation({ comments }));
     expect(result.outcome).toBe("moved");
@@ -272,6 +284,26 @@ describe(plan, () => {
     expect(
       result.update?.body?.startsWith(`${body}\n\n## Current acceptance`)
     ).toBeTruthy();
+  });
+
+  it.each([
+    ["four spaces", "    "],
+    ["a tab", "\t"],
+    ["a blockquote", "> "],
+  ])(
+    "treats a Current acceptance whose marker is indented by %s as someone else's",
+    (_, prefix) => {
+      const body = `## Current acceptance\n\n${prefix}<!-- qualification: pr=57 -->`;
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
+      expect(result.update).toBeUndefined();
+    }
+  );
+
+  it("still knows its own marker with trailing whitespace or a carriage return", () => {
+    const body = applied.replace("pr=57 -->", "pr=57 -->  \r");
+    const result = plan(situation({ issue: issue({ body }) }));
+    expect(result.update?.body).toBeUndefined();
   });
 
   it("never reopens a closed issue: comments once and reports it", () => {

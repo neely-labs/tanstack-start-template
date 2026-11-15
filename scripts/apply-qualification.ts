@@ -24,6 +24,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
 import { anyHeadingOf, headingTexts, lines, split } from "./markdown-lines.ts";
+import type { MarkdownLine } from "./markdown-lines.ts";
 import type { Declaration } from "./qualification.ts";
 import { TEMPLATE_PATH, readQualification } from "./verify-pr-description.ts";
 
@@ -107,9 +108,13 @@ const checklist = (checks: string[]) =>
 const commentMarker = (kind: CommentKind, pr: number) =>
   `<!-- qualification:${kind} pr=${pr} -->`;
 
-/** The lines of `markdown` outside code fences, trimmed. */
-const unfenced = (markdown: string) =>
-  lines(markdown).flatMap((line) => (line.fenced ? [] : line.raw.trim()));
+/**
+ * The line as a marker, or undefined. The script writes every marker alone at
+ * column 0, so any leading character, such as an indent that makes it code, a
+ * list continuation or a quote, means it is not one; trailing space is allowed.
+ */
+const asMarker = (line: MarkdownLine) =>
+  line.fenced || !line.raw.startsWith("<!--") ? undefined : line.raw.trimEnd();
 
 /** Whether an earlier run posted the comment of `kind` for pull request `pr`. */
 const posted = (comments: Comment[], kind: CommentKind, pr: number) =>
@@ -117,7 +122,9 @@ const posted = (comments: Comment[], kind: CommentKind, pr: number) =>
     (comment) =>
       comment.bot &&
       comment.author === WORKFLOW_AUTHOR &&
-      unfenced(comment.body).includes(commentMarker(kind, pr))
+      lines(comment.body).some(
+        (line) => asMarker(line) === commentMarker(kind, pr)
+      )
   );
 
 /** Whether pull request `pr` wrote a Current acceptance into `body`: its marker line under that heading. */
@@ -126,9 +133,8 @@ function wroteBody(body: string, pr: number) {
   return lines(body).some((line) => {
     heading = anyHeadingOf(line) ?? heading;
     return (
-      !line.fenced &&
       heading?.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase() &&
-      Number(BODY_MARKER.exec(line.raw.trim())?.groups?.pr) === pr
+      Number(BODY_MARKER.exec(asMarker(line) ?? "")?.groups?.pr) === pr
     );
   });
 }
