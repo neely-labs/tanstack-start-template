@@ -8,7 +8,7 @@ Closes #
 
 ## UI evidence
 
-<!-- Screenshots or a recording of the final head, between the two markers below. If you cannot upload, describe each screenshot there with its local path and note that reviewers cannot open it. When nothing visible changed, delete this section, markers included. -->
+<!-- Screenshots or a recording of the final head, between the two markers below, where the ui-evidence publisher writes. If you cannot upload, describe each screenshot there with its local path and note that reviewers cannot open it. When nothing visible changed, delete this section, markers included. -->
 
 <!-- ui-evidence:start -->
 <!-- ui-evidence:end -->
@@ -46,7 +46,7 @@ Closes #
 
 ## Decisions
 
-<!-- Choices you made on the owner's behalf: one short line each, stating the choice only. The collapsed block holds each choice's reason, each review finding you declined with why, and any walk notes. Delete a part of the block that has nothing in it. -->
+<!-- Choices you made on the owner's behalf: one short line each, stating the choice only. The collapsed block holds each choice's reason, each review or walk finding you declined with why, and any walk notes. Delete whatever stays empty, the whole block included. -->
 
 - <!-- One choice, such as "Kept the old route as a redirect" -->
 
