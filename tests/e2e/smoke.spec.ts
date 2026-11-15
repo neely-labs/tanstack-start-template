@@ -117,6 +117,8 @@ test("supports keyboard skip, navigation, and not-found recovery", async ({
   const skip = page.getByRole("link", { name: "Skip to content" });
   await page.keyboard.press("Tab");
   await expect(skip).toBeFocused();
+  // Shown over the page, so focusing it does not push the layout down.
+  await expect(skip).toHaveCSS("position", "fixed");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("main")).toBeFocused();
 
