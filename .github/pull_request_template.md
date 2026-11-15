@@ -2,13 +2,16 @@
 
 ## Summary
 
-<!-- What changed and why, in a few sentences. Then `Closes #N`, or `Refs #N` when part of the issue or a later check remains. -->
+<!-- What changed and why, in a few sentences. Then, when they make the change easier to see, at most one sketch (a diff, tree or call tree) and at most one before/after table. Then `Closes #N`, or `Refs #N` when part of the issue or a later check remains. -->
 
 Closes #
 
 ## UI evidence
 
-<!-- Screenshots or a recording of the final head. If you cannot upload, describe each screenshot with its local path and note that reviewers cannot open it. Delete this section when nothing visible changed. -->
+<!-- Screenshots or a recording of the final head, between the two markers below, where the ui-evidence publisher writes. If you cannot upload, describe each screenshot there with its local path and note that reviewers cannot open it. When nothing visible changed, delete this section, markers included. -->
+
+<!-- ui-evidence:start -->
+<!-- ui-evidence:end -->
 
 ## Merge danger
 
@@ -43,4 +46,17 @@ Closes #
 
 ## Decisions
 
-<!-- Choices you made on the owner's behalf, each with its reason. -->
+<!-- Choices you made on the owner's behalf: one short line each, stating the choice only. The collapsed block holds each choice's reason, each review or walk finding you declined with why, and any walk notes. Delete whatever stays empty, the whole block included. -->
+
+- <!-- One choice, such as "Kept the old route as a redirect" -->
+
+<details>
+<summary>Reasons, declined findings and walk notes</summary>
+
+**Reasons**
+
+**Declined findings**
+
+**Walk notes**
+
+</details>
