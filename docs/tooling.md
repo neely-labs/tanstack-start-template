@@ -1,6 +1,6 @@
 # Tooling
 
-Use this guide when a commit or push hook runs, when `pnpm install` asks to approve skills, when you update a committed skill, or when you create or rename the issue labels. For the checks every change needs, see [the development guide](development.md).
+Use this guide when a commit or push hook runs, when `pnpm install` asks to approve skills, when you update a committed skill, when you create or rename the issue labels, or when a Qualification run fails. For the checks every change needs, see [the development guide](development.md).
 
 ## Formatting and hooks
 
@@ -37,4 +37,15 @@ gh label create flaky --repo "$repo" --force --color D93F0B --description "A tes
 gh label list --repo "$repo" --limit 100
 ```
 
-`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values.
+`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values. A renamed state label also changes `STATE_LABELS` in `scripts/apply-qualification.ts`, which a test keeps equal to these commands.
+
+## Qualification workflow
+
+When a pull request merges, `.github/workflows/qualification.yml` moves each issue its Qualification section declares to `awaiting-qualification`; `scripts/apply-qualification.ts` says how. It applies the description as merged, never a later edit. It works through every declared issue and fails at the end if any failed:
+
+- A closed issue stays closed; it gets a comment with the checks, and the run still passes.
+- An issue that already has a Current acceptance from another delivery or an edit, or whose body ends inside an unclosed code fence or comment, stays unchanged; it gets a comment with the checks to add, and the run fails.
+- A number that names a pull request fails the run.
+- When the `awaiting-qualification` label is missing, it writes the Current acceptance and clears the assignees, leaves the labels, and fails. Create the labels as above.
+
+Re-run the job once a transient or setup cause, such as a missing label, is fixed: a re-run never changes an issue it already moved and never repeats a comment. A wrong declaration cannot be fixed by editing the description, so move that issue by hand: append the Current acceptance that [triage labels](agents/triage-labels.md#awaiting-qualification) shows, swap its state label for `awaiting-qualification`, and clear its assignees.

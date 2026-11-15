@@ -23,7 +23,8 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 ## Link pull requests
 
 - A delivery PR that completes an issue says `Closes #N`.
-- A PR that delivers only part of an issue, or delivers all of it while later checks remain, says `Refs #N`. In the second case, whoever merges it moves the issue to `awaiting-qualification` and writes its Current acceptance; a partial delivery keeps its current label.
+- A PR that delivers only part of an issue, or delivers all of it while later checks remain, says `Refs #N`. In the second case its Qualification section lists those checks, and [a workflow](../tooling.md#qualification-workflow) moves the issue to `awaiting-qualification` on merge; a partial delivery keeps its current label.
+- Whoever reverts a delivery moves its issue back by hand.
 - Write one keyword per issue, only in the PR description. Keep `Closes`, `Refs`, and other issue keywords out of commit messages: a squash merge can carry them onto the default branch and close an issue early.
 - Refer to a work map as `Part of #N`, which is not a closing keyword.
 - Record status in the issue with labels, comments, and checkboxes, never with a commit.

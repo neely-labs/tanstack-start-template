@@ -15,16 +15,18 @@ An open issue carries exactly one state label. Change it by removing the old lab
 
 The roles `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` match the public `mattpocock/skills` pack, so its skills work unchanged. If a project renames a label, change the second column and the matching command in [tooling](../tooling.md#create-the-labels).
 
-A new issue starts at `needs-triage`. One the person asked for starts at `ready-for-agent`, because their request is its triage; a follow-up you file for later still starts at `needs-triage`. Until the labels exist, file requested work without a state label. Triage moves it to `needs-info`, `ready-for-agent`, `ready-for-human`, or `wontfix`; `needs-info` returns to `needs-triage` when the reporter answers. When a PR that completes an issue's implementation merges while later checks remain, the person or agent who merged it moves the issue to `awaiting-qualification`.
+A new issue starts at `needs-triage`. One the person asked for starts at `ready-for-agent`, because their request is its triage; a follow-up you file for later still starts at `needs-triage`. Until the labels exist, file requested work without a state label. Triage moves it to `needs-info`, `ready-for-agent`, `ready-for-human`, or `wontfix`; `needs-info` returns to `needs-triage` when the reporter answers. When a PR that completes an issue's implementation merges with a Qualification section, [a workflow](../tooling.md#qualification-workflow) moves the issue to `awaiting-qualification`.
 
 ## Awaiting qualification
 
-Use this label when the change is merged but a check can only run later, such as observing production, running a rehearsal, or waiting for a scheduled job. The issue's Current acceptance starts with a status line, then one checkbox per remaining check that names who runs it and when it is due:
+Use this label when the change is merged but a check can only run later, such as observing production, running a rehearsal, or waiting for a scheduled job. The issue's Current acceptance starts with a status line and a marker naming the delivering PR, then one checkbox per remaining check that names who runs it and when it is due:
 
 ```markdown
 ## Current acceptance
 
-Status: delivered in #57; open for two production checks.
+Status: delivered in #57; open for 2 later checks.
+
+<!-- qualification: pr=57 -->
 
 - [ ] Owner confirms the weekly digest sends on 2026-12-01.
 - [ ] A fresh agent repeats the setup rehearsal after #60 merges.

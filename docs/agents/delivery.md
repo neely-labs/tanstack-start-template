@@ -49,6 +49,7 @@ State these in the pull request description before merge, each as a short phrase
 - Report how many tests or checks ran and how many were skipped, naming each skip's reason.
 - Label each result local, preview, or production, and keep them apart.
 - Open the pull request with a short summary; complete the description once, before merge, for the final head.
+- A check that can run only after merge goes under Qualification, not Decisions.
 - After pushing, confirm the remote branch points at the commit you tested: `git ls-remote origin <branch>` prints the same SHA as `git rev-parse HEAD`.
 
 ## Merge gate
@@ -66,6 +67,8 @@ Squash-merge, pinned to that head: `gh pr merge <n> --squash --match-head-commit
 ## After merge
 
 Confirm the pull request merged and that the local branch's tip matches the merged head, `gh pr view <n> --json headRefOid --jq .headRefOid`; if not, keep the branch and report it. Otherwise retire the checkout as [concurrent checkouts](../concurrent-checkouts.md) describes and remove its worktree, or switch the main checkout back to the default branch, then delete the local branch with `git branch -D`. GitHub deletes the remote branch on merge; if [setup](../template-setup.md#7-apply-repository-protection) left that off, leave it and report it.
+
+A red Qualification run means a declared issue did not move; its summary names each one. Re-run the job once a transient or setup cause is fixed; otherwise move the issue by hand, as [tooling](../tooling.md#qualification-workflow) says.
 
 ## Guards
 
