@@ -6,7 +6,7 @@ See GitHub's [ruleset documentation](https://docs.github.com/en/repositories/con
 
 ## Baseline
 
-`default-branch.json` protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` and `pr-description` GitHub Actions checks. It starts with zero required approvals so a solo maintainer is not locked out; add an approval and code-owner requirement when the project has a review team. The repository-admin bypass is explicit for break-glass recovery; remove it if the project requires every change to use the protected path.
+`default-branch.json` protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` and `pr-description` GitHub Actions checks. It starts with zero required approvals so a solo maintainer is not locked out; add an approval and code-owner requirement when the project has a review team. It dismisses approvals when new commits are pushed, which takes effect once approvals are required. It has no bypass actors, so every change, an admin's included, reaches the default branch through a pull request that meets the rules. For break-glass recovery, disable the ruleset in Settings > Rules > Rulesets, make the fix, and re-enable it.
 
 ### Up-to-date branches are not required
 
