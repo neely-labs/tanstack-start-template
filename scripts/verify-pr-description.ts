@@ -47,15 +47,57 @@ interface Section {
  * paragraph. HTML inside one is text, so it is escaped before parsing.
  */
 const CODE_SPAN =
-  /(?<!`)(?<run>`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])+?(?<!`)\k<run>(?!`)/gu;
+  /(?<!`)(?<run>`+)(?!`)(?:(?!\n[ \t]*\n)[\s\S])+?(?<!`)\k<run>(?!`)/gu;
+
+function escapeCode(text: string) {
+  return text.replaceAll(CODE_SPAN, (span) => span.replaceAll("<", "&lt;"));
+}
+
+/** Which lines sit in a code fence, delimiters included; a fence cannot open inside a comment. */
+function fencedLines(raws: string[]) {
+  let fence = "";
+  let inComment = false;
+  return raws.map((raw) => {
+    const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
+    if (!inComment && fence === "" && delimiter !== "") {
+      fence = delimiter;
+      return true;
+    }
+    if (fence !== "") {
+      if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
+        fence = "";
+      }
+      return true;
+    }
+    for (const [token] of escapeCode(raw).matchAll(/<!--|-->/gu)) {
+      inComment = token === "<!--";
+    }
+    return false;
+  });
+}
+
+/** Each line with code-span HTML escaped; spans never cross a fence or a blank line. */
+function escapedLines(raws: string[], fenced: boolean[]) {
+  const escaped = [...raws];
+  let start = 0;
+  for (let at = 0; at <= raws.length; at += 1) {
+    if ((at === raws.length || fenced[at]) && at > start) {
+      const run = escapeCode(raws.slice(start, at).join("\n")).split("\n");
+      escaped.splice(start, run.length, ...run);
+    }
+    if (fenced[at]) {
+      start = at + 1;
+    }
+  }
+  return escaped;
+}
 
 function lines(markdown: string): Line[] {
-  let fence = "";
   let open: { text: string; end: number } | undefined;
-  const escaped = markdown
-    .replaceAll(CODE_SPAN, (span) => span.replaceAll("<", "&lt;"))
-    .split(/\r?\n/u);
-  return markdown.split(/\r?\n/u).map((raw, at) => {
+  const raws = markdown.split(/\r?\n/u);
+  const fenced = fencedLines(raws);
+  const escaped = escapedLines(raws, fenced);
+  return raws.map((raw, at) => {
     const line: Line = {
       comments: [],
       fenced: true,
@@ -63,15 +105,7 @@ function lines(markdown: string): Line[] {
       raw,
       text: "",
     };
-    const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
-    if (open === undefined && fence === "" && delimiter !== "") {
-      fence = delimiter;
-      return line;
-    }
-    if (fence !== "") {
-      if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
-        fence = "";
-      }
+    if (fenced[at]) {
       return line;
     }
     line.fenced = false;

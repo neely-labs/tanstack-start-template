@@ -244,6 +244,14 @@ describe(check, () => {
     );
   });
 
+  it("never lets a backtick inside a code fence open a code span outside it", () => {
+    const body = describeWith({
+      "UI evidence":
+        '## UI evidence\n\n~~~js\nconst delimiter = "`";\n~~~\n<!-- ui-evidence:start -->\nScreenshot of the `input` control.\n<!-- ui-evidence:end -->',
+    });
+    expect(check(body, template)).toStrictEqual([]);
+  });
+
   it("ignores a marker written as inline code", () => {
     const body = describeWith({
       Decisions: `${decisions}\n\nThe publisher writes after \`<!-- ui-evidence:start -->\`.`,
