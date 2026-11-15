@@ -10,14 +10,18 @@ export const maxTextLength = 2000;
 
 const wordsPerMinute = 220;
 
-/** Splits text into the characters a person sees, such as 👋🏽 or é. */
-const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-
 /** What the analyzer tells a person whose input it rejects. Tests read it here. */
 export const textInputErrors = {
   blank: "Enter some text to analyze.",
   tooLong: `Enter at most ${maxTextLength} characters.`,
 } as const;
+
+/**
+ * Splits text into the characters a person sees, such as 👋🏽 or é. Built on
+ * first use rather than at import: the page imports this module for its limit
+ * and copy, and browsers at the ES2023 floor can lack `Intl.Segmenter`.
+ */
+let graphemes: Intl.Segmenter | undefined;
 
 export interface TextStats {
   characters: number;
@@ -28,6 +32,7 @@ export interface TextStats {
 export function summarizeText(text: string): TextStats {
   const trimmed = text.trim();
   const words = trimmed === "" ? 0 : trimmed.split(/\s+/u).length;
+  graphemes ??= new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
   return {
     characters: [...graphemes.segment(trimmed)].length,

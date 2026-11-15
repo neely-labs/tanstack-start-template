@@ -19,7 +19,7 @@ describe(summarizeText, () => {
   it.each([
     {
       expected: 28,
-      label: "an emoji modifier",
+      label: "accents, an emoji modifier and Japanese",
       text: "Café naïve résumé 👋🏽 日本語のテキスト",
     },
     { expected: 1, label: "a combining mark", text: "é".normalize("NFD") },
