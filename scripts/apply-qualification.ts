@@ -85,12 +85,18 @@ const plural = (count: number, word: string) =>
 const checklist = (checks: string[]) =>
   checks.map((text) => `- [ ] ${text}`).join("\n");
 
+const commentMarker = (kind: string, pr: number) =>
+  `<!-- qualification:${kind} pr=${pr} -->`;
+
+/** Whether an earlier run posted the comment of `kind` for pull request `pr`. */
+const posted = (comments: string[], kind: string, pr: number) =>
+  comments.some((body) => body.includes(commentMarker(kind, pr)));
+
 /** The comment of `kind`, or undefined when an earlier run already posted it. */
 function once(comments: string[], kind: string, pr: number, text: string) {
-  const marker = `<!-- qualification:${kind} pr=${pr} -->`;
-  return comments.some((body) => body.includes(marker))
+  return posted(comments, kind, pr)
     ? undefined
-    : `${marker}\n${text}`;
+    : `${commentMarker(kind, pr)}\n${text}`;
 }
 
 function currentAcceptance(pr: number, checks: string[]) {
@@ -138,10 +144,13 @@ export function plan(situation: Situation): Plan {
           outcome: "closed",
         };
   }
-  if (ours && once(comments, "moved", pr, "") === undefined) {
+  if (ours && posted(comments, "moved", pr)) {
     return unchanged;
   }
-  if (!ours && headingTexts(issue.body).includes(CURRENT_ACCEPTANCE)) {
+  const hasAcceptance = headingTexts(issue.body).some(
+    (heading) => heading.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase()
+  );
+  if (!ours && hasAcceptance) {
     return {
       comment: once(
         comments,
@@ -437,7 +446,7 @@ if (import.meta.main) {
       ? []
       : [
           "",
-          "Fix each cause, then re-run this job, or apply the rest by hand as docs/agents/issue-tracker.md#link-pull-requests says. A re-run leaves issues already moved unchanged.",
+          "Fix each cause, then re-run this job, or move the rest by hand as docs/tooling.md#qualification-workflow says. A re-run leaves issues already moved unchanged.",
         ]),
   ].join("\n");
   console.log(report);

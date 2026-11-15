@@ -151,7 +151,7 @@ describe(plan, () => {
     ["another delivery", applied.replaceAll("pr=57", "pr=40")],
     [
       "a manual edit",
-      `${original}\n\n## Current acceptance\n\nStatus: delivered in #40.\n\n- [ ] Owner checks.`,
+      `${original}\n\n## Current Acceptance\n\nStatus: delivered in #40.\n\n- [ ] Owner checks.`,
     ],
   ])(
     "leaves a Current acceptance from %s and comments the checks once",
