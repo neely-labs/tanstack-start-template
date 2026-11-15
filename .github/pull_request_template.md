@@ -2,9 +2,17 @@
 
 ## Summary
 
-<!-- What changed and why, in a few sentences. Then, when they make the change easier to see, at most one sketch (a diff, tree or call tree) and at most one before/after table. Then `Closes #N`, or `Refs #N` when part of the issue or a later check remains. -->
+<!-- What changed and why, in a few sentences. Then, when they make the change easier to see, at most one sketch (a diff, tree or call tree) and at most one before/after table. Then `Closes #N`, or `Refs #N` when part of the issue or a later check remains; for a later check, also fill Qualification. -->
 
 Closes #
+
+## Qualification
+
+<!-- Only when this delivers all of an issue and checks remain after merge, such as watching production. Per issue, a `For #N:` line, then each remaining check as an unticked box naming who runs it and when it is due. On merge, a workflow moves the issue to awaiting-qualification with these checks as its Current acceptance. Otherwise delete this section. -->
+
+For #
+
+- [ ]
 
 ## UI evidence
 

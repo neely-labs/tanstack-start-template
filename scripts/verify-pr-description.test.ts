@@ -2,7 +2,11 @@ import fs from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { TEMPLATE_PATH, check } from "./verify-pr-description.ts";
+import {
+  TEMPLATE_PATH,
+  check,
+  readQualification,
+} from "./verify-pr-description.ts";
 
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
 
@@ -71,6 +75,7 @@ const decisions = `## Decisions
 
 const parts = {
   Summary: summary,
+  Qualification: null,
   "UI evidence": evidence,
   "Merge danger": mergeDanger,
   Verification: verification,
@@ -465,5 +470,241 @@ describe(check, () => {
     expect(
       check(describeWith().replaceAll("\n", "\r\n"), template)
     ).toStrictEqual([]);
+  });
+});
+
+const declaring = `## Summary
+
+The digest job is delivered; its first production send is still to come.
+
+Refs #12
+Refs #14`;
+
+const qualification = `## Qualification
+
+<!-- Remaining checks for each issue. -->
+
+For #12:
+
+- [ ] Owner confirms the weekly digest sends on 2026-12-01.
+- [ ] An agent reads the send log after the first run.
+
+For #14:
+
+- [ ] A fresh agent repeats the setup rehearsal.`;
+
+/** A description that declares `section` as its Qualification, with a Summary that names #12 and #14. */
+function declare(
+  section: string,
+  overrides: Partial<Record<keyof typeof parts, string | null>> = {}
+) {
+  return describeWith({
+    Qualification: section,
+    Summary: declaring,
+    ...overrides,
+  });
+}
+
+describe("the Qualification section", () => {
+  it("passes a well-formed section directly after Summary", () => {
+    expect(check(declare(qualification), template)).toStrictEqual([]);
+    expect(
+      check(declare(qualification, { "UI evidence": null }), template)
+    ).toStrictEqual([]);
+  });
+
+  it("reads each issue and its checks, as the apply step sees them", () => {
+    expect(readQualification(declare(qualification), template)).toStrictEqual({
+      declarations: [
+        {
+          checks: [
+            "Owner confirms the weekly digest sends on 2026-12-01.",
+            "An agent reads the send log after the first run.",
+          ],
+          issue: 12,
+          line: 12,
+        },
+        {
+          checks: ["A fresh agent repeats the setup rehearsal."],
+          issue: 14,
+          line: 17,
+        },
+      ],
+      present: true,
+      problems: [],
+    });
+  });
+
+  it("is absent from a description without it, which changes nothing", () => {
+    expect(readQualification(describeWith(), template)).toStrictEqual({
+      declarations: [],
+      present: false,
+      problems: [],
+    });
+    const partial = describeWith({
+      Summary: summary.replace("Closes #1", "Refs #1"),
+    });
+    expect(check(partial, template)).toStrictEqual([]);
+    expect(readQualification(partial, template).declarations).toStrictEqual([]);
+  });
+
+  it("must come directly after Summary", () => {
+    const body = [
+      declaring,
+      evidence,
+      qualification,
+      mergeDanger,
+      verification,
+      decisions,
+    ].join("\n\n");
+    expect(check(body, template)).toStrictEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          /"## Qualification" must come directly after "## Summary"/u
+        ),
+        expect.stringMatching(/"## Qualification" is out of order/u),
+      ])
+    );
+  });
+
+  it.each([
+    [
+      "no For group",
+      "## Qualification\n\n<!-- none -->",
+      /has no "For #N:" line/u,
+    ],
+    [
+      "a group with no check",
+      qualification.replace(
+        "- [ ] A fresh agent repeats the setup rehearsal.",
+        ""
+      ),
+      /"For #14:" has no check/u,
+    ],
+    [
+      "a ticked check",
+      qualification.replace("- [ ] An agent", "- [x] An agent"),
+      /check is ticked/u,
+    ],
+    [
+      "a check before the first For line",
+      qualification.replace("For #12:\n", "- [ ] Too early.\n\nFor #12:\n"),
+      /check comes before the first "For #N:" line/u,
+    ],
+    [
+      "a duplicate issue",
+      qualification.replace("For #14:", "For #12:"),
+      /#12 is declared again/u,
+    ],
+    [
+      "a cross-repository reference",
+      qualification.replace("For #14:", "For other/repo#14:"),
+      /another repository/u,
+    ],
+    [
+      "an issue URL",
+      qualification.replace(
+        "For #14:",
+        "For https://github.com/other/repo/issues/14:"
+      ),
+      /another repository/u,
+    ],
+    [
+      "prose outside comments",
+      qualification.replace("For #14:", "These need the owner.\n\nFor #14:"),
+      /only "For #N:" lines and unticked checks/u,
+    ],
+    [
+      "a code fence",
+      `${qualification}\n\n\`\`\`\n- [ ] fenced\n\`\`\``,
+      /only "For #N:" lines and unticked checks/u,
+    ],
+    [
+      "a For line with no number, as the template leaves it",
+      "## Qualification\n\nFor #\n\n- [ ] ",
+      /write it as "For #N:"/u,
+    ],
+    [
+      "an empty check",
+      qualification.replace(
+        "- [ ] A fresh agent repeats the setup rehearsal.",
+        "- [ ] "
+      ),
+      /check has no text/u,
+    ],
+    [
+      "a comment on a check line",
+      qualification.replace("rehearsal.", "rehearsal. <!-- soon -->"),
+      /keep comments on their own lines/u,
+    ],
+  ])("rejects %s", (_, section, message) => {
+    expect(check(declare(section), template)).toContainEqual(
+      expect.stringMatching(message)
+    );
+  });
+
+  it("rejects a declared issue that Summary does not name with Refs", () => {
+    const body = declare(qualification, {
+      Summary: declaring.replace("Refs #14", ""),
+    });
+    expect(check(body, template)).toStrictEqual([
+      expect.stringMatching(
+        /#14 is declared under "## Qualification" but "## Summary" has no "Refs #14"/u
+      ),
+    ]);
+    const decoy = declare(qualification, {
+      Summary: declaring.replace("Refs #14", "Refs #140 and `Refs #14`"),
+    });
+    expect(check(decoy, template)).toContainEqual(
+      expect.stringMatching(/has no "Refs #14"/u)
+    );
+  });
+
+  it.each([
+    "Closes #12",
+    "fixed: #12",
+    "Resolves other/repo#12",
+    "closes https://github.com/owner/repo/issues/12",
+  ])(
+    "rejects a declared issue after a closing keyword anywhere: %s",
+    (keyword) => {
+      const body = declare(qualification, {
+        Decisions: `${decisions}\n\n${keyword} once the checks pass.`,
+      });
+      expect(check(body, template)).toContainEqual(
+        expect.stringMatching(/#12 follows a closing keyword/u)
+      );
+    }
+  );
+
+  it("ignores a closing keyword for another issue", () => {
+    const body = declare(qualification, {
+      Summary: `${declaring}\nCloses #120`,
+    });
+    expect(check(body, template)).toStrictEqual([]);
+  });
+
+  it("reports problems to the apply step instead of declarations", () => {
+    const result = readQualification(
+      declare(qualification.replace("- [ ] An agent", "- [x] An agent")),
+      template
+    );
+    expect(result.present).toBeTruthy();
+    expect(result.problems).toHaveLength(1);
+  });
+
+  it("is in the template, directly after Summary, and its placeholder fails", () => {
+    const headings = [...template.matchAll(/^## (?<name>.+)$/gmu)].map(
+      (match) => match.groups?.name
+    );
+    expect(headings.slice(0, 3)).toStrictEqual([
+      "Summary",
+      "Qualification",
+      "UI evidence",
+    ]);
+    const [section] =
+      /^## Qualification\n[\s\S]*?(?=\n## )/mu.exec(template) ?? [];
+    expect(section).toBeDefined();
+    expect(check(declare(section ?? ""), template)).not.toStrictEqual([]);
   });
 });

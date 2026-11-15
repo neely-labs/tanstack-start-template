@@ -6,13 +6,23 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  QUALIFICATION_SECTION,
+  checkReferences,
+  parseQualification,
+} from "./qualification.ts";
+import type { DescriptionLine } from "./qualification.ts";
+
 export const TEMPLATE_PATH = path.join(
   import.meta.dirname,
   "../.github/pull_request_template.md"
 );
 
-/** Sections a description may delete. Every other template section is required. */
-const OPTIONAL_SECTIONS = new Set(["UI evidence"]);
+/**
+ * Sections a description may delete, each kept directly after the template
+ * section before it that the description has. Every other section is required.
+ */
+const OPTIONAL_SECTIONS = new Set([QUALIFICATION_SECTION, "UI evidence"]);
 /** Sections that must keep the template's `<details>` block and the labels inside it. */
 const COLLAPSED_SECTIONS = new Set(["Verification"]);
 /** The section whose `- **Field:** value` lines are checked, and its optional fields. */
@@ -22,14 +32,9 @@ const OPTIONAL_FIELDS = new Set(["Rollback"]);
 const MARKER_SECTION = "UI evidence";
 const MARKER = /^ui-evidence:(?<kind>start|end)$/u;
 
-interface Line {
-  /** 1-based line number in the description. */
-  number: number;
-  raw: string;
+interface Line extends DescriptionLine {
   /** The line without HTML comments, with `<` in code spans escaped; empty inside a code fence. */
   text: string;
-  /** Inside a fenced code block, delimiters included. */
-  fenced: boolean;
   /** Each HTML comment that opens on this line: its trimmed text and the index of its last line. */
   comments: { text: string; end: number }[];
 }
@@ -109,6 +114,7 @@ function lines(markdown: string): Line[] {
   const escaped = escapedLines(raws, fenced);
   return raws.map((raw, at) => {
     const line: Line = {
+      commented: false,
       comments: [],
       fenced: true,
       number: at + 1,
@@ -120,12 +126,14 @@ function lines(markdown: string): Line[] {
     }
     line.fenced = false;
     let rest = escaped[at] ?? "";
+    line.commented = open !== undefined;
     while (rest !== "") {
       if (open === undefined) {
         const start = rest.indexOf("<!--");
         line.text += start === -1 ? rest : rest.slice(0, start);
         rest = start === -1 ? "" : rest.slice(start + 4);
         if (start !== -1) {
+          line.commented = true;
           open = { end: at, text: "" };
           line.comments.push(open);
         }
@@ -325,26 +333,35 @@ function checkHeadings(found: Section[], expected: Expected) {
   return { problems, seen };
 }
 
-/** UI evidence directly after its template neighbor, with its markers inside it. */
-function checkEvidence(
-  all: Line[],
+/** Each optional section directly after the nearest template section before it that the description has. */
+function checkPlacement(
   found: Section[],
   seen: Map<string, Section>,
   expected: Expected
 ) {
   const problems: string[] = [];
-  const evidence = seen.get(MARKER_SECTION);
-  const index = expected.headings.indexOf(MARKER_SECTION);
-  const before = index > 0 ? expected.headings[index - 1] : undefined;
-  if (
-    evidence !== undefined &&
-    before !== undefined &&
-    found[found.indexOf(evidence) - 1]?.heading !== before
-  ) {
-    problems.push(
-      `line ${evidence.line}: "## ${MARKER_SECTION}" must come directly after "## ${before}"`
-    );
+  for (const name of OPTIONAL_SECTIONS) {
+    const section = seen.get(name);
+    const before = expected.headings
+      .slice(0, expected.headings.indexOf(name))
+      .findLast((heading) => seen.has(heading));
+    if (
+      section !== undefined &&
+      before !== undefined &&
+      found[found.indexOf(section) - 1]?.heading !== before
+    ) {
+      problems.push(
+        `line ${section.line}: "## ${name}" must come directly after "## ${before}"`
+      );
+    }
   }
+  return problems;
+}
+
+/** The ui-evidence markers inside UI evidence, in order. */
+function checkEvidence(all: Line[], seen: Map<string, Section>) {
+  const problems: string[] = [];
+  const evidence = seen.get(MARKER_SECTION);
   const markers = all.flatMap((line) =>
     markersOn(line).map((kind) => ({ kind, line: line.number }))
   );
@@ -450,8 +467,22 @@ function checkPlaceholders(line: Line) {
   return problems;
 }
 
-/** Every way `body` drifts from `template`, each naming its heading or line. */
-export function check(body: string, template: string): string[] {
+/** The declarations under Qualification, and each way they break its rules. */
+function checkQualification(seen: Map<string, Section>, body: string) {
+  const section = seen.get(QUALIFICATION_SECTION);
+  if (section === undefined) {
+    return { declarations: [], present: false, problems: [] };
+  }
+  const { declarations, problems } = parseQualification(section.body);
+  const summary = seen.get("Summary")?.body ?? [];
+  return {
+    declarations,
+    present: true,
+    problems: [...problems, ...checkReferences(declarations, summary, body)],
+  };
+}
+
+function parse(body: string, template: string) {
   const expected = expectations(template);
   const all = withoutBotBlocks(
     lines(body),
@@ -459,10 +490,25 @@ export function check(body: string, template: string): string[] {
     expected.comments
   );
   const found = sections(all);
-  const { problems, seen } = checkHeadings(found, expected);
+  return { all, expected, found, ...checkHeadings(found, expected) };
+}
+
+/**
+ * The issues `body` declares under Qualification, or the problems that keep
+ * it from being applied. scripts/apply-qualification.ts reads it on merge.
+ */
+export function readQualification(body: string, template: string) {
+  return checkQualification(parse(body, template).seen, body);
+}
+
+/** Every way `body` drifts from `template`, each naming its heading or line. */
+export function check(body: string, template: string): string[] {
+  const { all, expected, found, problems, seen } = parse(body, template);
   return [
     ...problems,
-    ...checkEvidence(all, found, seen, expected),
+    ...checkPlacement(found, seen, expected),
+    ...checkEvidence(all, seen),
+    ...checkQualification(seen, body).problems,
     ...[...seen.values()].flatMap((section) =>
       checkCollapsed(section, expected)
     ),
