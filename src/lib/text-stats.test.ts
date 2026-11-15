@@ -34,7 +34,7 @@ describe(summarizeText, () => {
     expect(summarizeText(text).words).toBe(expected);
   });
 
-  it("splits words at hyphens and @, as the word segmenter does", () => {
+  it("splits words at hyphens and @, an accepted cost of segmenting", () => {
     // Intended: words come from Intl.Segmenter, which treats "-" and "@" as
     // boundaries. Splitting on spaces instead would miscount unspaced scripts.
     expect(summarizeText("e-mail me at a@b.com").words).toBe(6);
@@ -81,6 +81,7 @@ describe("the text stats module", () => {
 
       expect(fresh.textInputErrors.tooLong).toContain(`${fresh.maxTextLength}`);
     } finally {
+      vi.resetModules();
       Object.defineProperty(Intl, "Segmenter", {
         configurable: true,
         value: segmenter,

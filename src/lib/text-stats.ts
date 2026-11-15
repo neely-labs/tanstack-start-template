@@ -17,13 +17,13 @@ export const textInputErrors = {
 } as const;
 
 /**
- * These split text into the characters a person sees, such as 👋🏽 or é, and the
- * words, including words in scripts written without spaces. Built on
- * first use rather than at import: the page imports this module for its limit
- * and copy, and browsers at the ES2023 floor can lack `Intl.Segmenter`.
+ * Split text into the characters a person sees, such as 👋🏽 or é, and the
+ * words a person reads, even in scripts written without spaces. Built on first
+ * use rather than at import: the page imports this module for its limit and
+ * copy, and browsers at the ES2023 floor can lack `Intl.Segmenter`.
  */
-let graphemes: Intl.Segmenter | undefined;
-let wordSegments: Intl.Segmenter | undefined;
+let graphemeSegmenter: Intl.Segmenter | undefined;
+let wordSegmenter: Intl.Segmenter | undefined;
 
 export interface TextStats {
   characters: number;
@@ -33,17 +33,19 @@ export interface TextStats {
 
 export function summarizeText(text: string): TextStats {
   const trimmed = text.trim();
-  graphemes ??= new Intl.Segmenter(undefined, { granularity: "grapheme" });
-  wordSegments ??= new Intl.Segmenter(undefined, { granularity: "word" });
+  graphemeSegmenter ??= new Intl.Segmenter(undefined, {
+    granularity: "grapheme",
+  });
+  wordSegmenter ??= new Intl.Segmenter(undefined, { granularity: "word" });
   let words = 0;
-  for (const segment of wordSegments.segment(trimmed)) {
+  for (const segment of wordSegmenter.segment(trimmed)) {
     if (segment.isWordLike === true) {
       words += 1;
     }
   }
 
   return {
-    characters: [...graphemes.segment(trimmed)].length,
+    characters: [...graphemeSegmenter.segment(trimmed)].length,
     readingMinutes:
       words === 0 ? 0 : Math.max(1, Math.round(words / wordsPerMinute)),
     words,
