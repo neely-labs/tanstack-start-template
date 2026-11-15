@@ -152,7 +152,18 @@ export function anyHeadingOf(line: MarkdownLine) {
   )?.groups?.heading;
 }
 
-/** The text of each heading in `markdown`, at any level, outside code fences and comments. */
+/**
+ * The text of each heading in `markdown`, at any level, outside code fences and
+ * comments. A line of text above a `===` or `---` underline counts too; taking
+ * a paragraph for a heading there only makes a caller more cautious.
+ */
 export function headingTexts(markdown: string) {
-  return lines(markdown).flatMap((line) => anyHeadingOf(line) ?? []);
+  const all = lines(markdown);
+  return all.flatMap((line, index) => {
+    const underlined =
+      !line.fenced &&
+      line.text.trim() !== "" &&
+      /^ {0,3}(?:=+|-+)[ \t]*$/u.test(all[index + 1]?.text ?? "");
+    return anyHeadingOf(line) ?? (underlined ? line.text.trim() : []);
+  });
 }

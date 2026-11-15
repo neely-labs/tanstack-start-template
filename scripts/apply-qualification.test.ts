@@ -210,6 +210,16 @@ describe(plan, () => {
     }
   );
 
+  it.each(["===", "---"])(
+    "sees a Current acceptance heading underlined with %s as existing",
+    (underline) => {
+      const body = `${original}\n\nCurrent acceptance\n${underline}\n\n- [ ] Owner checks.`;
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
+      expect(result.update).toBeUndefined();
+    }
+  );
+
   it.each([
     [
       "a code fence",
