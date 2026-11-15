@@ -11,7 +11,7 @@ Repository files are only part of a dependable template. Complete this checklist
 
 ## Repository protections
 
-- The files under `.github/rulesets` are importable repository-level policies; GitHub does not copy active settings through the template flow. Import `default-branch.json` into this source repository and rehearse the same command in a generated repository. It protects the default branch and requires the `validate` check without requiring an approval, which keeps a single-maintainer template usable.
+- The files under `.github/rulesets` are importable repository-level policies; GitHub does not copy active settings through the template flow. Import `default-branch.json` into this source repository and rehearse the same command in a generated repository. It protects the default branch and requires the `validate` and `pr-description` checks without requiring an approval, which keeps a single-maintainer template usable.
 - Do not import the optional `vercel-preview.json` until a connected Vercel project has emitted a successful `Preview` deployment in GitHub. Change the environment name first when a project uses a suffix or custom environment.
 - Keep paid GitHub Code Security and default CodeQL setup disabled for private projects. The template has no CodeQL workflow, so generated private projects do not require a paid security product. Public projects can retain free organization-managed scanning.
 - Enable Dependabot alerts and security updates.
@@ -33,7 +33,7 @@ The tracked Dependabot configuration updates GitHub Actions only. Review applica
 2. Open the generated repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**, then confirm CI can be started.
 3. Install the pinned package manager with `npx get-pnpm 12.15.0` if needed.
 4. Run `pnpm install --frozen-lockfile` and `pnpm validate`.
-5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` is required. If the generated repository is intentionally left unprotected, record that as an explicit exception.
+5. Import `.github/rulesets/default-branch.json` with the command in `.github/rulesets/README.md`, then run `gh ruleset check --default` and confirm `validate` and `pr-description` are required. If the generated repository is intentionally left unprotected, record that as an explicit exception.
 6. If the host is Vercel, connect the project, create a preview from a pull request, and verify the deployment environment name before optionally importing `vercel-preview.json`. Do not enable a deployment rule with no matching deployment.
 7. Install Chromium with `pnpm exec playwright install chromium` and run `pnpm test:e2e`. This verifies desktop/mobile serving, keyboard navigation and skip links, theme hydration, example form validation, and loader-failure retry against the real server. Inspect the home, setup, runtime, and not-found states in light and dark themes too.
 8. Confirm the generated repository has its own unrelated Git history.

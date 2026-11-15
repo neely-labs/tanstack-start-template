@@ -17,8 +17,9 @@ permissions:
 
 jobs:
   pr-description:
-    # Bots such as Dependabot write their own descriptions. A skipped job counts
-    # as passing if this check is required.
+    # Bots such as Dependabot write their own descriptions. `pr-description` is a
+    # required status check, and a job skipped here counts as passing; the
+    # workflow takes no path filter, so every pull request gets a result.
     if: github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
     timeout-minutes: 5

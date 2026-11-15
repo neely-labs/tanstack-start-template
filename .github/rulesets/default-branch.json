@@ -36,6 +36,10 @@
           {
             "context": "validate",
             "integration_id": 15368
+          },
+          {
+            "context": "pr-description",
+            "integration_id": 15368
           }
         ]
       }
