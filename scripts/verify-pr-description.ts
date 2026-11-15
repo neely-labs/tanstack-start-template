@@ -159,6 +159,11 @@ function headingOf(line: Line) {
   )?.groups;
 }
 
+/** The text of each level 1 or 2 heading in `markdown`, outside code fences and comments. */
+export function headingTexts(markdown: string) {
+  return lines(markdown).flatMap((line) => headingOf(line)?.heading ?? []);
+}
+
 /** Level 1 and 2 headings and the lines under each; lines before the first are dropped. */
 function sections(all: Line[]): Section[] {
   const found: Section[] = [];
