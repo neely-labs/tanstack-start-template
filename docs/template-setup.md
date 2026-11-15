@@ -135,7 +135,7 @@ gh api --method POST \
 gh ruleset check --default --repo "$repo"
 ```
 
-The baseline protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` check emitted by `.github/workflows/ci.yml` without requiring branches to be up to date first ([why](../.github/rulesets/README.md#up-to-date-branches-are-not-required)). It starts with zero required approvals so a solo maintainer is not locked out; the project can add approval and code-owner requirements when a review team exists. Repository admins can bypass it for [break-glass recovery](../.github/rulesets/README.md); an ordinary merge never uses that bypass.
+The baseline protects the default branch from deletion and force pushes, requires pull requests with resolved review conversations, allows squash and rebase merges, and requires the `validate` check from `.github/workflows/ci.yml` and the `pr-description` check from `.github/workflows/pr-description.yml`, without requiring branches to be up to date first ([why](../.github/rulesets/README.md#up-to-date-branches-are-not-required)). It starts with zero required approvals so a solo maintainer is not locked out; the project can add approval and code-owner requirements when a review team exists. Repository admins can bypass it for [break-glass recovery](../.github/rulesets/README.md); an ordinary merge never uses that bypass.
 
 If `gh auth status`, `gh repo view`, or the API call fails, report the exact failure and stop this step. Do not retry by changing permissions or modifying the repository through another account.
 
@@ -173,7 +173,7 @@ gh api --method POST \
 
 If Vercel reports a project-suffixed or custom environment, copy the JSON to a temporary file, change `required_deployment_environments` to that exact name, and import the copy. Keep the tracked file as the standard single-project example. Vercel's preview deployment may also be absent when a project is not connected to the repository yet, which is a reason to defer this gate rather than guess.
 
-Cloudflare Workers and other hosts have no template-wide environment name. Do not apply the Vercel file for them. Add a separate required-deployment rule only when the chosen integration emits a stable GitHub deployment environment, using the same import command with that exact value. Otherwise the baseline `validate` check is the complete default.
+Cloudflare Workers and other hosts have no template-wide environment name. Do not apply the Vercel file for them. Add a separate required-deployment rule only when the chosen integration emits a stable GitHub deployment environment, using the same import command with that exact value. Otherwise the baseline checks are the complete default.
 
 Ends when the selected ruleset is visible in `gh ruleset check --default` with branch auto-delete reading `true`, and, when selected, the deployment rule names an environment that exists in the repository's deployment history.
 
@@ -227,6 +227,6 @@ Then start `pnpm dev:local` in the background, open the `appUrl` that `pnpm loca
 
 For a repository created through GitHub's **Use this template** flow, open the repository's **Actions** tab. If GitHub says workflows are not being run, click **Enable Actions on this repository**. Run CI manually against the working branch or push another commit so GitHub receives a new event after Actions is enabled. GitHub Code Security and CodeQL are not required or enabled by this template.
 
-Confirm `docs/template-origin.md` lists each departure setup made, such as removed example pages or a host preset. If issue labels were selected, confirm `gh label list` shows the labels from step 8. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate`, and confirm `gh repo view --json deleteBranchOnMerge` reports `true`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
+Confirm `docs/template-origin.md` lists each departure setup made, such as removed example pages or a host preset. If issue labels were selected, confirm `gh label list` shows the labels from step 8. If repository protection was selected, run `gh ruleset check --default` and confirm the active ruleset requires `validate` and `pr-description`, and confirm `gh repo view --json deleteBranchOnMerge` reports `true`. If a deployment gate was selected, confirm its environment name matches the provider's deployment history.
 
 Ends when `pnpm validate` and the applicable production browser suite pass, the running application shows the agreed identity and no unapproved placeholder text, and GitHub lists the CI workflow. The footer's "Built from" credit is an attribution, not placeholder text. Keep it, or drop it from `src/components/site-footer.tsx`, and remove `templateUrl` from `src/lib/site-config.ts` once nothing else uses it. Keep explicitly deferred assets or origin visible to the owner. If protection was deferred, leave that deferral visible rather than claiming it was configured.
