@@ -1,18 +1,14 @@
 import fs from "node:fs";
-import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { check } from "./verify-pr-description.ts";
+import { TEMPLATE_PATH, check } from "./verify-pr-description.ts";
 
-const template = fs.readFileSync(
-  path.join(import.meta.dirname, "../.github/pull_request_template.md"),
-  "utf-8"
-);
+const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
 
 const summary = `## Summary
 
-The analyzer now counts words as a reader sees them.
+The example page now names its input limit.
 
 \`\`\`diff
  ## UI evidence
@@ -20,7 +16,7 @@ The analyzer now counts words as a reader sees them.
 +## Not a heading
 \`\`\`
 
-Closes #112`;
+Closes #1`;
 
 const evidence = `## UI evidence
 
@@ -207,6 +203,24 @@ describe(check, () => {
     );
   });
 
+  it("fails Verification whose <details> block lost its tables", () => {
+    const emptied =
+      "## Verification\n\n<details>\n<summary>All green at abc1234</summary>\n\n</details>";
+    expect(
+      check(describeWith({ Verification: emptied }), template)
+    ).toStrictEqual([
+      expect.stringMatching(/"## Verification" .* lost "\*\*Checks\*\*"/u),
+      expect.stringMatching(/"## Verification" .* lost "\*\*Reviews\*\*"/u),
+    ]);
+  });
+
+  it("ignores a marker written as inline code", () => {
+    const body = describeWith({
+      Decisions: `${decisions}\n\nThe publisher writes after \`<!-- ui-evidence:start -->\`.`,
+    });
+    expect(check(body, template)).toStrictEqual([]);
+  });
+
   it("fails Decisions reasons spilled out of their collapsed block", () => {
     const spilled =
       "## Decisions\n\n- Treated this as tier 1\n\n**Reasons**\n\n- It changes what people see.";
@@ -240,7 +254,7 @@ describe(check, () => {
       Decisions:
         '## Decisions\n\n- <!-- One choice, such as "Kept the old route" -->',
       "Merge danger": `${mergeDanger.replace("clean two-way", "<!-- clean two-way, two-way, one-way -->")}\n- **Rollback:** <!-- Only when the door is not clean two-way -->`,
-      Summary: summary.replace("Closes #112", "Closes #"),
+      Summary: summary.replace("Closes #1", "Closes #"),
       Verification: verification.replace(
         "| 1 | Fresh agent | abc1234 | No findings |",
         "|       |          |      |         |"
@@ -297,13 +311,39 @@ describe(check, () => {
   it("treats a comment before the last section as the author's, not a bot's", () => {
     const body = describeWith({
       Summary: summary.replace(
-        "Closes #112",
+        "Closes #1",
         "<!-- note to self -->\n\nCloses #"
       ),
     });
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(/an issue reference has no number/u),
     ]);
+  });
+
+  it("checks what follows a bot footer's closing comment", () => {
+    const footer =
+      "<!-- codesmith:footer -->\n---\nOpen in codesmith\n<!-- /codesmith:footer -->";
+    const body = `${describeWith()}\n\n${footer}\n\n## Follow-ups\n\n|  |  |`;
+    const problems = check(body, template);
+    expect(problems).toHaveLength(2);
+    expect(problems).toStrictEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/"## Follow-ups" is not a template section/u),
+        expect.stringMatching(/a table row is empty/u),
+      ])
+    );
+  });
+
+  it("checks what follows an author's comment after the last section", () => {
+    const body = `${describeWith()}\n\n<!-- my note -->\n\n## Notes\n\n- `;
+    const problems = check(body, template);
+    expect(problems).toHaveLength(2);
+    expect(problems).toStrictEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/"## Notes" is not a template section/u),
+        expect.stringMatching(/a list item is empty/u),
+      ])
+    );
   });
 
   it("still checks UI evidence appended after a bot footer", () => {

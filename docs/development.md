@@ -18,10 +18,8 @@ pnpm start      # Run an existing production build
 pnpm validate   # Run the core checks, build, and metadata verification
 pnpm validate:docs # Run check and docs:budget, as CI does for docs-only changes
 pnpm test:e2e   # Check the production app in desktop and mobile Chromium
-pnpm pr:verify <file> # Check a saved pull request description against the template
+pnpm pr:verify <file | -> # Check a pull request description against the template
 ```
-
-To check a pull request's current description, pipe it in: `gh pr view <n> --json body --jq .body | pnpm pr:verify -`.
 
 For `pnpm dev:local` and the other per-checkout commands, see [concurrent checkouts](concurrent-checkouts.md). For the formatter, Git hooks, committed agent skills, and the skills that `pnpm install` asks to approve, see [tooling](tooling.md).
 

@@ -6,9 +6,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
+export const TEMPLATE_PATH = path.join(
+  import.meta.dirname,
+  "../.github/pull_request_template.md"
+);
+
 /** Sections a description may delete. Every other template section is required. */
 const OPTIONAL_SECTIONS = new Set(["UI evidence"]);
-/** Sections that must keep the template's `<details>` block. */
+/** Sections that must keep the template's `<details>` block and the labels inside it. */
 const COLLAPSED_SECTIONS = new Set(["Verification"]);
 /** The section whose `- **Field:** value` lines are checked, and its optional fields. */
 const FIELDS_SECTION = "Merge danger";
@@ -42,18 +47,11 @@ function lines(markdown: string): Line[] {
   let inComment = false;
   return markdown.split(/\r?\n/u).map((raw, at) => {
     const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
-    if (!inComment && fence === "" && delimiter !== "") {
-      fence = delimiter;
-      return {
-        fenced: true,
-        number: at + 1,
-        opensComment: false,
-        raw,
-        text: "",
-      };
-    }
-    if (fence !== "") {
-      if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
+    const opensFence = !inComment && fence === "" && delimiter !== "";
+    if (opensFence || fence !== "") {
+      if (opensFence) {
+        fence = delimiter;
+      } else if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
         fence = "";
       }
       return {
@@ -165,44 +163,82 @@ function expectations(template: string) {
       .find((section) => section.heading === FIELDS_SECTION)
       ?.body.flatMap((line) => FIELD.exec(line.text)?.groups?.label ?? []) ??
     [];
+  for (const field of OPTIONAL_FIELDS) {
+    if (!fields.includes(field)) {
+      throw new Error(
+        `The template's "## ${FIELDS_SECTION}" has no "**${field}:**" line, which scripts/verify-pr-description.ts names. Update the script to match.`
+      );
+    }
+  }
   const comments = new Set(
     all.filter((line) => line.opensComment).map((line) => line.raw.trim())
   );
   return { comments, fields, headings, labels };
 }
 
+/** The ui-evidence markers on a line, outside inline code. */
+function markersOn(line: Line) {
+  if (line.fenced) {
+    return [];
+  }
+  return [...line.raw.replaceAll(/`[^`]*`/gu, "").matchAll(MARKER)].map(
+    (match) => match.groups?.kind ?? ""
+  );
+}
+
 /**
- * Drops what bots appended after the template's last heading. A bot block starts
- * at a comment the template does not contain, such as `<!-- codesmith:footer -->`,
- * and runs until a template heading or a ui-evidence marker, so evidence or a
- * section appended after a bot footer is still checked.
+ * Drops what bots appended after the template's last heading. Between two
+ * template headings or ui-evidence markers, a bot block runs from the first
+ * comment the template lacks, such as `<!-- codesmith:footer -->`, to the last
+ * comment, such as `<!-- /codesmith:footer -->`. Anything after it is checked,
+ * and so is a footer that does not start with a comment.
  */
 function withoutBotBlocks(
   all: Line[],
   headings: string[],
   comments: Set<string>
 ) {
-  const last = headings.at(-1);
-  const start = all.find((line) => headingOf(line)?.heading === last);
-  if (start === undefined) {
+  const last = all.findIndex(
+    (line) => headingOf(line)?.heading === headings.at(-1)
+  );
+  if (last === -1) {
     return all;
   }
-  let inBlock = false;
-  return all.filter((line) => {
-    if (line.number <= start.number) {
-      return true;
+  const dropped = new Set<number>();
+  let opened = -1;
+  let closed = -1;
+  const settle = () => {
+    if (opened !== -1) {
+      for (let at = opened; at <= closed; at += 1) {
+        dropped.add(at);
+      }
     }
+    opened = -1;
+    closed = -1;
+  };
+  for (let at = last + 1; at < all.length; at += 1) {
+    const line = all[at];
     const heading = headingOf(line);
     if (
-      line.raw.match(MARKER) !== null ||
+      markersOn(line).length > 0 ||
       (heading?.marker === "##" && headings.includes(heading.heading))
     ) {
-      inBlock = false;
-    } else if (line.opensComment && !comments.has(line.raw.trim())) {
-      inBlock = true;
+      settle();
+    } else {
+      if (
+        opened === -1 &&
+        line.opensComment &&
+        !comments.has(line.raw.trim())
+      ) {
+        opened = at;
+      }
+      if (opened !== -1 && !line.fenced && line.raw.includes("-->")) {
+        closed = at;
+      }
     }
-    return !inBlock;
-  });
+  }
+  settle();
+  return all.filter((_, at) => !dropped.has(at));
 }
 
 type Expected = ReturnType<typeof expectations>;
@@ -266,14 +302,9 @@ function checkEvidence(
       `line ${evidence.line}: "## ${MARKER_SECTION}" must come directly after "## ${before}"`
     );
   }
-  const markers = all
-    .filter((line) => !line.fenced)
-    .flatMap((line) =>
-      [...line.raw.matchAll(MARKER)].map((match) => ({
-        kind: match.groups?.kind ?? "",
-        line: line.number,
-      }))
-    );
+  const markers = all.flatMap((line) =>
+    markersOn(line).map((kind) => ({ kind, line: line.number }))
+  );
   const inEvidence = new Set(evidence?.body.map((line) => line.number));
   for (const marker of markers) {
     if (!inEvidence.has(marker.line)) {
@@ -306,6 +337,18 @@ function checkCollapsed(section: Section, expected: Expected) {
     );
   }
   const labels = expected.labels.get(section.heading) ?? [];
+  if (COLLAPSED_SECTIONS.has(section.heading) && inside.some(Boolean)) {
+    const kept = new Set(
+      section.body.flatMap((line, at) =>
+        inside[at] ? (BOLD_LABEL.exec(line.text)?.groups?.label ?? []) : []
+      )
+    );
+    for (const label of labels.filter((name) => !kept.has(name))) {
+      problems.push(
+        `"## ${section.heading}" (line ${section.line}) lost "**${label}**" from its <details> block`
+      );
+    }
+  }
   for (const [at, line] of section.body.entries()) {
     const label = BOLD_LABEL.exec(line.text)?.groups?.label;
     if (label !== undefined && labels.includes(label) && !inside[at]) {
@@ -391,12 +434,8 @@ if (import.meta.main) {
     console.error("Usage: pnpm pr:verify <body-file | ->");
     process.exit(2);
   }
-  const templatePath = path.join(
-    import.meta.dirname,
-    "../.github/pull_request_template.md"
-  );
   const body = fs.readFileSync(source === "-" ? 0 : source, "utf-8");
-  const problems = check(body, fs.readFileSync(templatePath, "utf-8"));
+  const problems = check(body, fs.readFileSync(TEMPLATE_PATH, "utf-8"));
   if (problems.length === 0) {
     console.log("The description matches .github/pull_request_template.md.");
   } else {
