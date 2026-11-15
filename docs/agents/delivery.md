@@ -48,7 +48,7 @@ State these in the pull request description before merge, each as a short phrase
 - Name the commit each result came from, and whether the tree was dirty. A dirty-tree result proves that tree, not the commit; once that exact tree is committed unedited, the result names the new commit.
 - Report how many tests or checks ran and how many were skipped, naming each skip's reason.
 - Label each result local, preview, or production, and keep them apart.
-- Open the pull request with a short summary; complete the description once, before merge, for the final head.
+- Open the pull request with a short summary; complete the description once, before merge, for the final head. The `pr-description` check stays red until then.
 - After pushing, confirm the remote branch points at the commit you tested: `git ls-remote origin <branch>` prints the same SHA as `git rev-parse HEAD`.
 
 ## Merge gate
@@ -59,6 +59,7 @@ A pull request is ready to merge when all of these hold on its current head:
 - Required checks are green on that head.
 - Review at its tier is complete, each finding is fixed or answered with a written reason, and the author has resolved each thread after answering it.
 - The merge danger is stated, and the evidence names that head.
+- The `pr-description` check is green: the description keeps the [template's](../../.github/pull_request_template.md) sections in order, with every placeholder filled.
 
 Squash-merge, pinned to that head: `gh pr merge <n> --squash --match-head-commit <sha>`.
 
