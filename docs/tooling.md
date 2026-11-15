@@ -41,13 +41,11 @@ gh label list --repo "$repo" --limit 100
 
 ## Qualification workflow
 
-`.github/workflows/qualification.yml` runs `scripts/apply-qualification.ts` when a pull request merges into the default branch. For each issue under the description's Qualification section, it makes one update: it appends a Current acceptance holding the declared checks and a `<!-- qualification: pr=N -->` marker, replaces every state label with `awaiting-qualification`, and clears the assignees. It reads the issue back, then comments once that it moved it.
-
-It works through every declared issue and fails at the end if any failed:
+When a pull request merges, `.github/workflows/qualification.yml` moves each issue its Qualification section declares to `awaiting-qualification`; `scripts/apply-qualification.ts` says how. It applies the description as merged, never a later edit. It works through every declared issue and fails at the end if any failed:
 
 - A closed issue stays closed; it gets a comment with the checks, and the run still passes.
-- An issue that already has a Current acceptance from another delivery or an edit stays unchanged; it gets a comment with the checks to reconcile, and the run fails.
+- An issue that already has a Current acceptance from another delivery or an edit, or whose body ends inside an unclosed code fence or comment, stays unchanged; it gets a comment with the checks to add, and the run fails.
 - A number that names a pull request fails the run.
 - When the `awaiting-qualification` label is missing, it writes the Current acceptance and clears the assignees, leaves the labels, and fails. Create the labels as above.
 
-A re-run never changes an issue it already moved, ticked boxes and later edits included, and never repeats a comment, so after fixing a cause, re-run the job. To move an issue by hand instead, append the Current acceptance that [triage labels](agents/triage-labels.md#awaiting-qualification) shows, swap its state label for `awaiting-qualification`, and clear its assignees. No workflow undoes a move when a delivery is reverted.
+Re-run the job once a transient or setup cause, such as a missing label, is fixed: a re-run never changes an issue it already moved and never repeats a comment. A wrong declaration cannot be fixed by editing the description, so move that issue by hand: append the Current acceptance that [triage labels](agents/triage-labels.md#awaiting-qualification) shows, swap its state label for `awaiting-qualification`, and clear its assignees.
