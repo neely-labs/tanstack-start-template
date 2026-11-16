@@ -42,7 +42,9 @@ Run `pnpm validate` before sharing changes. For page or server changes, also fol
 | What you need | Where to go |
 | --- | --- |
 | Make this template your project | [Setup guide](docs/template-setup.md) |
-| Run checks, change routes, or debug a failure | [Development guide](docs/development.md) |
+| Run the app and its checks | [Development guide](docs/development.md) |
+| Find the files that own a change, or change a route | [Code map](docs/code-map.md) |
+| Debug a failing check, page, or request | [Investigate a failure](docs/debugging.md) |
 | Run several checkouts side by side | [Concurrent checkouts](docs/concurrent-checkouts.md) |
 | Choose, link, or close an issue | [Issue tracker guide](docs/agents/issue-tracker.md) |
 | Decide how much review a change needs, what evidence to give, or whether it is ready to merge | [Delivery guide](docs/agents/delivery.md) |
