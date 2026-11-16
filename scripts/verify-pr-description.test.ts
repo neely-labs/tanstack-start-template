@@ -1,8 +1,12 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import {
+  LIMITS,
   TEMPLATE_PATH,
   check,
   readQualification,
@@ -21,6 +25,10 @@ The example page now names its input limit.
 \`\`\`
 
 Closes #1`;
+
+/** Summary without a sketch, for tests that add their own code fence. */
+const plainSummary =
+  "## Summary\n\nThe example page now names its input limit.\n\nCloses #1";
 
 const evidence = `## UI evidence
 
@@ -251,7 +259,7 @@ describe(check, () => {
 
   it("still finds a code fence after a multiline code span holding a comment opener", () => {
     const body = describeWith({
-      Summary: `${summary}\n\nRecognizes the \`<!--\ndelimiter\` in prose.\n\n\`\`\`md\n## Example heading\n\`\`\``,
+      Summary: `${plainSummary}\n\nRecognizes the \`<!--\ndelimiter\` in prose.\n\n\`\`\`md\n## Example heading\n\`\`\``,
     });
     expect(check(body, template)).toStrictEqual([]);
   });
@@ -338,7 +346,7 @@ describe(check, () => {
 
   it("ignores placeholders written as code or inside a code fence", () => {
     const body = describeWith({
-      Summary: `${summary}\n\nThe template's \`Closes #N\` line.\n\n\`\`\`md\nCloses #\n|   |   |\n\`\`\``,
+      Summary: `${plainSummary}\n\nThe template's \`Closes #N\` line.\n\n\`\`\`md\nCloses #\n|   |   |\n\`\`\``,
     });
     expect(check(body, template)).toStrictEqual([]);
   });
@@ -464,6 +472,12 @@ describe(check, () => {
     expect(() =>
       check(describeWith(), template.replace("## Merge danger", "## Danger"))
     ).toThrow(/no "## Merge danger" section/u);
+    expect(() =>
+      check(describeWith(), template.replace("## Decisions", "## Choices"))
+    ).toThrow(/no "## Decisions" section/u);
+    expect(() =>
+      check(describeWith(), template.replace("**Checks**", "**Runs**"))
+    ).toThrow(/no "\*\*Checks\*\*" label/u);
   });
 
   it("reads CRLF line endings, as GitHub stores edited descriptions", () => {
@@ -714,5 +728,439 @@ describe("the Qualification section", () => {
       /^## Qualification\n[\s\S]*?(?=\n## )/mu.exec(template) ?? [];
     expect(section).toBeDefined();
     expect(check(declare(section ?? ""), template)).not.toStrictEqual([]);
+  });
+});
+
+/** `count` words of filler prose. */
+function words(count: number) {
+  return Array.from({ length: count }, () => "word").join(" ");
+}
+
+/** Decisions whose visible list holds `items`, with one reason collapsed. */
+function decisionsWith(items: string[]) {
+  return `## Decisions\n\n${items.join("\n")}\n\n<details>\n<summary>Reasons, declined findings and walk notes</summary>\n\n**Reasons**\n\n- ${words(60)}\n\n</details>`;
+}
+
+/** A description whose Summary holds `visuals` after one short sentence. */
+function summaryOf(...visuals: string[]) {
+  return describeWith({
+    Summary: `## Summary\n\nShort.\n\n${visuals.join("\n\n")}\n\nCloses #1`,
+  });
+}
+
+/** `count` one-line choices. */
+function visible(count: number) {
+  return Array.from({ length: count }, (_, at) => `- Choice ${at + 1}`);
+}
+
+describe("length limits", () => {
+  it("states each limit in the template's comments, so the two stay in step", () => {
+    const comments = [...template.matchAll(/<!--[\s\S]*?-->/gu)].join(" ");
+    for (const phrase of [
+      `${LIMITS.summaryWords} words`,
+      `${LIMITS.fieldWords} words`,
+      `${LIMITS.outcomeWords} words`,
+      `${LIMITS.decisionsVisible} bullets`,
+      `${LIMITS.choiceWords} words`,
+      `${LIMITS.askWords}`,
+    ]) {
+      expect(comments).toContain(phrase);
+    }
+  });
+
+  it("fails Summary prose over the limit, naming the section", () => {
+    const body = describeWith({
+      Summary: `## Summary\n\n${words(LIMITS.summaryWords + 1)}\n\nCloses #1`,
+    });
+    expect(check(body, template)).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^line \\d+: "## Summary" has ${LIMITS.summaryWords + 1} words of prose; keep it within ${LIMITS.summaryWords}`,
+          "u"
+        )
+      ),
+    ]);
+  });
+
+  it("counts list items and collapsed text in Summary, but not its sketch, table, comments or issue line", () => {
+    const table = `| Before | After |\n| --- | --- |\n| ${words(80)} | ${words(80)} |`;
+    const atLimit = `## Summary\n\n<!-- ${words(50)} -->\n\n${words(LIMITS.summaryWords - 10)}\n\n- ${words(10)}\n\n\`\`\`text\n${words(80)}\n\`\`\`\n\n${table}\n\nCloses #1`;
+    expect(check(describeWith({ Summary: atLimit }), template)).toStrictEqual(
+      []
+    );
+    const hidden = atLimit.replace(
+      "Closes #1",
+      "<details><summary>More</summary>\n\nextra\n\n</details>\n\nCloses #1"
+    );
+    expect(check(describeWith({ Summary: hidden }), template)).toHaveLength(1);
+  });
+
+  it("allows one sketch and one table in Summary, where a table may be the sketch", () => {
+    const sketch = "```text\na\n```";
+    const table = "| A | B |\n| --- | --- |\n| 1 | 2 |";
+    expect(check(summaryOf(sketch, table), template)).toStrictEqual([]);
+    expect(check(summaryOf(table, table), template)).toStrictEqual([]);
+    expect(check(summaryOf(sketch, sketch), template)).toStrictEqual([
+      expect.stringMatching(
+        /"## Summary" has 2 code sketches; keep at most one$/u
+      ),
+    ]);
+    expect(check(summaryOf(sketch, table, table), template)).toStrictEqual([
+      expect.stringMatching(
+        /"## Summary" has 3 sketches and tables; keep at most one sketch and one before\/after table$/u
+      ),
+    ]);
+  });
+
+  it("fails Merge danger values outside their format, naming each line", () => {
+    const body = describeWith({
+      "Merge danger": `## Merge danger
+
+- **Door:** mostly two-way
+- **Risk tier:** 2, it stores state
+- **Rounds used:** 6 of 5, the sixth requested by the owner
+- **Blast radius:** ${words(LIMITS.fieldWords + 1)}
+- **Rollback:** ${words(LIMITS.fieldWords + 1)}`,
+    });
+    const problems = check(body, template);
+    expect(problems).toStrictEqual([
+      expect.stringMatching(
+        /^line \d+: "\*\*Door:\*\*" must be one of clean two-way, two-way, one-way or uncertain; put any reason under Decisions$/u
+      ),
+      expect.stringMatching(
+        /^line \d+: "\*\*Risk tier:\*\*" must be one of 0, 1 or 2; put any reason under Decisions$/u
+      ),
+      expect.stringMatching(
+        /^line \d+: "\*\*Rounds used:\*\*" must read "N of M"; put the reason under Decisions$/u
+      ),
+      expect.stringMatching(
+        new RegExp(
+          `^line \\d+: "\\*\\*Blast radius:\\*\\*" has ${LIMITS.fieldWords + 1} words; keep it a phrase within ${LIMITS.fieldWords}`,
+          "u"
+        )
+      ),
+      expect.stringMatching(/"\*\*Rollback:\*\*" has \d+ words/u),
+    ]);
+  });
+
+  it("passes rounds past the budget and a Door in any letter case", () => {
+    const body = describeWith({
+      "Merge danger": mergeDanger
+        .replace("clean two-way", "Two-way")
+        .replace("1 of 3", "7 of 5"),
+    });
+    expect(check(body, template)).toStrictEqual([]);
+  });
+
+  it("fails more visible Decisions bullets than the limit, ignoring collapsed ones", () => {
+    expect(
+      check(
+        describeWith({
+          Decisions: decisionsWith(visible(LIMITS.decisionsVisible)),
+        }),
+        template
+      )
+    ).toStrictEqual([]);
+    expect(
+      check(
+        describeWith({
+          Decisions: decisionsWith(visible(LIMITS.decisionsVisible + 1)),
+        }),
+        template
+      )
+    ).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `"## Decisions" shows ${LIMITS.decisionsVisible + 1} bullets; keep at most ${LIMITS.decisionsVisible} visible`,
+          "u"
+        )
+      ),
+    ]);
+  });
+
+  it("fails a long choice, counting its wrapped and nested lines, but allows a longer owner item", () => {
+    const long = `- ${words(LIMITS.choiceWords - 5)}\n  ${words(3)}\n  - ${words(3)}`;
+    expect(
+      check(describeWith({ Decisions: decisionsWith([long]) }), template)
+    ).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^line \\d+: a Decisions choice has ${LIMITS.choiceWords + 1} words; keep it within ${LIMITS.choiceWords}`,
+          "u"
+        )
+      ),
+    ]);
+    const ask = (count: number) => `- **Needs your eye:** ${words(count - 3)}`;
+    expect(
+      check(
+        describeWith({ Decisions: decisionsWith([ask(LIMITS.askWords)]) }),
+        template
+      )
+    ).toStrictEqual([]);
+    expect(
+      check(
+        describeWith({
+          Decisions: decisionsWith([ask(LIMITS.askWords + 1)]),
+        }),
+        template
+      )
+    ).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `a Decisions item for the owner has ${LIMITS.askWords + 1} words; keep it within ${LIMITS.askWords}`,
+          "u"
+        )
+      ),
+    ]);
+  });
+
+  it("counts a flush-left continuation line and numbered items toward Decisions", () => {
+    const lazy = `- ${words(LIMITS.choiceWords - 3)}\n${words(4)}`;
+    expect(
+      check(describeWith({ Decisions: decisionsWith([lazy]) }), template)
+    ).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `a Decisions choice has ${LIMITS.choiceWords + 1} words`,
+          "u"
+        )
+      ),
+    ]);
+    const numbered = Array.from(
+      { length: LIMITS.decisionsVisible + 1 },
+      (_, at) => `${at + 1}. Choice`
+    );
+    expect(
+      check(describeWith({ Decisions: decisionsWith(numbered) }), template)
+    ).toHaveLength(1);
+  });
+
+  it("finds Decisions bullets indented under the heading, and their nested items", () => {
+    const indented = visible(LIMITS.decisionsVisible + 1).map(
+      (item) => `  ${item}`
+    );
+    expect(
+      check(describeWith({ Decisions: decisionsWith(indented) }), template)
+    ).toHaveLength(1);
+    const long = `  - ${words(LIMITS.choiceWords - 3)}\n    - ${words(4)}`;
+    expect(
+      check(describeWith({ Decisions: decisionsWith([long]) }), template)
+    ).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `a Decisions choice has ${LIMITS.choiceWords + 1} words`,
+          "u"
+        )
+      ),
+    ]);
+  });
+
+  it("reads a Merge danger value that wraps onto the next line", () => {
+    const body = describeWith({
+      "Merge danger": mergeDanger
+        .replace("clean two-way", "two-way\n  mostly")
+        .replace("one page", `one page\n  ${words(LIMITS.fieldWords)}`),
+    });
+    expect(check(body, template)).toStrictEqual([
+      expect.stringMatching(/"\*\*Door:\*\*" must be one of/u),
+      expect.stringMatching(/"\*\*Blast radius:\*\*" has \d+ words/u),
+    ]);
+  });
+
+  it("fails Verification whose collapsed block has no outcome line", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "<summary>All checks green at abc1234; review approved abc1234</summary>\n",
+        ""
+      ),
+    });
+    expect(check(body, template)).toStrictEqual([
+      expect.stringMatching(
+        /"## Verification" .* has no <summary> outcome line/u
+      ),
+    ]);
+  });
+
+  it("counts two code sketches even with no blank line between them", () => {
+    expect(
+      check(summaryOf("```text\na\n```\n```text\nb\n```"), template)
+    ).toStrictEqual([
+      expect.stringMatching(/"## Summary" has 2 code sketches/u),
+    ]);
+  });
+
+  it("counts one sketch for a longer fence that holds a shorter one", () => {
+    expect(
+      check(summaryOf("````md\n```ts\ncode\n```\n````"), template)
+    ).toStrictEqual([]);
+    expect(
+      check(summaryOf("~~~md\n```ts\ncode\n```\n~~~"), template)
+    ).toStrictEqual([]);
+  });
+
+  it("reads a data row of dashes as part of its table, not a new one", () => {
+    const table =
+      "| Before | After |\n| --- | --- |\n| --- | --- |\n| Missing | Present |";
+    expect(check(summaryOf("```text\na\n```", table), template)).toStrictEqual(
+      []
+    );
+  });
+
+  it("counts tables written without outer pipes", () => {
+    const bare = "A | B\n--- | ---\n1 | 2";
+    expect(
+      check(summaryOf("```text\na\n```", bare, bare), template)
+    ).toStrictEqual([
+      expect.stringMatching(/"## Summary" has 3 sketches and tables/u),
+    ]);
+  });
+
+  it("reads a Verification outcome line that wraps", () => {
+    const head = "abc1234def5678";
+    const body = describeWith({
+      Verification: verification.replace(
+        "<summary>All checks green at abc1234; review approved abc1234</summary>",
+        "<summary>\nAll checks green at abc1234\n</summary>"
+      ),
+    });
+    expect(check(body, template, { head })).toStrictEqual([]);
+  });
+
+  it("fails a Verification outcome line over the limit", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "All checks green at abc1234; review approved abc1234",
+        `abc1234 ${words(LIMITS.outcomeWords)}`
+      ),
+    });
+    expect(check(body, template)).toStrictEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^line \\d+: the Verification outcome line has ${LIMITS.outcomeWords + 1} words; keep it within ${LIMITS.outcomeWords}`,
+          "u"
+        )
+      ),
+    ]);
+  });
+});
+
+describe("the head commit", () => {
+  const head = "abc1234def5678abc1234def5678abc1234def56";
+
+  it("passes when the outcome line and every Checks row name the head, dirty or not", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |",
+        "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n| abc1234def dirty | `pnpm test` | 9 passed, 0 skipped | local |"
+      ),
+    });
+    expect(check(body, template, { head })).toStrictEqual([]);
+  });
+
+  it("fails a Checks row for another commit and an outcome line that misses the head", () => {
+    const body = describeWith({
+      Verification: verification
+        .replace(
+          "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |",
+          "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n| 789ddf0 (before the squash) | `pnpm test` | 9 passed, 0 skipped | local |"
+        )
+        .replace(
+          "All checks green at abc1234; review approved abc1234",
+          "All checks green at 789ddf0"
+        ),
+    });
+    expect(check(body, template, { head })).toStrictEqual([
+      expect.stringMatching(
+        /^line \d+: the Verification outcome line does not name the head commit abc1234; rewrite Verification for the final head$/u
+      ),
+      expect.stringMatching(
+        /^line \d+: this Checks row names another commit, not the head abc1234; replace it with a run at the head, and name a guard's failing run in the guards line instead$/u
+      ),
+    ]);
+  });
+
+  it("fails a Checks row with no commit, but leaves an empty row to the placeholder check", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |",
+        "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n|  | `pnpm test` | 9 passed, 0 skipped | local |\n|  |  |  |  |"
+      ),
+    });
+    expect(check(body, template, { head })).toStrictEqual([
+      expect.stringMatching(/this Checks row names another commit/u),
+      expect.stringMatching(/a table row is empty/u),
+    ]);
+  });
+
+  it("reads only the outcome line's visible text, not a link's target", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "All checks green at abc1234; review approved abc1234",
+        '<a href="https://example.com/commit/abc1234">789ddf0</a> green'
+      ),
+    });
+    expect(check(body, template, { head })).toStrictEqual([
+      expect.stringMatching(/outcome line does not name the head commit/u),
+    ]);
+  });
+
+  it("checks every table under Checks, up to the Reviews label", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |",
+        "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n\n| Commit | Command | Result | Limits |\n| --- | --- | --- | --- |\n| 789ddf0 | `pnpm test:e2e` | 9 passed, 0 skipped | preview |"
+      ),
+    });
+    expect(check(body, template, { head })).toStrictEqual([
+      expect.stringMatching(/this Checks row names another commit/u),
+    ]);
+  });
+
+  it("checks a Checks table written without outer pipes", () => {
+    const body = describeWith({
+      Verification: verification.replace(
+        "| Commit | Command | Result | Limits |\n| ------ | ------- | ------ | ------ |\n| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |",
+        "Commit | Command | Result | Limits\n--- | --- | --- | ---\n789ddf0 | `pnpm validate` | 150 passed, 0 skipped | local"
+      ),
+    });
+    expect(body).toContain("789ddf0 | `pnpm validate`");
+    expect(check(body, template, { head })).toStrictEqual([
+      expect.stringMatching(/this Checks row names another commit/u),
+    ]);
+  });
+
+  it("checks no commits when the head is not given", () => {
+    const body = describeWith({
+      Verification: verification.replaceAll("abc1234", "789ddf0"),
+    });
+    expect(check(body, template)).toStrictEqual([]);
+    expect(check(body, template, { head })).toHaveLength(2);
+  });
+});
+
+describe("pnpm pr:verify", () => {
+  const script = path.join(import.meta.dirname, "verify-pr-description.ts");
+  const run = (...args: string[]) => {
+    const dir = fs.mkdtempSync(path.join(tmpdir(), "pr-verify-"));
+    const file = path.join(dir, "body.md");
+    fs.writeFileSync(file, describeWith());
+    const result = spawnSync(process.execPath, [script, file, ...args], {
+      encoding: "utf-8",
+    });
+    fs.rmSync(dir, { force: true, recursive: true });
+    return result;
+  };
+
+  it("checks the head that --head names, as CI passes it", () => {
+    expect(run("--head", "abc1234ffff").status).toBe(0);
+    const stale = run("--head", "def5678ffff");
+    expect(stale.status).toBe(1);
+    expect(stale.stderr).toContain("not the head def5678");
+  });
+
+  it("refuses a malformed --head instead of skipping the check", () => {
+    expect(run("--head").status).toBe(2);
+    expect(run("--head", "main").status).toBe(2);
+    expect(run("--sha", "abc1234").status).toBe(2);
   });
 });

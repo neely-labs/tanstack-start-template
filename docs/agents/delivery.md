@@ -48,7 +48,7 @@ State these in the pull request description before merge, each as a short phrase
 - Name the commit each result came from, and whether the tree was dirty. A dirty-tree result proves that tree, not the commit; once that exact tree is committed unedited, the result names the new commit.
 - Report how many tests or checks ran and how many were skipped, naming each skip's reason.
 - Label each result local, preview, or production, and keep them apart.
-- Open the pull request with a short summary; complete the description once, before merge, for the final head.
+- Open the pull request with a short summary; complete the description once, before merge, for the final head. After the last commit, and again if the head moves, rewrite it from the template; never patch in rows as rounds land.
 - A check that can run only after merge goes under Qualification, not Decisions.
 - After pushing, confirm the remote branch points at the commit you tested: `git ls-remote origin <branch>` prints the same SHA as `git rev-parse HEAD`.
 
@@ -60,7 +60,7 @@ A pull request is ready to merge when all of these hold on its current head:
 - Required checks are green on that head.
 - Review at its tier is complete, each finding is fixed or answered with a written reason, and the author has resolved each thread after answering it.
 - The merge danger is stated, and the evidence names that head.
-- The `pr-description` check is green; it stays red until the description is complete. To run it locally: `gh pr view <n> --json body --jq .body | pnpm pr:verify -`.
+- The `pr-description` check is green; it stays red until the description is complete. To run it locally: `gh pr view <n> --json body --jq .body | pnpm pr:verify - --head "$(gh pr view <n> --json headRefOid --jq .headRefOid)"`.
 
 Squash-merge, pinned to that head: `gh pr merge <n> --squash --match-head-commit <sha>`.
 
@@ -72,7 +72,7 @@ A red Qualification run means a declared issue did not move; its summary names e
 
 ## Guards
 
-Before trusting a new check or regression test, show it failing once, per behavior or acceptance criterion rather than per test case. Break the behavior it guards, or run it on the base commit that has the problem, and record the failing run in the evidence. Before a deliberate break, commit your work; while the break is in place, edit nothing else, check with `git diff` that it applied, then undo it with `git restore <file>`. Then show the guard passing. A guard that has never failed may not test anything.
+Before trusting a new check or regression test, show it failing once, per behavior or acceptance criterion rather than per test case. Break the behavior it guards, or run it on the base commit that has the problem, and name it in the Verification guards line. Before a deliberate break, commit your work; while the break is in place, edit nothing else, check with `git diff` that it applied, then undo it with `git restore <file>`. Then show the guard passing. A guard that has never failed may not test anything.
 
 ## Real devices
 
