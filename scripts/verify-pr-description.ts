@@ -1,8 +1,9 @@
-// Checks a pull request description against the sections, order and filled
-// placeholders of .github/pull_request_template.md, which stays the one place
-// that names the sections. CI runs it on every description edit and push
-// (.github/workflows/pr-description.yml); run it locally on a saved body with
-// `pnpm pr:verify <file>`, or `-` to read standard input.
+// Checks a pull request description against the sections, order, filled
+// placeholders and length limits of .github/pull_request_template.md, which
+// stays the one place that names the sections and states the limits. CI runs it
+// on every description edit and push (.github/workflows/pr-description.yml),
+// passing the head commit; run it locally on a saved body with
+// `pnpm pr:verify <file> [--head <sha>]`, or `-` to read standard input.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -33,6 +34,65 @@ const OPTIONAL_FIELDS = new Set(["Rollback"]);
 const MARKER_SECTION = "UI evidence";
 const MARKER = /^ui-evidence:(?<kind>start|end)$/u;
 
+/**
+ * The limits the template's comments state, so a description stays readable at
+ * a glance; a test keeps the two in step. Words are whitespace-separated.
+ */
+export const LIMITS = {
+  /** Summary prose, outside its sketch, table, comments and issue lines. */
+  summaryWords: 100,
+  /** Blast radius and Rollback. */
+  fieldWords: 12,
+  /** Decisions bullets outside the collapsed block. */
+  decisionsVisible: 8,
+  /** One visible choice, its wrapped and nested lines included. */
+  choiceWords: 25,
+  /** One visible Owner decision or Needs your eye item. */
+  askWords: 50,
+  /** The Verification `<summary>` line. */
+  outcomeWords: 25,
+};
+/** Merge danger values with a fixed form, each as the template's comment lists it. */
+const FIELD_FORMS = new Map([
+  [
+    "Door",
+    {
+      matches: (value: string) =>
+        ["clean two-way", "two-way", "one-way", "uncertain"].includes(
+          value.toLowerCase()
+        ),
+      rule: "must be one of clean two-way, two-way, one-way or uncertain; put any reason under Decisions",
+    },
+  ],
+  [
+    "Risk tier",
+    {
+      matches: (value: string) => /^[012]$/u.test(value),
+      rule: "must be one of 0, 1 or 2; put any reason under Decisions",
+    },
+  ],
+  [
+    "Rounds used",
+    {
+      matches: (value: string) => /^\d+ of \d+$/u.test(value),
+      rule: 'must read "N of M"; put the reason under Decisions',
+    },
+  ],
+]);
+/** Merge danger values that are free phrases, held to `LIMITS.fieldWords`. */
+const PHRASE_FIELDS = new Set(["Blast radius", "Rollback"]);
+/** A visible Decisions item addressed to the owner, allowed `LIMITS.askWords`. */
+const ASK = /^\*\*(?:Owner decision|Needs your eye):\*\*/u;
+const ISSUE_LINE =
+  /^\s*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs)\s+#\d+\s*$/iu;
+/** A list item's marker, bulleted or numbered. */
+const BULLET = /^(?<indent>\s*)(?:[-*+]|\d+[.)])\s+/u;
+/** Sections and the Verification label the limit checks read, beyond those named above. */
+const SUMMARY_SECTION = "Summary";
+const VERIFICATION_SECTION = "Verification";
+const DECISIONS_SECTION = "Decisions";
+const CHECKS_LABEL = "Checks";
+const COMMIT = /^[0-9a-f]{7,40}$/iu;
 interface Section {
   heading: string;
   /** `#` or `##`, as written. */
@@ -86,6 +146,9 @@ function expectations(template: string) {
     ...COLLAPSED_SECTIONS,
     FIELDS_SECTION,
     MARKER_SECTION,
+    SUMMARY_SECTION,
+    VERIFICATION_SECTION,
+    DECISIONS_SECTION,
   ]) {
     if (!headings.includes(name)) {
       throw new Error(
@@ -102,6 +165,11 @@ function expectations(template: string) {
       return [section.heading, names];
     })
   );
+  if (labels.get(VERIFICATION_SECTION)?.includes(CHECKS_LABEL) !== true) {
+    throw new Error(
+      `The template's "## ${VERIFICATION_SECTION}" has no "**${CHECKS_LABEL}**" label, which scripts/verify-pr-description.ts names. Update the script to match.`
+    );
+  }
   const fields =
     found
       .find((section) => section.heading === FIELDS_SECTION)
@@ -349,6 +417,302 @@ function checkPlaceholders(line: Line) {
   return problems;
 }
 
+/** Words a reader sees in `text`: tags and bullet markers dropped. */
+function wordCount(text: string) {
+  return text
+    .replace(BULLET, "")
+    .replaceAll(/<\/?[a-z][^>]*>/giu, " ")
+    .split(/\s+/u)
+    .filter((word) => word !== "").length;
+}
+
+/** A table's delimiter row, with or without outer pipes, such as `--- | :---:`. */
+function isTableRule(text: string) {
+  return text.includes("|") && text.includes("-") && /^[\s|:-]+$/u.test(text);
+}
+
+/** A table row's trimmed cells, outer pipes optional. */
+function cellsOf(text: string) {
+  return text
+    .trim()
+    .replace(/^\|/u, "")
+    .replace(/\|$/u, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+/**
+ * Each table in `body` outside code fences, as GitHub reads one with or
+ * without outer pipes: its header row's index and its data rows' indexes.
+ */
+function tablesIn(body: Line[]) {
+  const found: { header: number; rows: number[] }[] = [];
+  for (const [at, line] of body.entries()) {
+    const header = body[at - 1];
+    const current = found.at(-1);
+    if (line.fenced) {
+      continue;
+    }
+    // A row right after a table's last line extends it, whatever it holds.
+    if (
+      current !== undefined &&
+      line.text.includes("|") &&
+      (current.rows.at(-1) ?? current.header + 1) === at - 1
+    ) {
+      current.rows.push(at);
+    } else if (
+      header !== undefined &&
+      !header.fenced &&
+      header.text.includes("|") &&
+      isTableRule(line.text)
+    ) {
+      found.push({ header: at - 1, rows: [] });
+    }
+  }
+  return found;
+}
+
+/** How many fenced code blocks `body` holds, each closed only by its own delimiter. */
+function fencesIn(body: Line[]) {
+  const DELIMITER = /^ {0,3}(?<mark>`{3,}|~{3,})/u;
+  let count = 0;
+  let open = "";
+  for (const line of body) {
+    const mark = DELIMITER.exec(line.raw)?.groups?.mark ?? "";
+    if (!line.fenced) {
+      open = "";
+    } else if (open === "") {
+      count += 1;
+      open = mark;
+    } else if (
+      mark.startsWith(open[0] ?? "") &&
+      mark.length >= open.length &&
+      line.raw.trim() === mark
+    ) {
+      open = "";
+    }
+  }
+  return count;
+}
+
+/** Summary prose within its limit; one sketch and one table at most, where a table may be the sketch. */
+function checkSummary(section: Section | undefined) {
+  if (section === undefined) {
+    return [];
+  }
+  const problems: string[] = [];
+  const name = `"## ${section.heading}"`;
+  const tables = tablesIn(section.body);
+  const tableLines = new Set(
+    tables.flatMap((table) => [table.header, table.header + 1, ...table.rows])
+  );
+  const prose = section.body.filter(
+    (line, at) =>
+      !line.fenced && !tableLines.has(at) && !ISSUE_LINE.test(line.text)
+  );
+  const count = prose.reduce((sum, line) => sum + wordCount(line.text), 0);
+  if (count > LIMITS.summaryWords) {
+    problems.push(
+      `line ${section.line}: ${name} has ${count} words of prose; keep it within ${LIMITS.summaryWords}, with proof under Verification and choices under Decisions`
+    );
+  }
+  const sketches = fencesIn(section.body);
+  if (sketches > 1) {
+    problems.push(
+      `line ${section.line}: ${name} has ${sketches} code sketches; keep at most one`
+    );
+  } else if (sketches + tables.length > 2) {
+    problems.push(
+      `line ${section.line}: ${name} has ${sketches + tables.length} sketches and tables; keep at most one sketch and one before/after table`
+    );
+  }
+  return problems;
+}
+
+/** Each Merge danger field's label and whole value, wrapped lines joined. */
+function fieldValues(section: Section | undefined) {
+  const found: { label: string; line: Line; value: string }[] = [];
+  for (const line of section?.body ?? []) {
+    const groups = FIELD.exec(line.text)?.groups;
+    const last = found.at(-1);
+    if (groups !== undefined) {
+      found.push({ label: groups.label, line, value: groups.value.trim() });
+    } else if (
+      last !== undefined &&
+      line.text.trim() !== "" &&
+      !BULLET.test(line.text)
+    ) {
+      last.value = `${last.value} ${line.text.trim()}`.trim();
+    }
+  }
+  return found;
+}
+
+/** Merge danger values in their fixed form, or a short phrase. */
+function checkFieldForms(section: Section | undefined) {
+  const problems: string[] = [];
+  for (const { label, line, value } of fieldValues(section)) {
+    if (value === "") {
+      continue;
+    }
+    const form = FIELD_FORMS.get(label);
+    const count = wordCount(value);
+    if (form !== undefined && !form.matches(value)) {
+      problems.push(`line ${line.number}: "**${label}:**" ${form.rule}`);
+    } else if (PHRASE_FIELDS.has(label) && count > LIMITS.fieldWords) {
+      problems.push(
+        `line ${line.number}: "**${label}:**" has ${count} words; keep it a phrase within ${LIMITS.fieldWords}, with reasons under Decisions`
+      );
+    }
+  }
+  return problems;
+}
+
+/** The visible Decisions list: few enough items, each short. */
+function checkDecisions(section: Section | undefined) {
+  if (section === undefined) {
+    return [];
+  }
+  const { inside } = collapsed(section.body);
+  const visibleLines = section.body.filter(
+    (line, at) => !inside[at] && !line.fenced
+  );
+  // The list's own indent: its first bullet's. Deeper by two or more is nested.
+  const root =
+    visibleLines
+      .map((line) => BULLET.exec(line.text)?.groups?.indent.length)
+      .find((length) => length !== undefined) ?? 0;
+  const items: { line: Line; words: number; ask: boolean }[] = [];
+  // Whether the line before continues an item, so a flush-left line joins it.
+  let open = false;
+  for (const line of visibleLines) {
+    const indent = BULLET.exec(line.text)?.groups?.indent;
+    const item = items.at(-1);
+    if (line.text.trim() === "") {
+      open = false;
+    } else if (indent !== undefined && indent.length < root + 2) {
+      items.push({
+        ask: ASK.test(line.text.replace(BULLET, "")),
+        line,
+        words: wordCount(line.text),
+      });
+      open = true;
+    } else if (item !== undefined && (open || /^\s/u.test(line.text))) {
+      item.words += wordCount(line.text);
+      open = true;
+    }
+  }
+  const problems: string[] = [];
+  if (items.length > LIMITS.decisionsVisible) {
+    problems.push(
+      `line ${section.line}: "## ${section.heading}" shows ${items.length} bullets; keep at most ${LIMITS.decisionsVisible} visible and move the rest into the collapsed block`
+    );
+  }
+  for (const item of items) {
+    const limit = item.ask ? LIMITS.askWords : LIMITS.choiceWords;
+    if (item.words > limit) {
+      problems.push(
+        `line ${item.line.number}: a Decisions ${item.ask ? "item for the owner" : "choice"} has ${item.words} words; keep it within ${limit}, with its reason in the collapsed block`
+      );
+    }
+  }
+  return problems;
+}
+
+/** Whether `text` names `head` by a SHA prefix of at least 7 characters. */
+function namesHead(text: string, head: string) {
+  return text
+    .split(/[^0-9a-z]+/iu)
+    .some(
+      (token) =>
+        COMMIT.test(token) && head.toLowerCase().startsWith(token.toLowerCase())
+    );
+}
+
+/** The Verification outcome line within its limit and, given `head`, naming it. */
+function checkOutcome(section: Section, head?: string) {
+  const at = section.body.findIndex((line) => /<summary>/iu.test(line.text));
+  const outcome = section.body[at];
+  if (outcome === undefined) {
+    const { inside } = collapsed(section.body);
+    return inside.some(Boolean)
+      ? [
+          `"## ${section.heading}" (line ${section.line}) has no <summary> outcome line naming the head commit`,
+        ]
+      : [];
+  }
+  const problems: string[] = [];
+  const end = section.body.findIndex(
+    (line, index) => index >= at && /<\/summary>/iu.test(line.text)
+  );
+  const joined = section.body
+    .slice(at, end === -1 ? at + 1 : end + 1)
+    .map((line) => line.text)
+    .join(" ");
+  const text =
+    /<summary>(?<text>.*?)(?:<\/summary>|$)/isu.exec(joined)?.groups?.text ??
+    "";
+  const visibleText = text.replaceAll(/<\/?[a-z][^>]*>/giu, " ");
+  const count = wordCount(visibleText);
+  if (count > LIMITS.outcomeWords) {
+    problems.push(
+      `line ${outcome.number}: the Verification outcome line has ${count} words; keep it within ${LIMITS.outcomeWords}`
+    );
+  }
+  if (head !== undefined && !namesHead(visibleText, head)) {
+    problems.push(
+      `line ${outcome.number}: the Verification outcome line does not name the head commit ${head.slice(0, 7)}; rewrite Verification for the final head`
+    );
+  }
+  return problems;
+}
+
+/** The Commit cell of each data row in every table between the Checks label and the next label. */
+function checkRows(section: Section) {
+  const labelAt = (from: number, test: (label: string) => boolean) =>
+    section.body.findIndex((line, at) => {
+      const label = BOLD_LABEL.exec(line.text)?.groups?.label;
+      return at > from && label !== undefined && test(label);
+    });
+  const start = labelAt(-1, (label) => label === CHECKS_LABEL);
+  const next = labelAt(start, () => true);
+  if (start === -1) {
+    return [];
+  }
+  return tablesIn(section.body)
+    .filter(({ header }) => header > start && (next === -1 || header < next))
+    .flatMap(({ rows }) => rows)
+    .flatMap((at) => {
+      const line = section.body[at];
+      const cells = cellsOf(line?.text ?? "");
+      // A row of empty cells is the placeholder check's to report.
+      return line === undefined || cells.every((cell) => cell === "")
+        ? []
+        : [{ commit: cells[0] ?? "", line }];
+    });
+}
+
+/**
+ * The Verification outcome line within its limit, and, given the head commit,
+ * the outcome line and every Checks row naming it.
+ */
+function checkVerification(section: Section | undefined, head?: string) {
+  if (section === undefined) {
+    return [];
+  }
+  const problems = checkOutcome(section, head);
+  if (head !== undefined) {
+    for (const row of checkRows(section)) {
+      if (!namesHead(row.commit, head)) {
+        problems.push(
+          `line ${row.line.number}: this Checks row names another commit, not the head ${head.slice(0, 7)}; replace it with a run at the head, and name a guard's failing run in the guards line instead`
+        );
+      }
+    }
+  }
+  return problems;
+}
+
 /** The declarations under Qualification, and each way they break its rules. */
 function checkQualification(seen: Map<string, Section>, body: string) {
   const section = seen.get(QUALIFICATION_SECTION);
@@ -383,8 +747,15 @@ export function readQualification(body: string, template: string) {
   return checkQualification(parse(body, template).seen, body);
 }
 
-/** Every way `body` drifts from `template`, each naming its heading or line. */
-export function check(body: string, template: string): string[] {
+/**
+ * Every way `body` drifts from `template`, each naming its heading or line.
+ * Given `head`, the pull request's head commit, Verification must name it.
+ */
+export function check(
+  body: string,
+  template: string,
+  { head }: { head?: string } = {}
+): string[] {
   const { all, expected, found, problems, seen } = parse(body, template);
   return [
     ...problems,
@@ -395,18 +766,28 @@ export function check(body: string, template: string): string[] {
       checkCollapsed(section, expected)
     ),
     ...checkFields(seen.get(FIELDS_SECTION), expected),
+    ...checkSummary(seen.get(SUMMARY_SECTION)),
+    ...checkFieldForms(seen.get(FIELDS_SECTION)),
+    ...checkVerification(seen.get(VERIFICATION_SECTION), head),
+    ...checkDecisions(seen.get(DECISIONS_SECTION)),
     ...all.filter((line) => !line.fenced).flatMap(checkPlaceholders),
   ];
 }
 
 if (import.meta.main) {
-  const source = process.argv.at(2);
-  if (source === undefined) {
-    console.error("Usage: pnpm pr:verify <body-file | ->");
+  const [source, flag, head, ...rest] = process.argv.slice(2);
+  if (
+    source === undefined ||
+    rest.length > 0 ||
+    (flag !== undefined && (flag !== "--head" || !COMMIT.test(head ?? "")))
+  ) {
+    console.error("Usage: pnpm pr:verify <body-file | -> [--head <sha>]");
     process.exit(2);
   }
   const body = fs.readFileSync(source === "-" ? 0 : source, "utf-8");
-  const problems = check(body, fs.readFileSync(TEMPLATE_PATH, "utf-8"));
+  const problems = check(body, fs.readFileSync(TEMPLATE_PATH, "utf-8"), {
+    head,
+  });
   if (problems.length === 0) {
     console.log("The description matches .github/pull_request_template.md.");
   } else {

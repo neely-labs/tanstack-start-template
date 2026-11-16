@@ -35,13 +35,14 @@ jobs:
           cache: false
           install: false
 
-      # Read the description now rather than from the event, so a rerun checks
-      # the current text, not the text when the run was queued.
+      # Read the description and head now rather than from the event, so a rerun
+      # checks the current text against the current head, not the ones queued.
       - name: Check the description against the template
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh api "repos/$REPO/pulls/$NUMBER" --jq '.body // ""' >"$RUNNER_TEMP/body.md"
-          node scripts/verify-pr-description.ts "$RUNNER_TEMP/body.md"
+          gh api "repos/$REPO/pulls/$NUMBER" >"$RUNNER_TEMP/pull.json"
+          jq -r '.body // ""' "$RUNNER_TEMP/pull.json" >"$RUNNER_TEMP/body.md"
+          node scripts/verify-pr-description.ts "$RUNNER_TEMP/body.md" --head "$(jq -r .head.sha "$RUNNER_TEMP/pull.json")"
