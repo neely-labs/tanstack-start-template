@@ -1,6 +1,6 @@
 # Working on the app
 
-Use this guide for local development, route changes, checks, and debugging. Run commands from the repository root. For code ownership and server/browser boundaries, see [how the app fits together](architecture.md); for hosting, use [the deployment guide](deployment.md).
+Use this guide for local development and checks. To find the files that own a change, or to change a route, see [the code map](code-map.md); to debug a failure, see [investigate a failure](debugging.md). Run commands from the repository root. For code ownership and server/browser boundaries, see [how the app fits together](architecture.md); for hosting, use [the deployment guide](deployment.md).
 
 ## Commands
 
@@ -22,33 +22,6 @@ pnpm pr:verify <file | -> [--head <sha>] # Check a pull request description agai
 ```
 
 For `pnpm dev:local` and the other per-checkout commands, see [concurrent checkouts](concurrent-checkouts.md). For the formatter, Git hooks, committed agent skills, and the skills that `pnpm install` asks to approve, see [tooling](tooling.md).
-
-## Find the right files
-
-Each row names the files that own an area and the focused check that proves a change there. The full checks in [Check your changes](#check-your-changes) still apply before handoff. `pnpm test:e2e` serves the last build, so build first.
-
-| Change | Owner | Check |
-| --- | --- | --- |
-| Name, description, or public origin | `src/lib/site-config.ts` | `pnpm test src/lib/site-config.test.ts src/lib/site-files.test.ts`, then `pnpm build && pnpm seo:verify` |
-| Add or remove a public route | `src/routes/`, `src/lib/public-routes.ts`, `navigation` in `src/lib/site-config.ts`; steps in [Change a route](#change-a-route) | `pnpm test src/lib/public-routes.test.ts src/lib/site-files.test.ts`, `pnpm validate` for prerender and metadata, then `pnpm test:e2e` |
-| Change a server function | `src/lib/server-runtime.ts`, its input schema `src/lib/text-stats.ts`, and the route that calls it; model in [Server and browser](architecture.md#server-and-browser) | `pnpm test src/lib/text-stats.test.ts src/lib/server-runtime.test.ts` for accepted and rejected input, then `pnpm test:e2e tests/e2e/examples.spec.ts` for the real request |
-| Page metadata or structured data | `src/lib/seo.ts`, and the check in `scripts/verify-seo-output.ts` | `pnpm test src/lib/seo.test.ts scripts/verify-seo-output.test.ts`, then `pnpm build && pnpm seo:verify` |
-| Theme or design tokens | `src/styles.css`, `src/lib/theme.ts`, [DESIGN.md](../DESIGN.md) | `pnpm test src/lib/theme.test.ts`, then `pnpm test:e2e tests/e2e/smoke.spec.ts` |
-| Headers, middleware, or production serving | `src/start.ts`, `src/server.ts`, `src/lib/security-headers.ts`, `vite.config.ts` | `pnpm build`, then `pnpm test:e2e tests/e2e/smoke.spec.ts` |
-| Per-checkout ports and server ownership | `scripts/local.ts` | `pnpm test scripts/local.test.ts` |
-| Always-read docs and their size limits | `BUDGET` in `scripts/verify-doc-budget.ts` | `pnpm docs:budget`; `pnpm test scripts/verify-doc-budget.test.ts` for the script itself |
-| Add or change a form | [Forms before hydration](architecture.md#forms-before-hydration) and [the forms recipe](recipes/forms.md) | `pnpm build && pnpm test:e2e` with the recipe's test copied into `tests/e2e/` |
-| Which changes CI treats as documentation-only | The `scope` step in `.github/workflows/ci.yml` | `pnpm test scripts/ci-docs-scope.test.ts` |
-| Pull request description sections | `.github/pull_request_template.md`, `scripts/verify-pr-description.ts`, `scripts/qualification.ts`, `scripts/markdown-lines.ts`, `.github/workflows/pr-description.yml` | `pnpm test scripts/verify-pr-description.test.ts` |
-| Moving an issue on merge | `scripts/apply-qualification.ts`, `.github/workflows/qualification.yml` | `pnpm test scripts/apply-qualification.test.ts scripts/qualification-workflow.test.ts` |
-
-A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, next to the code. Add a row when the app gains its own module, and remove rows for example files the project deletes.
-
-## Change a route
-
-1. Add or remove the route source, update its entry in `src/lib/public-routes.ts`, and reconcile metadata, navigation, links to the page, and affected browser tests.
-2. Let Vite regenerate `src/routeTree.gen.ts`. A development server for this checkout does that while running; from a stopped checkout, run `pnpm build`. The generated file stays generator-owned.
-3. Run the checks below. The refreshed tree lets TypeScript catch missing classification and links to removed routes before handoff.
 
 ## Check your changes
 
@@ -77,22 +50,3 @@ Before handoff, inspect the changed route or action and report what you actually
 - Update any product, design, architecture, or operating guidance the change makes stale.
 
 Record each result in the Verification table of the [pull request template](../.github/pull_request_template.md).
-
-## Investigate a failure
-
-- Check `/api/health` to see whether the server responds. A successful response alone does not identify the checkout.
-- Read the terminal for build and prerender errors. `pnpm seo:verify` names the route or built file whose metadata failed.
-- Use the browser console, network panel, and development-only TanStack devtools to inspect navigation, hydration, and server requests.
-- For a browser-check failure, open the screenshot and error context under `test-results/`, then inspect the trace:
-
-```bash
-pnpm exec playwright show-trace path/to/trace.zip
-```
-
-CI uploads those files as `browser-failure-evidence` for seven days when browser checks fail. Download the artifact and run the same trace command. Review captured data before publishing a trace from an app with private or authenticated content.
-
-The example loader-retry test simulates a failed request inside its browser, then retries the real server. It is a pattern for failure testing without a production fault endpoint. If an approach fails, inspect the diff and undo only the task's changes, preserving unrelated edits and other tasks' processes.
-
-## Flaky tests
-
-Browser tests do not retry, in CI or locally, so a [flaky](agents/triage-labels.md#category-labels) test shows as a failure instead of a clean pass. When a rerun of the same code passes, open a `flaky` issue that names the test, quotes the failure text, and states the cause, or what is known of it. Each pull request that hit the flake says `Refs #N` for that issue in its description, never `Closes`.

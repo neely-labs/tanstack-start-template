@@ -5,7 +5,7 @@ Work for this repository lives in GitHub Issues. Use the `gh` CLI. Issues own or
 ## Pick up work
 
 1. Work on the issue the person names, or on other specific work they name, such as a work map.
-2. When they name nothing, first list open `awaiting-qualification` issues and handle each due check in them as [awaiting qualification](#awaiting-qualification) says, leaving checks that are not yet due. Then take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it.
+2. When they name nothing, first list open `awaiting-qualification` issues and handle each due check in them as [qualification](../qualification.md#run-the-checks) says, leaving checks that are not yet due. Then take the first open issue labelled `ready-for-agent` with no assignee and no open blocker, in the order its work map lists, or oldest first when no map orders it.
 3. An issue without acceptance criteria is not ready, even a named one: ask for them, or move it to `needs-triage` and pick another.
 4. Check blockers before starting, including on a named issue. `gh issue view <n> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state == "OPEN")] | length'` must print `0`, and no `Waits for` or `Blocked by` line in the issue body or in its entry on the work map may name an open issue.
 5. Claim it with `gh issue edit <n> --add-assignee @me` before editing code.
@@ -30,17 +30,6 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 - Write one keyword per issue, only in the PR description. Keep `Closes`, `Refs`, and other issue keywords out of commit messages: a squash merge can carry them onto the default branch and close an issue early.
 - Refer to a work map as `Part of #N`, which is not a closing keyword.
 - Record status in the issue with labels, comments, and checkboxes, never with a commit.
-
-## Awaiting qualification
-
-An `awaiting-qualification` issue is already delivered. Do not reimplement it. Its Current acceptance names each remaining check, who runs it, and when it is due.
-
-- If a check is due and its runner is you or a role you fill, such as an agent, run it, tick its box, and comment with the evidence.
-- If a check is due but you cannot run it, because its runner is the owner or someone else, or it needs access or approval you do not have, tell the person which check is due and why you cannot run it.
-- If a check fails, comment with the evidence, open a `bug` issue for the failure that says `Introduced by: #N`, and keep this one open.
-- When every box is ticked, close the issue with a comment that links the evidence.
-- If it has no Current acceptance, ask the owner which checks remain.
-- Otherwise leave it alone and pick other work.
 
 ## Work maps
 

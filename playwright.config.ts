@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   reporter: "list",
   // No retries, in CI either: a retry reports a flaky test as a clean pass.
-  // docs/development.md#flaky-tests says how to track one instead.
+  // docs/debugging.md#flaky-tests says how to track one instead.
   retries: 0,
   testDir: "./tests/e2e",
   use: {
