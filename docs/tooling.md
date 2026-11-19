@@ -1,6 +1,6 @@
 # Tooling
 
-Use this guide when a commit or push hook runs, when `pnpm install` asks to approve skills, when you update a committed skill, when you create or rename the issue labels, or when a Qualification run fails. For the checks every change needs, see [the development guide](development.md).
+Use this guide when a commit or push hook runs, when `pnpm install` asks to approve skills, when you update a committed skill, when you create or rename the issue labels, or when a Qualification or Closed issue labels run fails. For the checks every change needs, see [the development guide](development.md).
 
 ## Formatting and hooks
 
@@ -45,7 +45,7 @@ gh label create flaky --repo "$repo" --force --color D93F0B --description "A tes
 gh label list --repo "$repo" --limit 100
 ```
 
-`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values. A renamed state label also changes `STATE_LABELS` in `scripts/apply-qualification.ts`, which a test keeps equal to these commands.
+`--force` updates a label that already exists instead of failing, so the commands are safe to repeat. It also resets that label's color and description to these values. A renamed state label also changes `STATE_LABELS` in `scripts/state-labels.ts`, which `scripts/state-labels.test.ts` keeps equal to these commands.
 
 ## Qualification workflow
 
@@ -57,3 +57,9 @@ When a pull request merges, `.github/workflows/qualification.yml` moves each iss
 - When the `awaiting-qualification` label is missing, it writes the Current acceptance and clears the assignees, leaves the labels, and fails. Create the labels as above.
 
 Re-run the job once a transient or setup cause, such as a missing label, is fixed: a re-run never changes an issue it already moved and never repeats a comment. A wrong declaration cannot be fixed by editing the description, so move that issue by hand: append the Current acceptance that [qualification](qualification.md#when-to-use-it) shows, swap its state label for `awaiting-qualification`, and clear its assignees.
+
+## Closed issue labels
+
+When an issue closes, for any reason, `.github/workflows/closed-issue-labels.yml` removes its state labels except `wontfix` and keeps every other label; `scripts/clear-closed-labels.ts` says how. An issue reopened before the run keeps its labels. The run shares the Qualification workflow's concurrency group, so it never reads an issue while a merge is moving it.
+
+GitHub starts no workflow for a close made with a workflow's own `GITHUB_TOKEN`, such as a `Closes #N` in a pull request that a workflow merged with that token, so such an issue keeps its labels. A failed run leaves them too. Re-run the job, or run the script with `REPO` and `NUMBER` set, as its header shows; a re-run never fails over a label already gone.

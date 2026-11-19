@@ -20,23 +20,14 @@
 // concurrency group keeps its own runs from being that write. Run:
 // `node scripts/apply-qualification.ts <body-file>` with REPO (owner/name) and
 // NUMBER (the pull request) set.
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
+import { ApiError, api } from "./gh-api.ts";
 import { anyHeadingOf, headingTexts, lines, split } from "./markdown-lines.ts";
 import type { MarkdownLine } from "./markdown-lines.ts";
 import type { Declaration } from "./qualification.ts";
+import { STATE_LABELS } from "./state-labels.ts";
 import { TEMPLATE_PATH, readQualification } from "./verify-pr-description.ts";
-
-/** The labels of which an open issue carries exactly one: docs/agents/triage-labels.md. */
-export const STATE_LABELS = [
-  "needs-triage",
-  "needs-info",
-  "ready-for-agent",
-  "ready-for-human",
-  "awaiting-qualification",
-  "wontfix",
-] as const;
 
 export const TARGET_LABEL = "awaiting-qualification";
 
@@ -344,59 +335,6 @@ export function readBackProblems(
   }
 
   return problems;
-}
-
-class ApiError extends Error {
-  override readonly name = "ApiError";
-  readonly status: number | undefined;
-
-  constructor(message: string, status: number | undefined) {
-    super(message);
-    this.status = status;
-  }
-}
-
-/** Runs `gh api` and returns its output; a failed request throws an ApiError with its HTTP status. */
-function api(
-  endpoint: string,
-  options: {
-    method?: string;
-    input?: Update | { body: string };
-    paginate?: boolean;
-  } = {}
-) {
-  const args = ["api", endpoint];
-
-  if (options.method !== undefined) {
-    args.push("--method", options.method);
-  }
-
-  if (options.input !== undefined) {
-    args.push("--input", "-");
-  }
-
-  if (options.paginate === true) {
-    args.push("--paginate", "--slurp");
-  }
-
-  try {
-    return execFileSync("gh", args, {
-      encoding: "utf-8",
-      input: options.input === undefined ? "" : JSON.stringify(options.input),
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } catch (error) {
-    const stderr =
-      error instanceof Error && "stderr" in error
-        ? String(error.stderr).trim()
-        : String(error);
-
-    const status = /\(HTTP (?<code>\d{3})\)/u.exec(stderr)?.groups?.code;
-    throw new ApiError(
-      `${options.method ?? "GET"} ${endpoint} failed: ${stderr}`,
-      status === undefined ? undefined : Number(status)
-    );
-  }
 }
 
 /** Each `key` field, as text, of the objects in a parsed JSON list. */

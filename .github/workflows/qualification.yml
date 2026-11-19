@@ -13,10 +13,13 @@ on:
     types: [closed]
 
 # One run at a time across every pull request, so two merges never write the
-# same issue at once. `queue: max` keeps up to 100 runs waiting in order; the
-# default keeps one and cancels older pending runs. None cancels a running one.
+# same issue at once. closed-issue-labels.yml shares the group, so a close never
+# reads an issue while a merge is moving it; the name stays the one
+# `${{ github.workflow }}` gave, so a re-run of an older run joins it too. `queue: max` keeps up to 100 runs
+# waiting in order; the default keeps one and cancels older pending runs. None
+# cancels a running one.
 concurrency:
-  group: ${{ github.workflow }}
+  group: Qualification
   queue: max
   cancel-in-progress: false
 

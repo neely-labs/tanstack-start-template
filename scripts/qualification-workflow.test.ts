@@ -11,7 +11,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { z } from "zod";
 
-import { STATE_LABELS } from "./apply-qualification.ts";
+import { STATE_LABELS } from "./state-labels.ts";
 
 const root = path.join(import.meta.dirname, "..");
 const workflowPath = path.join(root, ".github/workflows/qualification.yml");
@@ -87,8 +87,8 @@ describe("the qualification workflow's shape", () => {
 
   it("runs one at a time across pull requests, queueing the rest instead of cancelling any", () => {
     const { concurrency } = workflow();
-    // One group for every run: nothing per pull request in its name.
-    expect(concurrency.group).not.toMatch(/pull_request|github\.ref/u);
+    // One group for every run, named as it was when it was `${{ github.workflow }}`.
+    expect(concurrency.group).toBe("Qualification");
     expect(concurrency.queue).toBe("max");
     expect(concurrency["cancel-in-progress"]).toBeFalsy();
   });

@@ -20,7 +20,8 @@ Each row names the files that own an area and the focused check that proves a ch
 | Comments listed for the review's comment check | `scripts/list-comments.ts`, the `LIST_COMMENTS` switch in `oxlint.config.ts` | `pnpm test scripts/list-comments.test.ts` |
 | Which changes CI treats as documentation-only | The `scope` step in `.github/workflows/ci.yml` | `pnpm test scripts/ci-docs-scope.test.ts` |
 | Pull request description sections | `.github/pull_request_template.md`, `scripts/verify-pr-description.ts`, `scripts/qualification.ts`, `scripts/markdown-lines.ts`, `.github/workflows/pr-description.yml` | `pnpm test scripts/verify-pr-description.test.ts` |
-| Moving an issue on merge | `scripts/apply-qualification.ts`, `.github/workflows/qualification.yml` | `pnpm test scripts/apply-qualification.test.ts scripts/qualification-workflow.test.ts` |
+| Moving an issue on merge | `scripts/apply-qualification.ts`, `scripts/state-labels.ts`, `scripts/gh-api.ts`, `.github/workflows/qualification.yml` | `pnpm test scripts/apply-qualification.test.ts scripts/qualification-workflow.test.ts scripts/state-labels.test.ts` |
+| Labels removed when an issue closes | `scripts/clear-closed-labels.ts`, `scripts/state-labels.ts`, `scripts/gh-api.ts`, `.github/workflows/closed-issue-labels.yml` | `pnpm test scripts/clear-closed-labels.test.ts scripts/closed-issue-labels-workflow.test.ts scripts/state-labels.test.ts` |
 
 A row holds only pointers: owner paths, a guide section, and the check command. Explanation of how an area works belongs in the owning module's header comment, next to the code. Add a row when the app gains its own module, and remove rows for example files the project deletes.
 
