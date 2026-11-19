@@ -354,13 +354,14 @@ describe("the closed issue labels workflow's step", () => {
 
   it("fails and names what it removed when the issue reopens during the run", () => {
     const state = closedIssue(["needs-triage", "ready-for-agent"], {
+      removedFirst: "needs-triage",
       reopenOnDelete: true,
     });
 
     const run = runClear(state);
     expect(run.status).toBe(1);
     expect(run.stdout).toContain(
-      "#21 reopened during the run, after it removed `needs-triage`, `ready-for-agent`"
+      "#21 reopened during the run, which removed `ready-for-agent`;"
     );
   });
 

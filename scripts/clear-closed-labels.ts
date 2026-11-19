@@ -90,11 +90,14 @@ export function clear(repo: string, number: number) {
     } satisfies Result;
   }
 
+  const removed: string[] = [];
+
   for (const label of labels) {
     try {
       api(`${endpoint}/labels/${encodeURIComponent(label)}`, {
         method: "DELETE",
       });
+      removed.push(label);
     } catch (error) {
       // Not Found: someone removed the label first.
       if (!(error instanceof ApiError) || error.status !== 404) {
@@ -108,7 +111,7 @@ export function clear(repo: string, number: number) {
   if (after.state === "open") {
     return {
       failed: true,
-      message: `#${number} reopened during the run, after it removed ${listed(labels)}; check that it has the state label it needs.`,
+      message: `#${number} reopened during the run, which removed ${removed.length === 0 ? "nothing" : listed(removed)}; check that it has the state label it needs.`,
     } satisfies Result;
   }
 
