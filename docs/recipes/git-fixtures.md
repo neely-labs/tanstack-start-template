@@ -19,18 +19,19 @@ const local = new Set(
 );
 
 /** An environment for Git fixtures under `base`, a fresh temporary directory. */
-export const fixtureEnv = (base: string): NodeJS.ProcessEnv => ({
-  ...Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !local.has(key))
-  ),
-  GIT_AUTHOR_EMAIL: "test@example.com",
-  GIT_AUTHOR_NAME: "test",
-  GIT_CEILING_DIRECTORIES: base,
-  GIT_COMMITTER_EMAIL: "test@example.com",
-  GIT_COMMITTER_NAME: "test",
-  GIT_CONFIG_GLOBAL: os.devNull,
-  GIT_CONFIG_NOSYSTEM: "1",
-});
+export const fixtureEnv = (base: string) =>
+  ({
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !local.has(key))
+    ),
+    GIT_AUTHOR_EMAIL: "test@example.com",
+    GIT_AUTHOR_NAME: "test",
+    GIT_CEILING_DIRECTORIES: base,
+    GIT_COMMITTER_EMAIL: "test@example.com",
+    GIT_COMMITTER_NAME: "test",
+    GIT_CONFIG_GLOBAL: os.devNull,
+    GIT_CONFIG_NOSYSTEM: "1",
+  }) satisfies NodeJS.ProcessEnv;
 ```
 
 - The template's own Git tests import this helper from `scripts/git.test-utils.ts`.

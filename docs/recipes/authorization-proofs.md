@@ -13,9 +13,9 @@
 - No file outside `proofs/` may assert a value to a proof type.
 - No type assertion except `as const` outside `proofs/` and `lib/ids.ts`.
 
-The last rule replaces anti-slop's `SAFETY:` comment rule everywhere else: an assertion with a reason still fails. Without the last rule, anyone could forge a proof with `as`. The paths are fixed, so put the folders at `src/proofs/` and `src/lib/ids.ts`.
+The last rule replaces anti-slop's `SAFETY:` comment rule everywhere else: an assertion with a reason still fails. Without the last rule, anyone could forge a proof with `as`. The preset matches any `proofs/` folder and any `lib/ids.ts`; use `src/proofs/` and `src/lib/ids.ts`.
 
-**Branded ids in `src/lib/ids.ts`.** Parse each id at the boundary into its own type, such as `export const UserId = z.string().brand<"UserId">()`, so a project id never passes as a user id.
+**Branded ids in `src/lib/ids.ts`.** Parse each id at the boundary into its own type, such as `export const UserId = z.string().brand<"UserId">()` with `export type UserId = z.infer<typeof UserId>`, so a project id never passes as a user id.
 
 **One module per proof in `src/proofs/`.** Keep the prover private. Give it a different name from the exported interface, because core's `no-redeclare` rejects the shared name that GDP-ts's README uses:
 
