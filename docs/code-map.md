@@ -17,6 +17,7 @@ Each row names the files that own an area and the focused check that proves a ch
 | Per-checkout ports and server ownership | `scripts/local.ts` | `pnpm test scripts/local.test.ts` |
 | Always-read docs and their size limits | `BUDGET` in `scripts/verify-doc-budget.ts` | `pnpm docs:budget`; `pnpm test scripts/verify-doc-budget.test.ts` for the script itself |
 | Add or change a form | [Forms before hydration](architecture.md#forms-before-hydration) and [the forms recipe](recipes/forms.md) | `pnpm build && pnpm test:e2e` with the recipe's test copied into `test/e2e/` |
+| Comments listed for the review's comment check | `scripts/list-comments.ts`, the `LIST_COMMENTS` switch in `oxlint.config.ts` | `pnpm test scripts/list-comments.test.ts` |
 | Which changes CI treats as documentation-only | The `scope` step in `.github/workflows/ci.yml` | `pnpm test scripts/ci-docs-scope.test.ts` |
 | Pull request description sections | `.github/pull_request_template.md`, `scripts/verify-pr-description.ts`, `scripts/qualification.ts`, `scripts/markdown-lines.ts`, `.github/workflows/pr-description.yml` | `pnpm test scripts/verify-pr-description.test.ts` |
 | Moving an issue on merge | `scripts/apply-qualification.ts`, `.github/workflows/qualification.yml` | `pnpm test scripts/apply-qualification.test.ts scripts/qualification-workflow.test.ts` |

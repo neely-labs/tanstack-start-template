@@ -85,9 +85,11 @@ export default defineConfig({
     },
   ],
   rules: {
-    // Agents lean on comments to explain away shortcuts, but this rule also
-    // bans the SAFETY comments anti-slop requires on type assertions.
-    "landmines-style/no-comments": "off",
+    // It matches comment syntax, not the shortcut a comment excuses, so it
+    // stays off as a gate. `pnpm comments:changed` sets LIST_COMMENTS to list
+    // a branch's comments for the review's comment check.
+    "landmines-style/no-comments":
+      process.env.LIST_COMMENTS === "1" ? "warn" : "off",
     "func-style": "off",
     "react/function-component-definition": "off",
     // Its autofix adds `async` to any function that returns a promise. The
