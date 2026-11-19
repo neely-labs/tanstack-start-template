@@ -105,7 +105,7 @@ export function clear(repo: string, number: number) {
   if (before.state === "open") {
     return {
       failed: false,
-      message: `#${number} is open again, so its labels stay.`,
+      message: `#${number} is open, so its labels stay.`,
     } satisfies Result;
   }
 

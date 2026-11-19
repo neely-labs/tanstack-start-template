@@ -311,7 +311,7 @@ describe("the closed issue labels workflow's step", () => {
     state.issue.state = "open";
     const run = runClear(state);
     expect(run.status).toBe(0);
-    expect(run.stdout).toContain("#21 is open again, so its labels stay.");
+    expect(run.stdout).toContain("#21 is open, so its labels stay.");
     expect(labelsOf(state)).toStrictEqual(["ready-for-agent"]);
     expect(state.calls).toStrictEqual(["GET repos/owner/repo/issues/21"]);
   });
