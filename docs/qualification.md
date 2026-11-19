@@ -23,7 +23,7 @@ An `awaiting-qualification` issue is already delivered. Do not reimplement it. I
 
 - If a check is due and its runner is you or a role you fill, such as an agent, run it, tick its box, and comment with the evidence.
 - If a check is due but you cannot run it, because its runner is the owner or someone else, or it needs access or approval you do not have, tell the person which check is due and why you cannot run it.
-- If a check fails, comment with the evidence, open a `bug` issue for the failure that says `Introduced by: #N`, and keep this one open.
-- When every box is ticked, close the issue with a comment that links the evidence.
+- If a check fails, comment with the evidence, open a `bug` issue for the failure that says `Introduced by: #N`, and keep this one open. It keeps `awaiting-qualification` while it stays open.
+- When every box is ticked, close the issue with a comment that links the evidence. Closing removes `awaiting-qualification`, as [triage labels](agents/triage-labels.md#triage-labels) says.
 - If it has no Current acceptance, ask the owner which checks remain.
 - Otherwise leave it alone and pick other work.

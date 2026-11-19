@@ -11,7 +11,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { z } from "zod";
 
-import { STATE_LABELS } from "./apply-qualification.ts";
+import { STATE_LABELS } from "./state-labels.ts";
 
 const root = path.join(import.meta.dirname, "..");
 const workflowPath = path.join(root, ".github/workflows/qualification.yml");

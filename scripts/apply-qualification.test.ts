@@ -3,13 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  STATE_LABELS,
-  TARGET_LABEL,
-  plan,
-  readBackProblems,
-} from "./apply-qualification.ts";
+import { TARGET_LABEL, plan, readBackProblems } from "./apply-qualification.ts";
 import type { Issue, Situation } from "./apply-qualification.ts";
+import { STATE_LABELS } from "./state-labels.ts";
 
 const byName = (left: string, right: string) => left.localeCompare(right);
 

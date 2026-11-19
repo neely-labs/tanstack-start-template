@@ -26,17 +26,8 @@ import fs from "node:fs";
 import { anyHeadingOf, headingTexts, lines, split } from "./markdown-lines.ts";
 import type { MarkdownLine } from "./markdown-lines.ts";
 import type { Declaration } from "./qualification.ts";
+import { STATE_LABELS } from "./state-labels.ts";
 import { TEMPLATE_PATH, readQualification } from "./verify-pr-description.ts";
-
-/** The labels of which an open issue carries exactly one: docs/agents/triage-labels.md. */
-export const STATE_LABELS = [
-  "needs-triage",
-  "needs-info",
-  "ready-for-agent",
-  "ready-for-human",
-  "awaiting-qualification",
-  "wontfix",
-] as const;
 
 export const TARGET_LABEL = "awaiting-qualification";
 

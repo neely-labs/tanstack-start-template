@@ -1,0 +1,48 @@
+name: Closed issue labels
+
+# When an issue closes, for any reason, removes its state labels except
+# wontfix (scripts/clear-closed-labels.ts), since state labels describe open
+# issues. The issue number is the only event value it reads, passed through the
+# environment; no issue text reaches a script.
+# scripts/closed-issue-labels-workflow.test.ts pins this shape and runs the step.
+on:
+  issues:
+    types: [closed]
+
+# Shared with qualification.yml, so this never reads an issue while a merge is
+# moving it to awaiting-qualification. Runs queue in order; none is cancelled.
+concurrency:
+  group: issue-state-labels
+  queue: max
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Only Node is needed: the script uses no dependencies.
+      - name: Set up Node.js
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Remove the state labels
+        id: clear
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: node scripts/clear-closed-labels.ts

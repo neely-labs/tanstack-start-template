@@ -1,6 +1,6 @@
 # Triage labels
 
-An open issue carries exactly one state label. Change it by removing the old label in the same edit that adds the new one. Labels are repository settings that a template does not copy, so a new repository creates them once with the commands in [tooling](../tooling.md#create-the-labels).
+An open issue carries exactly one state label. Change it by removing the old label in the same edit that adds the new one. State labels describe open issues: when an issue closes, for any reason, [a workflow](../tooling.md#closed-issue-labels) removes them all except `wontfix`, so close an issue without editing its labels. Labels are repository settings that a template does not copy, so a new repository creates them once with the commands in [tooling](../tooling.md#create-the-labels).
 
 ## State labels
 
