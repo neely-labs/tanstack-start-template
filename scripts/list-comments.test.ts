@@ -37,21 +37,21 @@ function repositoryOnFeatureBranch(files: Record<string, string>) {
 }
 
 describe(changedRanges, () => {
-  it("reads new-side ranges and skips deletions and removed files", () => {
-    const diff = [
+  it("reads new-side ranges per section and skips pure deletions", () => {
+    const patch = [
       "diff --git a/a.ts b/a.ts",
       "--- a/a.ts",
       "+++ b/a.ts",
       "@@ -1,0 +2,3 @@",
+      "+++ an added line that looks like a header",
       "@@ -9 +12 @@",
       "@@ -20,2 +22,0 @@",
-      "diff --git a/gone.ts b/gone.ts",
-      "--- a/gone.ts",
-      "+++ /dev/null",
-      "@@ -1,4 +0,0 @@",
+      'diff --git "a/caf\\303\\251 b.ts" "b/caf\\303\\251 b.ts"',
+      '+++ "b/caf\\303\\251 b.ts"',
+      "@@ -0,0 +1 @@",
     ].join("\n");
 
-    expect([...changedRanges(diff)]).toStrictEqual([
+    expect([...changedRanges(patch, ["a.ts", "café b.ts"])]).toStrictEqual([
       [
         "a.ts",
         [
@@ -59,6 +59,7 @@ describe(changedRanges, () => {
           { end: 12, start: 12 },
         ],
       ],
+      ["café b.ts", [{ end: 1, start: 1 }]],
     ]);
   });
 });
@@ -84,6 +85,53 @@ describe(listComments, () => {
       { file: "src/a.ts", line: 4, text: "// Adds one to a." },
       { file: "src/c.ts", line: 1, text: "/**\n * Narrates c.\n */" },
     ]);
+  });
+
+  it("lists every comment kind, joins // runs, and keeps text after non-ASCII", () => {
+    const { dir, run } = repositoryOnFeatureBranch({
+      "src/accents.ts": "export const a = 1;\n",
+    });
+
+    write(dir, {
+      "src/accents.ts":
+        'export const a = "ééé日本語";\n// One thought\n// over two lines.\nexport const b = 2;\n',
+      "src/café b.ts":
+        "/** Exported doc. */\nexport const c = 3;\n// WARNING: a footgun.\nexport const d = 4;\n",
+    });
+    run("add", ".");
+    run("commit", "-q", "-m", "comments");
+
+    expect(listComments({ cwd: dir, env })).toStrictEqual([
+      {
+        file: "src/accents.ts",
+        line: 2,
+        text: "// One thought\n// over two lines.",
+      },
+      { file: "src/café b.ts", line: 1, text: "/** Exported doc. */" },
+      { file: "src/café b.ts", line: 3, text: "// WARNING: a footgun." },
+    ]);
+  });
+
+  it("prints the comments and exits 0 when run as a script", () => {
+    const { dir, run } = repositoryOnFeatureBranch({
+      "src/a.ts": "export const a = 1;\n",
+    });
+
+    const script = (...args: string[]) =>
+      execFileSync(
+        process.execPath,
+        [path.join(import.meta.dirname, "list-comments.ts"), ...args],
+        { cwd: dir, encoding: "utf-8", env }
+      );
+
+    expect(script()).toBe("No comments on changed lines.\n");
+
+    write(dir, { "src/a.ts": "// Narrates a.\nexport const a = 1;\n" });
+    run("commit", "-q", "-am", "comment");
+
+    expect(script()).toMatch(
+      /^src\/a\.ts:1\n {2}\/\/ Narrates a\.\n1 comment/u
+    );
   });
 
   it("lists nothing when the changed lines hold no comment", () => {

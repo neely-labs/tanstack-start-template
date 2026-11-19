@@ -89,7 +89,9 @@ export default defineConfig({
     // stays off as a gate. `pnpm comments:changed` sets LIST_COMMENTS to list
     // a branch's comments for the review's comment check.
     "landmines-style/no-comments":
-      process.env.LIST_COMMENTS === "1" ? "warn" : "off",
+      process.env.LIST_COMMENTS === "1"
+        ? ["warn", { allow: [], publicApi: [] }]
+        : "off",
     "func-style": "off",
     "react/function-component-definition": "off",
     // Its autofix adds `async` to any function that returns a promise. The
