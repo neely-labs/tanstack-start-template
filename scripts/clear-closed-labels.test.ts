@@ -37,14 +37,29 @@ describe(decodeIssueLabels, () => {
           state: "closed",
         })
       )
-    ).toStrictEqual({ labels: ["bug", "needs-triage"], state: "closed" });
+    ).toStrictEqual({
+      isPullRequest: false,
+      labels: ["bug", "needs-triage"],
+      state: "closed",
+    });
   });
 
   it("treats any state but closed as open", () => {
     expect(decodeIssueLabels('{"state":"reopened"}')).toStrictEqual({
+      isPullRequest: false,
       labels: [],
       state: "open",
     });
+  });
+
+  it("marks a pull request, which the issues endpoint also returns", () => {
+    expect(
+      decodeIssueLabels('{"state":"closed","pull_request":{"url":"u"}}')
+        .isPullRequest
+    ).toBeTruthy();
+    expect(
+      decodeIssueLabels('{"state":"closed","pull_request":null}').isPullRequest
+    ).toBeFalsy();
   });
 
   it("throws when the response is not an issue", () => {

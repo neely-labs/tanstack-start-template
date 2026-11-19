@@ -87,8 +87,8 @@ describe("the qualification workflow's shape", () => {
 
   it("runs one at a time across pull requests, queueing the rest instead of cancelling any", () => {
     const { concurrency } = workflow();
-    // One group for every run: nothing per pull request in its name.
-    expect(concurrency.group).not.toMatch(/pull_request|github\.ref/u);
+    // One group for every run, named as it was when it was `${{ github.workflow }}`.
+    expect(concurrency.group).toBe("Qualification");
     expect(concurrency.queue).toBe("max");
     expect(concurrency["cancel-in-progress"]).toBeFalsy();
   });

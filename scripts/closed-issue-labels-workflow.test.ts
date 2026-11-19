@@ -73,7 +73,7 @@ describe("the closed issue labels workflow's shape", () => {
     expect(onlyJob().permissions).toBeUndefined();
   });
 
-  it("queues in the qualification workflow's group instead of cancelling any run", () => {
+  it("queues in the qualification workflow's group, cancelling no run in progress", () => {
     const { concurrency } = workflow();
     expect(concurrency.group).toBe(
       workflow("qualification.yml").concurrency.group
@@ -157,6 +157,7 @@ if (endpoint === "repos/owner/repo/issues/" + issue.number && method === "GET") 
   const name = decodeURIComponent(match[2]);
   if (!issue.labels.some((label) => label.name === name)) { save(); fail("gh: Label does not exist (HTTP 404)", 1); }
   if (!state.ignoreDelete) issue.labels = issue.labels.filter((label) => label.name !== name);
+  if (state.reopenOnDelete) { issue.state = "open"; issue.state_reason = "reopened"; }
   save();
   process.stdout.write(JSON.stringify(issue.labels) + "\n");
 } else fail("fake gh: no route for " + method + " " + endpoint, 2);
@@ -175,9 +176,11 @@ interface FakeState {
     state: "open" | "closed";
     state_reason: "completed" | "not_planned" | "reopened" | null;
     labels: { name: string }[];
+    pull_request?: { url: string };
   };
   calls: string[];
   removedFirst?: string;
+  reopenOnDelete?: boolean;
   ignoreDelete?: boolean;
   serverError?: boolean;
 }
@@ -335,6 +338,30 @@ describe("the closed issue labels workflow's step", () => {
     expect(rerun.status).toBe(0);
     expect(rerun.stdout).toContain("#21 has no label to remove.");
     expect(state.calls).toHaveLength(calls + 1);
+  });
+
+  it("refuses a pull request number without removing anything", () => {
+    const state = closedIssue(["ready-for-agent"]);
+    state.issue.pull_request = { url: "https://example.com/21" };
+    const run = runClear(state);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain(
+      "#21 is a pull request, so nothing was removed."
+    );
+    expect(labelsOf(state)).toStrictEqual(["ready-for-agent"]);
+    expect(state.calls).toStrictEqual(["GET repos/owner/repo/issues/21"]);
+  });
+
+  it("fails and names what it removed when the issue reopens during the run", () => {
+    const state = closedIssue(["needs-triage", "ready-for-agent"], {
+      reopenOnDelete: true,
+    });
+
+    const run = runClear(state);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain(
+      "#21 reopened during the run, after it removed `needs-triage`, `ready-for-agent`"
+    );
   });
 
   it("fails when a label reads back still on the issue", () => {

@@ -10,9 +10,11 @@ on:
     types: [closed]
 
 # Shared with qualification.yml, so this never reads an issue while a merge is
-# moving it to awaiting-qualification. Runs queue in order; none is cancelled.
+# moving it to awaiting-qualification. The group keeps Qualification's earlier
+# name, so a re-run from before the change still queues with this. Up to 100
+# runs wait in order; none in progress is cancelled.
 concurrency:
-  group: issue-state-labels
+  group: Qualification
   queue: max
   cancel-in-progress: false
 

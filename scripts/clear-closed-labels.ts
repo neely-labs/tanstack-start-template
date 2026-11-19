@@ -5,8 +5,9 @@
 // It reads the issue live rather than trusting the close event, so an issue
 // reopened before the run keeps its labels. It then removes each label by name,
 // which leaves labels anyone adds meanwhile untouched. An issue reopened
-// between that read and a removal still loses the label. A re-run is safe: a
-// label already gone counts as removed. Run:
+// during the removals still loses them, and the run then fails so someone
+// checks its state. A pull request number is refused. A re-run is safe: a label
+// already gone counts as removed. Run:
 // `node scripts/clear-closed-labels.ts` with REPO (owner/name) and NUMBER (the
 // issue) set.
 import fs from "node:fs";
@@ -27,6 +28,7 @@ export const clearedOnClose = (labels: readonly string[]) =>
 export interface IssueLabels {
   state: "open" | "closed";
   labels: string[];
+  isPullRequest: boolean;
 }
 
 /** The issues endpoint's JSON as IssueLabels; throws when it has no state. */
@@ -45,6 +47,8 @@ export function decodeIssueLabels(json: string) {
   );
 
   return {
+    isPullRequest:
+      "pull_request" in data && (data.pull_request ?? null) !== null,
     labels,
     state: data.state === "closed" ? "closed" : "open",
   } satisfies IssueLabels;
@@ -62,6 +66,13 @@ const listed = (names: string[]) =>
 export function clear(repo: string, number: number) {
   const endpoint = `repos/${repo}/issues/${number}`;
   const before = decodeIssueLabels(api(endpoint));
+
+  if (before.isPullRequest) {
+    return {
+      failed: true,
+      message: `#${number} is a pull request, so nothing was removed.`,
+    } satisfies Result;
+  }
 
   if (before.state === "open") {
     return {
@@ -93,7 +104,15 @@ export function clear(repo: string, number: number) {
   }
 
   const after = decodeIssueLabels(api(endpoint));
-  const left = after.state === "closed" ? clearedOnClose(after.labels) : [];
+
+  if (after.state === "open") {
+    return {
+      failed: true,
+      message: `#${number} reopened during the run, after it removed ${listed(labels)}; check that it has the state label it needs.`,
+    } satisfies Result;
+  }
+
+  const left = clearedOnClose(after.labels);
 
   return (
     left.length === 0
