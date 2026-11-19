@@ -173,6 +173,7 @@ interface FakeState {
   issue: {
     number: number;
     state: "open" | "closed";
+    state_reason: "completed" | "not_planned" | "reopened" | null;
     labels: { name: string }[];
   };
   calls: string[];
@@ -188,6 +189,7 @@ function closedIssue(labels: string[], overrides: Partial<FakeState> = {}) {
       labels: labels.map((name) => ({ name })),
       number: 21,
       state: "closed",
+      state_reason: "completed",
     },
     ...overrides,
   };
@@ -271,31 +273,35 @@ describe("the closed issue labels workflow's step", () => {
     fs.rmSync(temporary, { force: true, recursive: true });
   });
 
-  it("removes each state label but wontfix and keeps every other label", () => {
-    const state = closedIssue([
-      "bug",
-      "awaiting-qualification",
-      "ready-for-agent",
-      "wontfix",
-      "flaky",
-    ]);
+  it.each(["completed", "not_planned"] as const)(
+    "removes each state label but wontfix and keeps every other label, closed as %s",
+    (reason) => {
+      const state = closedIssue([
+        "bug",
+        "awaiting-qualification",
+        "ready-for-agent",
+        "wontfix",
+        "flaky",
+      ]);
 
-    const run = runClear(state);
-    expect(run.stderr).not.toMatch(/fake gh: /u);
-    expect({
-      labels: labelsOf(state),
-      status: run.status,
-      stdout: run.stdout.trim(),
-      summary: run.summary.trim(),
-    }).toStrictEqual({
-      labels: ["bug", "wontfix", "flaky"],
-      status: 0,
-      stdout:
-        "Closed issue labels: #21: removed `awaiting-qualification`, `ready-for-agent`.",
-      summary:
-        "Closed issue labels: #21: removed `awaiting-qualification`, `ready-for-agent`.",
-    });
-  });
+      state.issue.state_reason = reason;
+      const run = runClear(state);
+      expect(run.stderr).not.toMatch(/fake gh: /u);
+      expect({
+        labels: labelsOf(state),
+        status: run.status,
+        stdout: run.stdout.trim(),
+        summary: run.summary.trim(),
+      }).toStrictEqual({
+        labels: ["bug", "wontfix", "flaky"],
+        status: 0,
+        stdout:
+          "Closed issue labels: #21: removed `awaiting-qualification`, `ready-for-agent`.",
+        summary:
+          "Closed issue labels: #21: removed `awaiting-qualification`, `ready-for-agent`.",
+      });
+    }
+  );
 
   it("changes nothing on an issue with no state label but wontfix", () => {
     const state = closedIssue(["wontfix", "enhancement"]);
@@ -309,6 +315,7 @@ describe("the closed issue labels workflow's step", () => {
   it("leaves an issue reopened before the run alone", () => {
     const state = closedIssue(["ready-for-agent"]);
     state.issue.state = "open";
+    state.issue.state_reason = "reopened";
     const run = runClear(state);
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("#21 is open, so its labels stay.");

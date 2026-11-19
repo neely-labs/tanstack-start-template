@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   KEPT_ON_CLOSE,
   clearedOnClose,
-  decodeIssue,
+  decodeIssueLabels,
 } from "./clear-closed-labels.ts";
 import { STATE_LABELS } from "./state-labels.ts";
 
@@ -27,10 +27,10 @@ describe(clearedOnClose, () => {
   });
 });
 
-describe(decodeIssue, () => {
+describe(decodeIssueLabels, () => {
   it("reads the state and label names", () => {
     expect(
-      decodeIssue(
+      decodeIssueLabels(
         JSON.stringify({
           labels: [{ id: 1, name: "bug" }, { name: "needs-triage" }, {}],
           number: 4,
@@ -41,14 +41,14 @@ describe(decodeIssue, () => {
   });
 
   it("treats any state but closed as open", () => {
-    expect(decodeIssue('{"state":"reopened"}')).toStrictEqual({
+    expect(decodeIssueLabels('{"state":"reopened"}')).toStrictEqual({
       labels: [],
       state: "open",
     });
   });
 
   it("throws when the response is not an issue", () => {
-    expect(() => decodeIssue('{"message":"Not Found"}')).toThrow(
+    expect(() => decodeIssueLabels('{"message":"Not Found"}')).toThrow(
       "returned no issue"
     );
   });

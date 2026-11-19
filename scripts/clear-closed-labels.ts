@@ -1,22 +1,17 @@
-// Removes the state labels from a closed issue, keeping `wontfix`: state labels
-// describe open issues (docs/agents/triage-labels.md). Every other label stays.
-// .github/workflows/closed-issue-labels.yml runs it when an issue closes, for
-// any reason. Every GitHub call goes through `gh api`, which the tests replace
-// with a fake.
+// Removes the state labels from a closed issue, keeping `wontfix`, as
+// docs/agents/triage-labels.md says. Every other label stays.
+// .github/workflows/closed-issue-labels.yml runs it when an issue closes.
 //
 // It reads the issue live rather than trusting the close event, so an issue
 // reopened before the run keeps its labels. It then removes each label by name,
 // which leaves labels anyone adds meanwhile untouched. An issue reopened
-// between that read and a removal still loses the label; whoever reopens an
-// issue sets its state anyway. The workflow shares the qualification
-// workflow's concurrency group, so a merge that moves this issue to
-// awaiting-qualification finishes before this run reads it. A re-run is safe:
-// a label already gone counts as removed. Run:
+// between that read and a removal still loses the label. A re-run is safe: a
+// label already gone counts as removed. Run:
 // `node scripts/clear-closed-labels.ts` with REPO (owner/name) and NUMBER (the
 // issue) set.
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
+import { ApiError, api } from "./gh-api.ts";
 import { STATE_LABELS } from "./state-labels.ts";
 
 /** The one state label a closed issue keeps, because it explains the close. */
@@ -26,18 +21,16 @@ const CLEARED: ReadonlySet<string> = new Set(
   STATE_LABELS.filter((label) => label !== KEPT_ON_CLOSE)
 );
 
-/** The labels in `labels` that closing an issue removes. */
 export const clearedOnClose = (labels: readonly string[]) =>
   labels.filter((label) => CLEARED.has(label));
 
-/** What the script reads from the issues endpoint. */
-export interface ClosedIssue {
+export interface IssueLabels {
   state: "open" | "closed";
   labels: string[];
 }
 
-/** The issues endpoint's JSON as a ClosedIssue; throws when it has no state. */
-export function decodeIssue(json: string) {
+/** The issues endpoint's JSON as IssueLabels; throws when it has no state. */
+export function decodeIssueLabels(json: string) {
   const data: unknown = JSON.parse(json);
 
   if (!(data instanceof Object) || !("state" in data)) {
@@ -54,44 +47,12 @@ export function decodeIssue(json: string) {
   return {
     labels,
     state: data.state === "closed" ? "closed" : "open",
-  } satisfies ClosedIssue;
+  } satisfies IssueLabels;
 }
 
-class ApiError extends Error {
-  override readonly name = "ApiError";
-  readonly status: number | undefined;
-
-  constructor(message: string, status: number | undefined) {
-    super(message);
-    this.status = status;
-  }
-}
-
-/** One line for the log, and whether the run fails. */
 export interface Result {
   failed: boolean;
   message: string;
-}
-
-/** Runs `gh api`; a failed request throws an ApiError with its HTTP status. */
-function api(endpoint: string, method = "GET") {
-  try {
-    return execFileSync("gh", ["api", endpoint, "--method", method], {
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } catch (error) {
-    const stderr =
-      error instanceof Error && "stderr" in error
-        ? String(error.stderr).trim()
-        : String(error);
-
-    const status = /\(HTTP (?<code>\d{3})\)/u.exec(stderr)?.groups?.code;
-    throw new ApiError(
-      `${method} ${endpoint} failed: ${stderr}`,
-      status === undefined ? undefined : Number(status)
-    );
-  }
 }
 
 const listed = (names: string[]) =>
@@ -100,7 +61,7 @@ const listed = (names: string[]) =>
 /** Removes the cleared labels from closed issue `number`, and returns one line for the log. */
 export function clear(repo: string, number: number) {
   const endpoint = `repos/${repo}/issues/${number}`;
-  const before = decodeIssue(api(endpoint));
+  const before = decodeIssueLabels(api(endpoint));
 
   if (before.state === "open") {
     return {
@@ -120,7 +81,9 @@ export function clear(repo: string, number: number) {
 
   for (const label of labels) {
     try {
-      api(`${endpoint}/labels/${encodeURIComponent(label)}`, "DELETE");
+      api(`${endpoint}/labels/${encodeURIComponent(label)}`, {
+        method: "DELETE",
+      });
     } catch (error) {
       // Not Found: someone removed the label first.
       if (!(error instanceof ApiError) || error.status !== 404) {
@@ -129,7 +92,7 @@ export function clear(repo: string, number: number) {
     }
   }
 
-  const after = decodeIssue(api(endpoint));
+  const after = decodeIssueLabels(api(endpoint));
   const left = after.state === "closed" ? clearedOnClose(after.labels) : [];
 
   return (
