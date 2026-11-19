@@ -6,6 +6,7 @@
   "scripts": {
     "build": "vite build",
     "check": "ultracite check --type-aware --type-check",
+    "comments:changed": "node scripts/list-comments.ts",
     "dev": "vite dev --port 3000 --strictPort",
     "dev:local": "node scripts/local.ts dev",
     "docs:budget": "node scripts/verify-doc-budget.ts",

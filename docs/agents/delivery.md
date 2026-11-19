@@ -16,7 +16,18 @@ Classify a change by the behavior it can affect, not its size or file type. When
 - **Agent authority** is what an agent may do without asking, such as merge, delete, spend, publish, or change these rules. A docs-only change that widens it is tier 2.
 - **Examples:** fixing a typo in a guide is tier 0. A calculator that shows amounts but stores and sends nothing is tier 1. Saving a new field with each record is tier 2, even in one line.
 
-A round is one review and the fixes it prompts; at tier 0 the review is the author's own read of the diff. A review bot's finding, checked against the current head, joins the current round. Never wait for an optional bot; none replaces the tier's independent review. A finding is substantive when leaving it would break behavior or mislead a reader; style preferences are not. When the budget runs out before the tier's review is satisfied, stop, even if the last round fixed everything and only a recheck remains. Report the open findings, what each round fixed, and whether they are shrinking, then ask the owner whether to continue, narrow, or split the change. If a change grows into a higher tier, review it at that tier.
+Every tier includes the [comment check](#comment-check). A round is one review and the fixes it prompts; at tier 0 the review is the author's own read of the diff. A review bot's finding, checked against the current head, joins the current round. Never wait for an optional bot; none replaces the tier's independent review. A finding is substantive when leaving it would break behavior or mislead a reader; style preferences are not. When the budget runs out before the tier's review is satisfied, stop, even if the last round fixed everything and only a recheck remains. Report the open findings, what each round fixed, and whether they are shrinking, then ask the owner whether to continue, narrow, or split the change. If a change grows into a higher tier, review it at that tier.
+
+## Comment check
+
+Agents often add comments to explain away a shortcut, such as a timer, polling, a swallowed error, or an unchecked cast. At every tier, the review settles each comment the diff adds or changes; `pnpm comments:changed origin/main` lists them. For each one, choose:
+
+- **Delete** a comment that restates what the code plainly does.
+- **Fix** the code a comment excuses, then delete or rewrite the comment.
+- **Encode** a rule the comment states as a type, test, or lint rule.
+- **Keep** a comment that records an external constraint, a public contract, or a link, or a module's header explanation, as [the code map](../code-map.md#find-the-right-files) says.
+
+A `SAFETY:` comment names the check or test that proves its claim; one that does not fails the check.
 
 ## Flow walk
 

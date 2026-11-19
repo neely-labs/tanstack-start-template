@@ -12,7 +12,7 @@ Ultracite runs the quality tools: Oxlint checks code, and Oxfmt handles formatti
 - **shadcn** keeps classes on the design system's tokens and component variants.
 - **landmines** catches test shortcuts such as test doubles, fixed sleeps, polling, and retries, enforces test file names and placement, and bans annotated return types.
 
-Landmines' `no-comments` rule is off because it would also ban the `SAFETY:` comments that anti-slop requires on type assertions.
+Landmines' `no-comments` rule is off as a gate: it matches comment syntax, not the shortcut a comment excuses. `pnpm comments:changed` turns it on for one run to list a branch's comments for the [comment check](agents/delivery.md#comment-check).
 
 Agent tooling is excluded from application quality gates. `agent-tooling.ts` lists it; `tsconfig.json` and `lefthook.yml` restate that list, which `scripts/agent-tooling.test.ts` checks. Review content, accessibility, architecture, and edge cases by hand as well.
 

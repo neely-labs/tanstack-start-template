@@ -8,6 +8,7 @@ Use this guide for local development and checks. To find the files that own a ch
 pnpm dev        # Start the app on port 3000
 pnpm fix        # Apply lint and formatting fixes
 pnpm check      # Check lint, formatting, and type-aware rules
+pnpm comments:changed [base] # List comments on lines changed since base (default main)
 pnpm docs:budget # Check the size of the docs agents always read
 pnpm typecheck  # Check TypeScript
 pnpm test       # Run unit tests once
