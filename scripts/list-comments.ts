@@ -5,7 +5,8 @@
  * public-API exemption, so only functional directives are left out. A comment
  * is listed when it touches a line changed since the merge base, including
  * uncommitted and untracked files, and consecutive `//` lines are one comment.
- * Findings never fail the run; a bad base or a failed lint does.
+ * Findings never fail the run, and neither do other rules' errors; a bad base,
+ * a file oxlint cannot parse or a lint that does not finish does.
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -18,7 +19,18 @@ import { z } from "zod";
 import { gitEnv } from "./local.ts";
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "..");
-const LINT_EXTENSIONS = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
+
+const LINT_EXTENSIONS = new Set([
+  ".cjs",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".mts",
+  ".ts",
+  ".tsx",
+]);
+
 const RULE = "landmines-style(no-comments)";
 
 interface LineRange {
@@ -35,7 +47,8 @@ export interface FlaggedComment {
 const reportSchema = z.object({
   diagnostics: z.array(
     z.object({
-      code: z.string(),
+      code: z.string().optional(),
+      message: z.string(),
       filename: z.string(),
       labels: z.array(
         z.object({
@@ -102,7 +115,7 @@ function changedLines(root: string, base: string, env: NodeJS.ProcessEnv) {
   );
 
   const ranges = changedRanges(
-    git(root, env, ...diff, "-U0", mergeBase),
+    git(root, env, ...diff, "-U0", "--inter-hunk-context=0", mergeBase),
     files
   );
 
@@ -143,6 +156,10 @@ function lintComments(root: string, files: string[]) {
     throw result.error;
   }
 
+  if (result.signal !== null) {
+    throw new Error(`oxlint stopped on ${result.signal}`);
+  }
+
   let output: unknown;
 
   try {
@@ -152,6 +169,16 @@ function lintComments(root: string, files: string[]) {
   }
 
   const report = reportSchema.parse(output);
+
+  const unparsed = report.diagnostics.find(
+    (diagnostic) => diagnostic.code === undefined
+  );
+
+  if (unparsed) {
+    throw new Error(
+      `oxlint could not parse ${unparsed.filename}: ${unparsed.message}`
+    );
+  }
 
   const comments: FlaggedComment[] = [];
 

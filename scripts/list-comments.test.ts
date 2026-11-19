@@ -79,11 +79,15 @@ describe(listComments, () => {
         "// An older note.\nexport const a = 1;\n\n// Adds one to a.\nexport const b = a + 1;\n",
     });
     run("commit", "-q", "-am", "add b");
-    write(dir, { "src/c.ts": "/**\n * Narrates c.\n */\nconst c = 3;\n" });
+    write(dir, {
+      "src/c.ts": "/**\n * Narrates c.\n */\nconst c = 3;\n",
+      "src/d.cts": "// In a CommonJS module.\nexport const d = 4;\n",
+    });
 
     expect(listComments({ cwd: dir, env })).toStrictEqual([
       { file: "src/a.ts", line: 4, text: "// Adds one to a." },
       { file: "src/c.ts", line: 1, text: "/**\n * Narrates c.\n */" },
+      { file: "src/d.cts", line: 1, text: "// In a CommonJS module." },
     ]);
   });
 
@@ -134,6 +138,19 @@ describe(listComments, () => {
     );
   });
 
+  it("skips an unchanged comment between two edits, whatever Git's hunk settings", () => {
+    const { dir, run } = repositoryOnFeatureBranch({
+      "src/a.ts": "export const a = 1;\n// Between.\nexport const b = 2;\n",
+    });
+
+    run("config", "diff.interHunkContext", "10");
+    write(dir, {
+      "src/a.ts": "export const a = 10;\n// Between.\nexport const b = 20;\n",
+    });
+
+    expect(listComments({ cwd: dir, env })).toStrictEqual([]);
+  });
+
   it("lists nothing when the changed lines hold no comment", () => {
     const { dir, run } = repositoryOnFeatureBranch({
       "src/a.ts": "// An older note.\nexport const a = 1;\n",
@@ -165,6 +182,18 @@ describe(listComments, () => {
         (comment) => comment.text
       )
     ).toStrictEqual(["// Second."]);
+  });
+
+  it("fails on a file oxlint cannot parse", () => {
+    const { dir } = repositoryOnFeatureBranch({
+      "src/a.ts": "export const a = 1;\n",
+    });
+
+    write(dir, { "src/bad.mts": "const = ;\n// Lost.\n" });
+
+    expect(() => listComments({ cwd: dir, env })).toThrow(
+      /could not parse .*bad\.mts/u
+    );
   });
 
   it("fails on a base that does not exist", () => {
