@@ -13,11 +13,13 @@ describe("generated site files", () => {
       '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
     );
     expect(sitemap.source.match(/<loc>/gu)).toHaveLength(publicPaths.length);
+
     for (const routePath of publicPaths) {
       expect(sitemap.source).toContain(
         `<loc>${siteConfig.origin}${routePath}</loc>`
       );
     }
+
     expect(sitemap.source).not.toContain("/api/health");
   });
 

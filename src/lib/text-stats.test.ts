@@ -76,6 +76,7 @@ describe("the text stats module", () => {
     const segmenter = Intl.Segmenter;
     Reflect.deleteProperty(Intl, "Segmenter");
     vi.resetModules();
+
     try {
       const fresh = await import("./text-stats.ts");
 
@@ -126,8 +127,10 @@ describe("the text input schema", () => {
     expect(textInputSchema.parse({ text: atBound })).toStrictEqual({
       text: atBound,
     });
+
     const issues = textInputSchema.safeParse({ text: `${atBound}a` }).error
       ?.issues;
+
     expect(issues?.map((issue) => issue.message)).toStrictEqual([
       textInputErrors.tooLong,
     ]);

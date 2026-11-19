@@ -29,12 +29,15 @@ const skillsLockSchema = z.object({
 /** Each skill in `skills-lock.json` under `dir` with its entry; none without a lock. */
 function lockedSkills(dir = root) {
   const lockPath = path.join(dir, "skills-lock.json");
+
   if (!fs.existsSync(lockPath)) {
     return [];
   }
+
   const lock = skillsLockSchema.parse(
     JSON.parse(fs.readFileSync(lockPath, "utf-8"))
   );
+
   return Object.entries(lock.skills);
 }
 
@@ -46,32 +49,39 @@ function lockedSkills(dir = root) {
 function unlockedSkills(dir = root) {
   const locked = new Set(lockedSkills(dir).map(([name]) => name));
   const problems: string[] = [];
+
   for (const folder of skillFolders) {
     const listed = fs.existsSync(path.join(dir, folder))
       ? fs.readdirSync(path.join(dir, folder))
       : [];
+
     for (const name of listed.filter((entry) => !locked.has(entry))) {
       problems.push(`${folder}/${name} has no entry in skills-lock.json`);
     }
+
     for (const name of [...locked].filter((entry) => !listed.includes(entry))) {
       problems.push(`${folder}/${name} is missing for a locked skill`);
     }
   }
+
   return problems;
 }
 
 /** Each entry under `dir` by relative path: file contents, or "link". */
 function tree(dir: string) {
   const entries = new Map<string, string>();
+
   for (const entry of fs.readdirSync(dir, { recursive: true })) {
     const file = path.join(dir, String(entry));
     const stat = fs.lstatSync(file);
+
     if (stat.isSymbolicLink()) {
       entries.set(String(entry), "link");
     } else if (stat.isFile()) {
       entries.set(String(entry), fs.readFileSync(file, "utf-8"));
     }
   }
+
   return entries;
 }
 
@@ -123,20 +133,24 @@ describe("the skill inventory", () => {
   function checkout(skills: Record<string, string[]>, lock?: string[]) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "skills-"));
     fixtures.push(dir);
+
     for (const [folder, names] of Object.entries(skills)) {
       for (const name of names) {
         fs.mkdirSync(path.join(dir, folder, name), { recursive: true });
       }
     }
+
     if (lock !== undefined) {
       const entries = new Map(
         lock.map((name) => [name, { installMode: "copy" }])
       );
+
       fs.writeFileSync(
         path.join(dir, "skills-lock.json"),
         JSON.stringify({ skills: Object.fromEntries(entries), version: 2 })
       );
     }
+
     return dir;
   }
 
@@ -155,6 +169,7 @@ describe("the skill inventory", () => {
     const dir = checkout({ ".agents/skills": ["a"], ".claude/skills": [] }, [
       "a",
     ]);
+
     expect(unlockedSkills(dir)).toStrictEqual([
       ".claude/skills/a is missing for a locked skill",
     ]);
@@ -183,27 +198,36 @@ describe("the skill inventory", () => {
  */
 function skillGrants(text: string) {
   const doc = parseDocument(text, { stringKeys: true, version: "1.1" });
+
   if (doc.errors.length > 0) {
     throw doc.errors[0];
   }
+
   const config: unknown = doc.toJS({ mapAsMap: true }) ?? new Map();
+
   if (!(config instanceof Map)) {
     throw new TypeError("pnpm-workspace.yaml is not a map of settings");
   }
+
   const permissions: unknown = config.get("permissions") ?? new Map();
+
   if (!(permissions instanceof Map)) {
     throw new TypeError("pnpm-workspace.yaml permissions is not a map");
   }
+
   const grants: string[] = [];
+
   for (const [name, entry] of new Map<unknown, unknown>(permissions)) {
     const skills: unknown =
       entry instanceof Map
         ? new Map<unknown, unknown>(entry).get("skills")
         : entry;
+
     if (skills !== false && skills !== undefined) {
       grants.push(String(name));
     }
   }
+
   return grants;
 }
 
@@ -217,9 +241,11 @@ const workspace = (permissions: string) =>
 describe("dependency skills", () => {
   it("are granted to no package the project has not adopted", () => {
     const text = fs.readFileSync(workspacePath, "utf-8");
+
     const grants = skillGrants(text).filter(
       (name) => !approvedSkills.has(name)
     );
+
     expect(grants.map(grantMessage)).toStrictEqual([]);
   });
 
@@ -300,6 +326,7 @@ describe("dependency skills", () => {
     const text = workspace(
       "  ultracite:\n    skills: true\n  msw:\n    skills: false\n  '@tanstack/react-start':\n    skills: true"
     );
+
     expect(skillGrants(text)).toStrictEqual([
       "ultracite",
       "@tanstack/react-start",

@@ -73,16 +73,19 @@ function renderBrokenRoute(
   options: Pick<Parameters<typeof createRoute>[0], "component" | "loader">
 ) {
   const rootRoute = createRootRoute();
+
   const brokenRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/broken",
     ...options,
   });
+
   const router = createRouter({
     defaultErrorComponent: RouteError,
     history: createMemoryHistory({ initialEntries: ["/broken"] }),
     routeTree: rootRoute.addChildren([brokenRoute]),
   });
+
   render(<RouterProvider router={router} />);
 }
 
@@ -96,10 +99,8 @@ function reports(consoleError: MockInstance<typeof console.error>) {
 describe(RouteError, () => {
   let consoleError: MockInstance<typeof console.error>;
   beforeEach(() => {
-    // React also logs every error a boundary catches; these are expected.
-    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    // Observes the app's reporter; React's expected boundary logs still print.
+    consoleError = vi.spyOn(console, "error");
   });
   afterEach(() => {
     cleanup();
@@ -121,12 +122,15 @@ describe(RouteError, () => {
 
   it("recovers from a render error when the visitor tries again", async () => {
     let failRender = true;
+
     function FlakyPage() {
       if (failRender) {
         throw new Error("Render failed");
       }
+
       return <h1>Recovered</h1>;
     }
+
     renderBrokenRoute({ component: FlakyPage });
 
     await expect(screen.findByRole("alert")).resolves.toBeDefined();

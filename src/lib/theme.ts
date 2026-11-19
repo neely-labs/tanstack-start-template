@@ -25,6 +25,7 @@ export function subscribeToTheme(onChange: () => void) {
     attributeFilter: ["class"],
     attributes: true,
   });
+
   return () => {
     observer.disconnect();
   };
@@ -32,6 +33,7 @@ export function subscribeToTheme(onChange: () => void) {
 
 export function toggleTheme() {
   const dark = document.documentElement.classList.toggle("dark");
+
   try {
     localStorage.setItem(storageKey, dark ? "dark" : "light");
   } catch {

@@ -14,27 +14,24 @@ import { afterAll, describe, expect, it } from "vitest";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
 
-import {
-  agentToolingIgnorePatterns,
-  vendoredToolingIgnorePatterns,
-} from "../agent-tooling.ts";
-import { fixtureEnv } from "./git-fixtures.ts";
+import { agentToolingIgnorePatterns } from "../agent-tooling.ts";
+import { fixtureEnv } from "./git.test-utils.ts";
 
 const root = path.join(import.meta.dirname, "..");
 const require = createRequire(import.meta.url);
-const patterns = [
-  ...agentToolingIgnorePatterns,
-  ...vendoredToolingIgnorePatterns,
-];
+const patterns = agentToolingIgnorePatterns;
+
 /** A file no pattern names, which every tool must still see. */
 const control = "src/control.ts";
 
 /** Files one and two levels inside the folder `pattern` names. */
 function samples(pattern: string) {
   const folder = pattern.replace(/^\*\*\//u, "").replace(/\/\*\*$/u, "");
+
   if (/[*?[\]{}]/u.test(folder)) {
     throw new Error(`${pattern} does not name one folder; extend samples`);
   }
+
   return [`${folder}/file.ts`, `${folder}/sample/file.ts`];
 }
 
@@ -47,11 +44,14 @@ function fixture(files: string[]) {
   const dir = fs.realpathSync(
     fs.mkdtempSync(path.join(os.tmpdir(), "ignore-"))
   );
+
   fixtures.push(dir);
+
   for (const file of files) {
     fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     fs.writeFileSync(path.join(dir, file), "export {};\n");
   }
+
   return dir;
 }
 
@@ -62,14 +62,17 @@ function typescriptFiles(files: string[]) {
     path.join(root, "tsconfig.json"),
     path.join(dir, "tsconfig.json")
   );
+
   const tsc = path.join(
     path.dirname(require.resolve("typescript/package.json")),
     "bin/tsc"
   );
+
   const shown = execFileSync(process.execPath, [tsc, "--showConfig"], {
     cwd: dir,
     encoding: "utf-8",
   });
+
   return z
     .object({ files: z.array(z.string()) })
     .parse(JSON.parse(shown))
@@ -96,12 +99,15 @@ function lefthookFiles(files: string[]) {
   const { jobs } = lefthookSchema.parse(
     parse(fs.readFileSync(path.join(root, "lefthook.yml"), "utf-8"))
   )["pre-commit"];
+
   const echoes = jobs.map(({ exclude, glob }, index) => ({
     exclude,
     glob,
     run: `echo "job${index}: {staged_files}"`,
   }));
+
   const dir = fixture([]);
+
   // A developer's `LEFTHOOK=0`, `LEFTHOOK_QUIET` or `LEFTHOOK_CONFIG` would
   // skip jobs, hide their output or swap the config.
   const env = Object.fromEntries(
@@ -109,23 +115,28 @@ function lefthookFiles(files: string[]) {
       ([key]) => !key.startsWith("LEFTHOOK")
     )
   );
+
   execFileSync("git", ["init", "--quiet"], { cwd: dir, env });
   fs.writeFileSync(
     path.join(dir, "lefthook.yml"),
     stringify({ "pre-commit": { jobs: echoes } })
   );
+
   const lefthook = path.join(
     path.dirname(require.resolve("lefthook/package.json")),
     "bin/index.js"
   );
+
   const options = ["--no-auto-install", "--no-tty", "--colors", "off"];
   const named = files.flatMap((file) => ["--file", file]);
   const args = [lefthook, "run", "pre-commit", ...options, ...named];
+
   const output = execFileSync(process.execPath, args, {
     cwd: dir,
     encoding: "utf-8",
     env,
   });
+
   return jobs.map(({ name }, index) => ({
     files:
       new RegExp(`^job${index}: (.*)$`, "mu").exec(output)?.[1]?.split(" ") ??
@@ -152,11 +163,13 @@ describe("agent tooling ignore patterns", () => {
     expect(jobs.length).toBeGreaterThan(0);
     const blind = jobs.filter(({ files }) => !files.includes(control));
     expect(blind.map(({ name }) => name)).toStrictEqual([]);
+
     const leaks = jobs.flatMap(({ files, name }) =>
       sampled
         .filter((file) => files.includes(file))
         .map((file) => `${name}: ${file}`)
     );
+
     expect(leaks).toStrictEqual([]);
   });
 });

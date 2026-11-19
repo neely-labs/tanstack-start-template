@@ -1,5 +1,5 @@
 import { IconCheck, IconCopy, IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button.tsx";
 
@@ -13,26 +13,30 @@ const announcements = {
 
 export function CopyCommand({ command }: { command: string }) {
   const [status, setStatus] = useState<keyof typeof announcements>("idle");
+  const reset = useRef<number>(undefined);
 
-  useEffect(() => {
-    const timeout =
-      status === "idle"
-        ? undefined
-        : window.setTimeout(() => {
-            setStatus("idle");
-          }, resetDelayMs);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [status]);
+  useEffect(
+    () => () => {
+      window.clearTimeout(reset.current);
+    },
+    []
+  );
+
+  function announce(next: "copied" | "failed") {
+    setStatus(next);
+    window.clearTimeout(reset.current);
+    reset.current = window.setTimeout(() => {
+      setStatus("idle");
+    }, resetDelayMs);
+  }
 
   async function copy() {
     try {
       // Clipboard access is missing on insecure origins and can be denied.
       await navigator.clipboard.writeText(command);
-      setStatus("copied");
+      announce("copied");
     } catch {
-      setStatus("failed");
+      announce("failed");
     }
   }
 

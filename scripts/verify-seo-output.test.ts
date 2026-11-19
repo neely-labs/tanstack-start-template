@@ -1,3 +1,5 @@
+// It tests ./verify-seo-output.ts; site-config is only expected data.
+/* oxlint-disable landmines-structure/colocated-tests */
 import { describe, expect, it } from "vitest";
 
 import { siteConfig } from "../src/lib/site-config.ts";
@@ -34,6 +36,7 @@ const valid = `<!DOCTYPE html><html lang="en-US"><head>
 function broken(find: string | RegExp, replace: string) {
   const html = valid.replace(find, replace);
   expect(html).not.toBe(valid);
+
   return html;
 }
 

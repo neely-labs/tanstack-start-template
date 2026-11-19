@@ -39,28 +39,37 @@ function fencedLines(raws: string[]) {
   let inComment = false;
   // Prose since the last fence, scanned whole: a code span can cross lines.
   let prose: string[] = [];
+
   const fenced = raws.map((raw) => {
     const delimiter = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(raw)?.groups?.m ?? "";
+
     if (!inComment && fence === "" && delimiter !== "") {
       fence = delimiter;
       prose = [];
+
       return true;
     }
+
     if (fence !== "") {
       if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
         fence = "";
       }
+
       return true;
     }
+
     prose.push(raw);
     inComment = false;
+
     for (const [token] of escapeCode(prose.join("\n")).matchAll(
       /<!--|--!?>/gu
     )) {
       inComment = token === "<!--";
     }
+
     return false;
   });
+
   return { fenced, open: fence !== "" };
 }
 
@@ -68,15 +77,18 @@ function fencedLines(raws: string[]) {
 function escapedLines(raws: string[], fenced: boolean[]) {
   const escaped = [...raws];
   let start = 0;
+
   for (let at = 0; at <= raws.length; at += 1) {
     if ((at === raws.length || fenced[at]) && at > start) {
       const run = escapeCode(raws.slice(start, at).join("\n")).split("\n");
       escaped.splice(start, run.length, ...run);
     }
+
     if (fenced[at]) {
       start = at + 1;
     }
   }
+
   return escaped;
 }
 
@@ -86,6 +98,7 @@ export function split(markdown: string) {
   const raws = markdown.split(/\r?\n/u);
   const { fenced, open: fenceOpen } = fencedLines(raws);
   const escaped = escapedLines(raws, fenced);
+
   const all = raws.map((raw, at) => {
     const line: MarkdownLine = {
       commented: false,
@@ -95,17 +108,21 @@ export function split(markdown: string) {
       raw,
       text: "",
     };
+
     if (fenced[at]) {
       return line;
     }
+
     line.fenced = false;
     let rest = escaped[at] ?? "";
     line.commented = open !== undefined;
+
     while (rest !== "") {
       if (open === undefined) {
         const start = rest.indexOf("<!--");
         line.text += start === -1 ? rest : rest.slice(0, start);
         rest = start === -1 ? "" : rest.slice(start + 4);
+
         if (start !== -1) {
           line.commented = true;
           open = { end: at, text: "" };
@@ -116,25 +133,30 @@ export function split(markdown: string) {
         open.end = at;
         open.text = `${open.text}\n${close === null ? rest : rest.slice(0, close.index)}`;
         rest = close === null ? "" : rest.slice(close.index + close[0].length);
+
         if (close !== null) {
           open.text = open.text.trim();
           open = undefined;
         }
       }
     }
+
     return line;
   });
+
   let unclosed: "code fence" | "HTML comment" | undefined;
+
   if (fenceOpen) {
     unclosed = "code fence";
   } else if (open !== undefined) {
     unclosed = "HTML comment";
   }
+
   return { lines: all, unclosed };
 }
 
 /** Each line of `markdown`, with comments and code fences marked. */
-export function lines(markdown: string): MarkdownLine[] {
+export function lines(markdown: string) {
   return split(markdown).lines;
 }
 
@@ -159,11 +181,13 @@ export function anyHeadingOf(line: MarkdownLine) {
  */
 export function headingTexts(markdown: string) {
   const all = lines(markdown);
+
   return all.flatMap((line, index) => {
     const underlined =
       !line.fenced &&
       line.text.trim() !== "" &&
       /^ {0,3}(?:=+|-+)[ \t]*$/u.test(all[index + 1]?.text ?? "");
+
     return anyHeadingOf(line) ?? (underlined ? line.text.trim() : []);
   });
 }

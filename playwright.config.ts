@@ -3,9 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 import { checkoutOf } from "./scripts/local.ts";
 
 const port = process.env.E2E_PORT ?? String(checkoutOf().e2ePort);
+
 if (!/^[1-9]\d{0,4}$/u.test(port) || Number(port) > 65_535) {
   throw new Error("E2E_PORT must be an integer from 1 to 65535.");
 }
+
 const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -18,7 +20,7 @@ export default defineConfig({
   // No retries, in CI either: a retry reports a flaky test as a clean pass.
   // docs/debugging.md#flaky-tests says how to track one instead.
   retries: 0,
-  testDir: "./tests/e2e",
+  testDir: "./test/e2e",
   use: {
     baseURL,
     screenshot: "only-on-failure",

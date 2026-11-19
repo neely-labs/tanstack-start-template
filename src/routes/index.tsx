@@ -76,11 +76,7 @@ function HomePage() {
   return (
     <div className="flex-1">
       <section className="relative isolate overflow-hidden">
-        {/* Decorative backdrop: a faint dot grid that fades out at the edges. */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(var(--border)_1px,transparent_1px)] mask-[radial-gradient(ellipse_70%_60%_at_50%_40%,black,transparent)] bg-size-[22px_22px]"
-        />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 dot-grid" />
         <div
           aria-hidden="true"
           className="absolute -top-40 left-1/2 -z-10 h-80 w-[48rem] -translate-x-1/2 rounded-full bg-brand/10 blur-3xl"
@@ -88,7 +84,7 @@ function HomePage() {
         <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] lg:items-center">
           <div className="max-w-3xl">
             <Badge
-              className="mb-6 gap-1.5"
+              className="mb-6"
               render={<Link to="/setup" />}
               variant="outline"
             >
@@ -99,7 +95,7 @@ function HomePage() {
               Example page. Make it yours
               <IconArrowRight aria-hidden="true" data-icon="inline-end" />
             </Badge>
-            <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
+            <h1 className="max-w-3xl text-5xl font-semibold tracking-display text-balance sm:text-6xl">
               Start with the decisions already made.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
@@ -121,11 +117,15 @@ function HomePage() {
             </div>
           </div>
 
-          <Card className="bg-card/80 backdrop-blur-sm" size="sm">
+          <Card size="sm">
+            {/* CardHeader adds its own bottom padding when given border-b. */}
+            {/* oxlint-disable-next-line shadcn/no-restyle */}
             <CardHeader className="border-b">
-              <CardTitle className="flex items-center gap-2">
-                <IconBolt aria-hidden="true" className="size-4 text-brand" />
-                One handoff gate
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <IconBolt aria-hidden="true" className="size-4 text-brand" />
+                  One handoff gate
+                </span>
               </CardTitle>
               <CardDescription>
                 Local, pre-push, and CI use the same command.
@@ -144,7 +144,7 @@ function HomePage() {
                   <li className="flex items-center gap-3" key={item}>
                     <span
                       aria-hidden="true"
-                      className="grid size-5 place-items-center rounded-full bg-brand/10 font-mono text-[0.6875rem] font-medium text-brand"
+                      className="grid size-5 place-items-center rounded-full bg-brand/10 font-mono text-xs font-medium text-brand"
                     >
                       {index + 1}
                     </span>

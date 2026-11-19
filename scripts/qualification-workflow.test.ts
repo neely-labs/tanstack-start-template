@@ -52,9 +52,11 @@ function onlyJob() {
   const jobs = Object.values(workflow().jobs);
   expect(jobs).toHaveLength(1);
   const [job] = jobs;
+
   if (job === undefined) {
     throw new Error("qualification.yml has no job");
   }
+
   return job;
 }
 
@@ -95,6 +97,7 @@ describe("the qualification workflow's shape", () => {
     const checkouts = onlyJob().steps.filter(
       (step) => step.uses?.startsWith("actions/checkout@") === true
     );
+
     expect(checkouts).toHaveLength(1);
     expect(checkouts[0]?.with).toStrictEqual({ "persist-credentials": false });
   });
@@ -104,6 +107,7 @@ describe("the qualification workflow's shape", () => {
       path.join(root, ".github/workflows/pr-description.yml"),
       "utf-8"
     );
+
     const uses = onlyJob().steps.flatMap((step) => step.uses ?? []);
     expect(uses).toHaveLength(2);
     expect(
@@ -116,6 +120,7 @@ describe("the qualification workflow's shape", () => {
 
   it("never reads pull request text or code into an expression or script", () => {
     const text = readWorkflow();
+
     for (const banned of [
       "github.event.pull_request.body",
       "github.event.pull_request.title",
@@ -124,6 +129,7 @@ describe("the qualification workflow's shape", () => {
     ]) {
       expect(text).not.toContain(banned);
     }
+
     for (const step of onlyJob().steps) {
       expect(step.run ?? "").not.toContain("${{");
     }
@@ -133,6 +139,7 @@ describe("the qualification workflow's shape", () => {
     const scripts = onlyJob()
       .steps.map((step) => step.run ?? "")
       .join("\n");
+
     expect(scripts).toContain('"$GITHUB_EVENT_PATH"');
     expect(scripts).not.toMatch(/pulls\//u);
   });
@@ -210,7 +217,9 @@ if ((match = /^pulls\/(\d+)$/.exec(path)) && method === "GET") {
 
 const temporary = fs.mkdtempSync(path.join(tmpdir(), "qualification-"));
 const fakeBin = path.join(temporary, "bin");
+
 fs.mkdirSync(fakeBin);
+
 fs.writeFileSync(path.join(fakeBin, "gh"), fakeGh, { mode: 0o755 });
 
 interface FakeIssue {
@@ -267,9 +276,11 @@ const template = fs.readFileSync(
 /** A filled description; `qualification` replaces the template's section, or drops it when null. */
 function description(qualification: string | null, refs: number[]) {
   const [summaryAndRest = ""] = template.split("\n## UI evidence");
+
   const summary = summaryAndRest
     .split("\n## Qualification")[0]
     ?.replace(/^Closes #$/mu, refs.map((n) => `Refs #${n}`).join("\n"));
+
   return [
     summary,
     qualification,
@@ -306,8 +317,8 @@ For #17:
 
 const foreign = `Issue 16.\n\n## Current acceptance\n\nStatus: delivered in #40; open for 1 later check.\n\n<!-- qualification: pr=40 -->\n\n- [ ] Earlier check.`;
 
-function baseState(body: string | null): FakeState {
-  return {
+function baseState(body: string | null) {
+  const state: FakeState = {
     calls: [],
     comments: {
       "12": ["First.", "Second.", "Third."].map((text) => ({
@@ -325,6 +336,8 @@ function baseState(body: string | null): FakeState {
     patches: [],
     pulls: { "57": { body } },
   };
+
+  return state;
 }
 
 let runCount = 0;
@@ -339,26 +352,32 @@ function runApply(state: FakeState) {
   fs.writeFileSync(stateFile, JSON.stringify(state));
   const steps = onlyJob().steps.filter((step) => step.id === "apply");
   const [step] = steps.length === 1 ? steps : [];
+
   if (step?.run === undefined || step.shell !== "bash") {
     throw new Error("qualification.yml has no bash apply step with a script");
   }
+
   const context = new Map([
     ["github.event.pull_request.number", "57"],
     ["github.repository", "owner/repo"],
     ["github.token", "fake-token"],
   ]);
+
   const env = Object.fromEntries(
     Object.entries(step.env ?? {}).map(([name, value]) => [
       name,
       value.replaceAll(/\$\{\{(?<expr>.*?)\}\}/gu, (_, expr: string) => {
         const expanded = context.get(expr.trim());
+
         if (expanded === undefined) {
           throw new Error(`Unexpected expression in the apply step: ${expr}`);
         }
+
         return expanded;
       }),
     ])
   );
+
   const script = path.join(dir, "step.sh");
   fs.writeFileSync(script, step.run);
   const event = path.join(dir, "event.json");
@@ -372,6 +391,7 @@ function runApply(state: FakeState) {
       },
     })
   );
+
   const result = spawnSync(
     "bash",
     ["--noprofile", "--norc", "-eo", "pipefail", script],
@@ -389,8 +409,10 @@ function runApply(state: FakeState) {
       },
     }
   );
+
   const after: unknown = JSON.parse(fs.readFileSync(stateFile, "utf-8"));
   Object.assign(state, after);
+
   return {
     status: result.status,
     stderr: result.stderr,
@@ -401,6 +423,7 @@ function runApply(state: FakeState) {
 
 const labelsOf = (issue: FakeIssue | undefined) =>
   issue?.labels.map((label) => label.name);
+
 const marked = (state: FakeState, issue: string, kind: string) =>
   (state.comments[issue] ?? []).filter((comment) =>
     comment.body.includes(`<!-- qualification:${kind} pr=57 -->`)
@@ -451,6 +474,7 @@ describe("the qualification workflow's apply step", () => {
     const run = runApply(
       baseState(description(declared, [12, 14, 15, 16, 17]))
     );
+
     const expected = [
       /OK: #12: moved to awaiting-qualification with 2 checks/u,
       /OK: #14: closed/u,
@@ -458,6 +482,7 @@ describe("the qualification workflow's apply step", () => {
       /Failed: #16: left unchanged because the issue already has a Current acceptance/u,
       /Failed: #17: GET repos\/owner\/repo\/issues\/17 failed: .*HTTP 404/u,
     ];
+
     expect(expected.filter((line) => !line.test(run.stdout))).toStrictEqual([]);
     expect(expected.filter((line) => !line.test(run.summary))).toStrictEqual(
       []
@@ -468,12 +493,16 @@ describe("the qualification workflow's apply step", () => {
   it("prints the run between stop-commands markers, so its text runs no workflow command", () => {
     const state = baseState(description(declared, [12, 14, 15, 16, 17]));
     const { stdout } = runApply(state);
+
     const token = /^::stop-commands::(?<token>[0-9a-f]{32})$/mu.exec(stdout)
       ?.groups?.token;
+
     expect(token).toBeDefined();
+
     const [, inside = "", after = ""] = stdout.split(
       new RegExp(`^::(?:stop-commands::${token}|${token}::)$`, "mu")
     );
+
     expect(inside).toContain("Qualification for #57");
     expect(after.trim()).toBe("");
   });
@@ -482,9 +511,11 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(description(declared, [12, 14, 15, 16, 17]));
     runApply(state);
     const ticked = state.issues["12"];
+
     if (ticked === undefined) {
       throw new Error("issue 12 is missing");
     }
+
     ticked.body = ticked.body?.replace("- [ ] Owner", "- [x] Owner") ?? null;
     ticked.assignees = [{ login: "someone" }];
     const issues = structuredClone(state.issues);
@@ -502,6 +533,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
     );
+
     state.labels = state.labels.filter(
       (name) => name !== "awaiting-qualification"
     );
@@ -529,6 +561,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
     );
+
     state.labels = state.labels.filter(
       (name) => name !== "awaiting-qualification"
     );
@@ -552,6 +585,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
     );
+
     state.ignorePatch = [12];
     const run = runApply(state);
     expect(run.status).toBe(1);
@@ -565,6 +599,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
     );
+
     const other = `Issue 12.\n\n## Current acceptance\n\nStatus: delivered in #60; open for 1 later check.\n\n<!-- qualification: pr=60 -->\n\n- [ ] Its check.`;
     state.racer = { armed: false, issue: 12, writes: [{ body: other }] };
     const run = runApply(state);
@@ -581,6 +616,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
     );
+
     state.racer = {
       armed: false,
       issue: 12,
@@ -599,6 +635,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
     );
+
     state.comments["12"]?.push({
       body: "<!-- qualification:moved pr=57 -->",
       user: { login: "octo-person", type: "User" },
@@ -623,6 +660,7 @@ describe("the qualification workflow's apply step", () => {
     const state = baseState(
       description("## Qualification\n\nFor #12:\n\n- [x] Ticked.", [12])
     );
+
     const run = runApply(state);
     expect(run.status).toBe(1);
     expect(run.stdout).toMatch(
@@ -638,6 +676,7 @@ describe("the qualification workflow's apply step", () => {
         [12]
       )
     );
+
     state.merged = description(
       "## Qualification\n\nFor #12:\n\n- [ ] Merged check.",
       [12]

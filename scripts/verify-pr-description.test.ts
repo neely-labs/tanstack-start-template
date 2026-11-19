@@ -114,6 +114,7 @@ describe(check, () => {
     const body = describeWith({
       "Merge danger": `${mergeDanger}\n- **Rollback:** revert, then clear the cache`,
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -134,6 +135,7 @@ describe(check, () => {
     const wrapped = evidence
       .replace("<!-- ui-evidence:start -->\n", "")
       .replace("## UI evidence", "<!-- ui-evidence:start -->\n## UI evidence");
+
     const problems = check(describeWith({ "UI evidence": wrapped }), template);
     expect(problems).toStrictEqual([
       expect.stringMatching(
@@ -152,6 +154,7 @@ describe(check, () => {
     const body = describeWith({
       "UI evidence": "<!-- ui-evidence:start -->\n<!-- ui-evidence:end -->",
     });
+
     const problems = check(body, template);
     expect(problems).toHaveLength(2);
     expect(problems[0]).toMatch(/ui-evidence:start marker sits outside/u);
@@ -162,6 +165,7 @@ describe(check, () => {
     const body = describeWith({
       "UI evidence": evidence.replace("<!-- ui-evidence:end -->", ""),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(/one ui-evidence:start marker then one/u),
     ]);
@@ -177,6 +181,7 @@ describe(check, () => {
     const body = describeWith({
       Decisions: `${decisions}\n\n## Notes\n\nMore.\n\n# Appendix\n\nEven more.`,
     });
+
     const problems = check(body, template);
     expect(problems).toHaveLength(2);
     expect(problems[0]).toMatch(/"## Notes" is not a template section/u);
@@ -194,6 +199,7 @@ describe(check, () => {
     const body = [summary, evidence, verification, mergeDanger, decisions].join(
       "\n\n"
     );
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(
         /"## Merge danger" is out of order; the template puts it before "## Verification"/u
@@ -205,6 +211,7 @@ describe(check, () => {
     const flat = verification
       .replace(/<details>\n<summary>.*<\/summary>\n/u, "")
       .replace("</details>", "");
+
     const problems = check(describeWith({ Verification: flat }), template);
     expect(problems[0]).toMatch(
       /"## Verification" .* lost its <details> block/u
@@ -219,6 +226,7 @@ describe(check, () => {
   it("fails Verification whose <details> block lost its tables", () => {
     const emptied =
       "## Verification\n\n<details>\n<summary>All green at abc1234</summary>\n\n</details>";
+
     expect(
       check(describeWith({ Verification: emptied }), template)
     ).toStrictEqual([
@@ -231,10 +239,13 @@ describe(check, () => {
     const body = describeWith({
       Summary: `${summary}\n\nRecognizes the \`<!--\` delimiter and \`<details>\` blocks.`,
     });
+
     expect(check(body, template)).toStrictEqual([]);
+
     const coded = verification
       .replace("<details>", "`<details>`")
       .replace("</details>", "`</details>`");
+
     expect(
       check(describeWith({ Verification: coded }), template)
     ).toContainEqual(
@@ -246,10 +257,13 @@ describe(check, () => {
     const body = describeWith({
       Summary: `${summary}\n\nRecognizes the \`<!--\ndelimiter\` in prose.`,
     });
+
     expect(check(body, template)).toStrictEqual([]);
+
     const coded = verification
       .replace("<details>", "`<details>\n`")
       .replace("</details>", "`</details>\n`");
+
     expect(
       check(describeWith({ Verification: coded }), template)
     ).toContainEqual(
@@ -261,6 +275,7 @@ describe(check, () => {
     const body = describeWith({
       Summary: `${plainSummary}\n\nRecognizes the \`<!--\ndelimiter\` in prose.\n\n\`\`\`md\n## Example heading\n\`\`\``,
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -269,6 +284,7 @@ describe(check, () => {
       "UI evidence":
         '## UI evidence\n\n~~~js\nconst delimiter = "`";\n~~~\n<!-- ui-evidence:start -->\nScreenshot of the `input` control.\n<!-- ui-evidence:end -->',
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -276,6 +292,7 @@ describe(check, () => {
     const body = describeWith({
       Summary: summary.replace("Closes #1", "<!-- note --!>\n\nCloses #"),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(/an issue reference has no number/u),
     ]);
@@ -285,12 +302,14 @@ describe(check, () => {
     const body = describeWith({
       Decisions: `${decisions}\n\nThe publisher writes after \`<!-- ui-evidence:start -->\`.`,
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
   it("fails Decisions reasons spilled out of their collapsed block", () => {
     const spilled =
       "## Decisions\n\n- Treated this as tier 1\n\n**Reasons**\n\n- It changes what people see.";
+
     expect(check(describeWith({ Decisions: spilled }), template)).toStrictEqual(
       [
         expect.stringMatching(
@@ -304,6 +323,7 @@ describe(check, () => {
     const body = describeWith({
       Decisions: "## Decisions\n\n- Treated this as tier 1",
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -327,6 +347,7 @@ describe(check, () => {
         "|       |          |      |         |"
       ),
     });
+
     const problems = check(body, template);
     expect(problems).toHaveLength(5);
     expect(problems).toStrictEqual(
@@ -348,6 +369,7 @@ describe(check, () => {
     const body = describeWith({
       Summary: `${plainSummary}\n\nThe template's \`Closes #N\` line.\n\n\`\`\`md\nCloses #\n|   |   |\n\`\`\``,
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -355,6 +377,7 @@ describe(check, () => {
     const body = describeWith({
       "Merge danger": mergeDanger.replace("- **Door:** clean two-way\n", ""),
     });
+
     expect(check(body, template)).toStrictEqual([
       '"## Merge danger" is missing "**Door:**"',
     ]);
@@ -370,6 +393,7 @@ describe(check, () => {
       "Closes #",
       "<!-- /codesmith:footer -->",
     ].join("\n");
+
     expect(check(`${describeWith()}\n\n${footer}\n`, template)).toStrictEqual(
       []
     );
@@ -382,6 +406,7 @@ describe(check, () => {
         "<!-- note to self -->\n\nCloses #"
       ),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(/an issue reference has no number/u),
     ]);
@@ -390,6 +415,7 @@ describe(check, () => {
   it("checks what follows a bot footer's closing comment", () => {
     const footer =
       "<!-- codesmith:footer -->\n---\nOpen in codesmith\n<!-- /codesmith:footer -->";
+
     const body = `${describeWith()}\n\n${footer}\n\n## Follow-ups\n\n|  |  |`;
     const problems = check(body, template);
     expect(problems).toHaveLength(2);
@@ -416,6 +442,7 @@ describe(check, () => {
   it("ends a bot block at its own closing comment, not a later one", () => {
     const footer =
       "<!-- codesmith:footer -->\n---\nOpen in codesmith\n<!-- /codesmith:footer -->";
+
     const body = `${describeWith()}\n\n${footer}\n\n## Follow-ups\n\nCloses #\n\n<!-- Explain this follow-up -->`;
     expect(check(body, template)).toHaveLength(2);
   });
@@ -426,6 +453,7 @@ describe(check, () => {
       "<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
       "<!-- Generated by sourcery-ai[bot]: start summary -->\n## Decisions\n<!-- Generated by sourcery-ai[bot]: end summary -->",
     ];
+
     expect(
       blocks.map((block) => check(`${describeWith()}\n\n${block}`, template))
     ).toStrictEqual([[], [], []]);
@@ -434,6 +462,7 @@ describe(check, () => {
   it("still checks UI evidence appended after a bot footer", () => {
     const footer =
       "<!-- codesmith:footer -->\n---\nOpen in codesmith\n<!-- /codesmith:footer -->";
+
     const body = `${describeWith({ "UI evidence": null })}\n\n${footer}\n\n${evidence}`;
     const problems = check(body, template);
     expect(problems).toContainEqual(
@@ -446,10 +475,13 @@ describe(check, () => {
   it("still checks Decisions when the author kept a template comment in it", () => {
     const [comment] =
       /(?<=## Decisions\n\n)<!--[\s\S]*?-->/u.exec(template) ?? [];
+
     expect(comment).toBeDefined();
+
     const body = describeWith({
       Decisions: `## Decisions\n\n${comment}\n\n- \n\n## Notes`,
     });
+
     const problems = check(body, template);
     expect(problems).toHaveLength(2);
   });
@@ -459,12 +491,15 @@ describe(check, () => {
       "## Decisions",
       "## Risks\n\n<!-- What could go wrong. -->\n\n## Decisions"
     );
+
     expect(check(describeWith(), extended)).toStrictEqual([
       'missing section "## Risks"',
     ]);
+
     const body = describeWith({
       Decisions: `## Risks\n\nNone known.\n\n${decisions}`,
     });
+
     expect(check(body, extended)).toStrictEqual([]);
   });
 
@@ -555,9 +590,11 @@ describe("the Qualification section", () => {
       present: false,
       problems: [],
     });
+
     const partial = describeWith({
       Summary: summary.replace("Closes #1", "Refs #1"),
     });
+
     expect(check(partial, template)).toStrictEqual([]);
     expect(readQualification(partial, template).declarations).toStrictEqual([]);
   });
@@ -571,6 +608,7 @@ describe("the Qualification section", () => {
       verification,
       decisions,
     ].join("\n\n");
+
     expect(check(body, template)).toStrictEqual(
       expect.arrayContaining([
         expect.stringMatching(
@@ -669,14 +707,17 @@ describe("the Qualification section", () => {
     const body = declare(qualification, {
       Summary: declaring.replace("Refs #14", ""),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(
         /#14 is declared under "## Qualification" but "## Summary" has no "Refs #14"/u
       ),
     ]);
+
     const decoy = declare(qualification, {
       Summary: declaring.replace("Refs #14", "Refs #140 and `Refs #14`"),
     });
+
     expect(check(decoy, template)).toContainEqual(
       expect.stringMatching(/has no "Refs #14"/u)
     );
@@ -693,6 +734,7 @@ describe("the Qualification section", () => {
       const body = declare(qualification, {
         Decisions: `${decisions}\n\n${keyword} once the checks pass.`,
       });
+
       expect(check(body, template)).toContainEqual(
         expect.stringMatching(/#12 follows a closing keyword/u)
       );
@@ -703,6 +745,7 @@ describe("the Qualification section", () => {
     const body = declare(qualification, {
       Summary: `${declaring}\nCloses #120`,
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -711,6 +754,7 @@ describe("the Qualification section", () => {
       declare(qualification.replace("- [ ] An agent", "- [x] An agent")),
       template
     );
+
     expect(result.present).toBeTruthy();
     expect(result.problems).toHaveLength(1);
   });
@@ -719,13 +763,16 @@ describe("the Qualification section", () => {
     const headings = [...template.matchAll(/^## (?<name>.+)$/gmu)].map(
       (match) => match.groups?.name
     );
+
     expect(headings.slice(0, 3)).toStrictEqual([
       "Summary",
       "Qualification",
       "UI evidence",
     ]);
+
     const [section] =
       /^## Qualification\n[\s\S]*?(?=\n## )/mu.exec(template) ?? [];
+
     expect(section).toBeDefined();
     expect(check(declare(section ?? ""), template)).not.toStrictEqual([]);
   });
@@ -756,6 +803,7 @@ function visible(count: number) {
 describe("length limits", () => {
   it("states each limit in the template's comments, so the two stay in step", () => {
     const comments = [...template.matchAll(/<!--[\s\S]*?-->/gu)].join(" ");
+
     for (const phrase of [
       `${LIMITS.summaryWords} words`,
       `${LIMITS.fieldWords} words`,
@@ -772,6 +820,7 @@ describe("length limits", () => {
     const body = describeWith({
       Summary: `## Summary\n\n${words(LIMITS.summaryWords + 1)}\n\nCloses #1`,
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(
         new RegExp(
@@ -788,10 +837,12 @@ describe("length limits", () => {
     expect(check(describeWith({ Summary: atLimit }), template)).toStrictEqual(
       []
     );
+
     const hidden = atLimit.replace(
       "Closes #1",
       "<details><summary>More</summary>\n\nextra\n\n</details>\n\nCloses #1"
     );
+
     expect(check(describeWith({ Summary: hidden }), template)).toHaveLength(1);
   });
 
@@ -822,6 +873,7 @@ describe("length limits", () => {
 - **Blast radius:** ${words(LIMITS.fieldWords + 1)}
 - **Rollback:** ${words(LIMITS.fieldWords + 1)}`,
     });
+
     const problems = check(body, template);
     expect(problems).toStrictEqual([
       expect.stringMatching(
@@ -849,6 +901,7 @@ describe("length limits", () => {
         .replace("clean two-way", "Two-way")
         .replace("1 of 3", "7 of 5"),
     });
+
     expect(check(body, template)).toStrictEqual([]);
   });
 
@@ -926,10 +979,12 @@ describe("length limits", () => {
         )
       ),
     ]);
+
     const numbered = Array.from(
       { length: LIMITS.decisionsVisible + 1 },
       (_, at) => `${at + 1}. Choice`
     );
+
     expect(
       check(describeWith({ Decisions: decisionsWith(numbered) }), template)
     ).toHaveLength(1);
@@ -939,6 +994,7 @@ describe("length limits", () => {
     const indented = visible(LIMITS.decisionsVisible + 1).map(
       (item) => `  ${item}`
     );
+
     expect(
       check(describeWith({ Decisions: decisionsWith(indented) }), template)
     ).toHaveLength(1);
@@ -961,6 +1017,7 @@ describe("length limits", () => {
         .replace("clean two-way", "two-way\n  mostly")
         .replace("one page", `one page\n  ${words(LIMITS.fieldWords)}`),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(/"\*\*Door:\*\*" must be one of/u),
       expect.stringMatching(/"\*\*Blast radius:\*\*" has \d+ words/u),
@@ -974,6 +1031,7 @@ describe("length limits", () => {
         ""
       ),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(
         /"## Verification" .* has no <summary> outcome line/u
@@ -1001,6 +1059,7 @@ describe("length limits", () => {
   it("reads a data row of dashes as part of its table, not a new one", () => {
     const table =
       "| Before | After |\n| --- | --- |\n| --- | --- |\n| Missing | Present |";
+
     expect(check(summaryOf("```text\na\n```", table), template)).toStrictEqual(
       []
     );
@@ -1017,12 +1076,14 @@ describe("length limits", () => {
 
   it("reads a Verification outcome line that wraps", () => {
     const head = "abc1234def5678";
+
     const body = describeWith({
       Verification: verification.replace(
         "<summary>All checks green at abc1234; review approved abc1234</summary>",
         "<summary>\nAll checks green at abc1234\n</summary>"
       ),
     });
+
     expect(check(body, template, { head })).toStrictEqual([]);
   });
 
@@ -1033,6 +1094,7 @@ describe("length limits", () => {
         `abc1234 ${words(LIMITS.outcomeWords)}`
       ),
     });
+
     expect(check(body, template)).toStrictEqual([
       expect.stringMatching(
         new RegExp(
@@ -1054,6 +1116,7 @@ describe("the head commit", () => {
         "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n| abc1234def dirty | `pnpm test` | 9 passed, 0 skipped | local |"
       ),
     });
+
     expect(check(body, template, { head })).toStrictEqual([]);
   });
 
@@ -1069,6 +1132,7 @@ describe("the head commit", () => {
           "All checks green at 789ddf0"
         ),
     });
+
     expect(check(body, template, { head })).toStrictEqual([
       expect.stringMatching(
         /^line \d+: the Verification outcome line does not name the head commit abc1234; rewrite Verification for the final head$/u
@@ -1086,6 +1150,7 @@ describe("the head commit", () => {
         "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n|  | `pnpm test` | 9 passed, 0 skipped | local |\n|  |  |  |  |"
       ),
     });
+
     expect(check(body, template, { head })).toStrictEqual([
       expect.stringMatching(/this Checks row names another commit/u),
       expect.stringMatching(/a table row is empty/u),
@@ -1099,6 +1164,7 @@ describe("the head commit", () => {
         '<a href="https://example.com/commit/abc1234">789ddf0</a> green'
       ),
     });
+
     expect(check(body, template, { head })).toStrictEqual([
       expect.stringMatching(/outcome line does not name the head commit/u),
     ]);
@@ -1111,6 +1177,7 @@ describe("the head commit", () => {
         "| abc1234 | `pnpm validate` | 150 passed, 0 skipped | local |\n\n| Commit | Command | Result | Limits |\n| --- | --- | --- | --- |\n| 789ddf0 | `pnpm test:e2e` | 9 passed, 0 skipped | preview |"
       ),
     });
+
     expect(check(body, template, { head })).toStrictEqual([
       expect.stringMatching(/this Checks row names another commit/u),
     ]);
@@ -1123,6 +1190,7 @@ describe("the head commit", () => {
         "Commit | Command | Result | Limits\n--- | --- | --- | ---\n789ddf0 | `pnpm validate` | 150 passed, 0 skipped | local"
       ),
     });
+
     expect(body).toContain("789ddf0 | `pnpm validate`");
     expect(check(body, template, { head })).toStrictEqual([
       expect.stringMatching(/this Checks row names another commit/u),
@@ -1133,6 +1201,7 @@ describe("the head commit", () => {
     const body = describeWith({
       Verification: verification.replaceAll("abc1234", "789ddf0"),
     });
+
     expect(check(body, template)).toStrictEqual([]);
     expect(check(body, template, { head })).toHaveLength(2);
   });
@@ -1140,14 +1209,18 @@ describe("the head commit", () => {
 
 describe("pnpm pr:verify", () => {
   const script = path.join(import.meta.dirname, "verify-pr-description.ts");
+
   const run = (...args: string[]) => {
     const dir = fs.mkdtempSync(path.join(tmpdir(), "pr-verify-"));
     const file = path.join(dir, "body.md");
     fs.writeFileSync(file, describeWith());
+
     const result = spawnSync(process.execPath, [script, file, ...args], {
       encoding: "utf-8",
     });
+
     fs.rmSync(dir, { force: true, recursive: true });
+
     return result;
   };
 

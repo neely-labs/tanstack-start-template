@@ -15,6 +15,7 @@ import { siteConfig } from "../src/lib/site-config.ts";
 import { generatedSiteFiles } from "../src/lib/site-files.ts";
 
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
 // The card types X documents; any other value renders no card.
 const twitterCards = new Set([
   "app",
@@ -22,8 +23,10 @@ const twitterCards = new Set([
   "summary",
   "summary_large_image",
 ]);
+
 const ldJsonSelector = 'script[type="application/ld+json"]';
 const twitterCardSelector = 'meta[name="twitter:card"]';
+
 // What `createGraph` emits; page nodes are then picked out by their `@type`.
 const graphSchema = z.object({
   "@graph": z.array(
@@ -43,9 +46,11 @@ function fail(routePath: string, tag: string, problem: string): never {
 /** The one element `selector` matches; more or fewer fails. */
 function exactlyOne(document: Document, routePath: string, selector: string) {
   const found = document.querySelectorAll(selector);
+
   if (found.length !== 1) {
     fail(routePath, selector, `appears ${found.length} times, expected 1`);
   }
+
   return found[0];
 }
 
@@ -59,9 +64,11 @@ function attributeOf(
   const value = exactlyOne(document, routePath, selector).getAttribute(
     attribute
   );
+
   if (value === null || value.trim() === "") {
     fail(routePath, selector, `has no ${attribute}`);
   }
+
   return value;
 }
 
@@ -74,6 +81,7 @@ function expectAttribute(
   expected: string
 ) {
   const value = attributeOf(document, routePath, selector, attribute);
+
   if (value !== expected) {
     fail(
       routePath,
@@ -91,19 +99,25 @@ function checkStructuredData(
 ) {
   const text =
     exactlyOne(document, routePath, ldJsonSelector).textContent ?? "";
+
   let data: unknown;
+
   try {
     data = JSON.parse(text);
   } catch {
     fail(routePath, ldJsonSelector, "is not valid JSON");
   }
+
   const parsed = graphSchema.safeParse(data);
+
   if (!parsed.success) {
     fail(routePath, ldJsonSelector, "has no @graph array of nodes");
   }
+
   const pages = parsed.data["@graph"].filter((node) =>
     webPageTypes.some((pageType) => pageType === node["@type"])
   );
+
   if (pages.length !== 1) {
     fail(
       routePath,
@@ -111,7 +125,9 @@ function checkStructuredData(
       `has ${pages.length} page nodes (${webPageTypes.join(", ")}), expected 1`
     );
   }
+
   const [page] = pages;
+
   for (const [key, expected] of [
     ["url", pageUrl],
     ["@id", `${pageUrl}#webpage`],
@@ -141,20 +157,24 @@ export function checkPageHtml(html: string, routePath: string) {
 
   const title =
     exactlyOne(document, routePath, "title").textContent?.trim() ?? "";
+
   if (title === "") {
     fail(routePath, "title", "is empty");
   }
+
   const description = attributeOf(
     document,
     routePath,
     'meta[name="description"]',
     "content"
   );
+
   if (document.querySelector("h1") === null) {
     fail(routePath, "h1", "is missing from the server-rendered HTML");
   }
 
   const { height, type, width } = siteConfig.socialImage;
+
   for (const [selector, attribute, expected] of [
     ['link[rel="canonical"]', "href", pageUrl],
     ['meta[property="og:url"]', "content", pageUrl],
@@ -167,7 +187,9 @@ export function checkPageHtml(html: string, routePath: string) {
   ] as const) {
     expectAttribute(document, routePath, selector, attribute, expected);
   }
+
   const card = attributeOf(document, routePath, twitterCardSelector, "content");
+
   if (!twitterCards.has(card)) {
     fail(
       routePath,
@@ -175,6 +197,7 @@ export function checkPageHtml(html: string, routePath: string) {
       `content "${card}" is not a card type`
     );
   }
+
   checkStructuredData(document, routePath, pageUrl);
 
   return { description, title };
@@ -191,14 +214,17 @@ function htmlOutputPath(routePath: string) {
 function verifyBuildOutput() {
   const pageTitles = new Set<string>();
   const pageDescriptions = new Set<string>();
+
   for (const routePath of publicPaths) {
     const page = checkPageHtml(
       readFileSync(htmlOutputPath(routePath), "utf-8"),
       routePath
     );
+
     pageTitles.add(page.title);
     pageDescriptions.add(page.description);
   }
+
   assert.equal(
     pageTitles.size,
     publicPaths.length,
@@ -212,6 +238,7 @@ function verifyBuildOutput() {
 
   const sitemap = readFileSync(".output/public/sitemap.xml", "utf-8");
   assert.equal(sitemap.match(/<loc>/gu)?.length ?? 0, publicPaths.length);
+
   for (const routePath of publicPaths) {
     assert.ok(sitemap.includes(`<loc>${siteConfig.origin}${routePath}</loc>`));
   }
@@ -234,6 +261,7 @@ function verifyBuildOutput() {
   const socialImage = readFileSync(
     path.resolve(".output/public", siteConfig.socialImage.path.slice(1))
   );
+
   assert.ok(
     socialImage.subarray(0, pngSignature.length).equals(pngSignature),
     "Social image must be a PNG"

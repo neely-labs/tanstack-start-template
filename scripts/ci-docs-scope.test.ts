@@ -35,31 +35,35 @@ function readStep(yaml: string, id: string) {
   const steps = Object.values(workflowSchema.parse(parse(yaml)).jobs).flatMap(
     (job) => job.steps
   );
+
   const found = steps.filter((candidate) => candidate.id === id);
+
   if (found.length !== 1) {
     throw new Error(
       `Expected one step with id ${id} in ${workflowPath}, found ${found.length}`
     );
   }
+
   const step = stepSchema.safeParse(found[0]);
+
   if (!step.success) {
     throw new Error(
       `The step with id ${id} needs a \`run\` script and string \`env\` values: ${z.prettifyError(step.error)}`
     );
   }
+
   return step.data;
 }
 
 /** Replaces each `${{ name }}` from `context`, as Actions does: an unset name is empty. */
-function expand(
-  text: string,
-  context: Partial<Record<string, string>>
-): string {
+function expand(text: string, context: Partial<Record<string, string>>) {
   return text.replaceAll(/\$\{\{(?<expr>.*?)\}\}/gu, (_, expr: string) => {
     const name = expr.trim();
+
     if (!/^[\w.-]+$/u.test(name)) {
       throw new Error(`Unsupported expression in the scope step: ${name}`);
     }
+
     return context[name] ?? "";
   });
 }
@@ -84,7 +88,9 @@ jq -r "$filter" "$FAKE_GH_RESPONSE"
 
 const temporary = fs.mkdtempSync(path.join(tmpdir(), "ci-docs-scope-"));
 const fakeBin = path.join(temporary, "bin");
+
 fs.mkdirSync(fakeBin);
+
 fs.writeFileSync(path.join(fakeBin, "gh"), fakeGh, { mode: 0o755 });
 
 const before = "a".repeat(40);
@@ -123,9 +129,11 @@ function runScope(input: Case) {
   const responseFile = path.join(dir, "response.json");
   fs.writeFileSync(output, "");
   fs.writeFileSync(log, "");
+
   if (input.response !== undefined) {
     fs.writeFileSync(responseFile, JSON.stringify(input.response));
   }
+
   const pullRequestContext =
     input.event === "pull_request"
       ? {
@@ -133,6 +141,7 @@ function runScope(input: Case) {
           "github.event.pull_request.base.sha": prBase,
         }
       : {};
+
   const context = {
     "github.event.before": input.before ?? before,
     "github.event_name": input.event,
@@ -141,23 +150,28 @@ function runScope(input: Case) {
     "github.token": "fake-token",
     ...pullRequestContext,
   };
+
   const step = readStep(fs.readFileSync(workflowPath, "utf-8"), "scope");
   const script = path.join(dir, "step.sh");
   fs.writeFileSync(script, expand(step.run, context));
+
   if (step.shell !== undefined && step.shell !== "bash") {
     throw new Error(`Unsupported shell in the scope step: ${step.shell}`);
   }
+
   // The shells GitHub runs for `shell: bash` and for a step with no shell.
   const shellArgs =
     step.shell === "bash"
       ? ["--noprofile", "--norc", "-eo", "pipefail", script]
       : ["-e", script];
+
   const env = Object.fromEntries(
     Object.entries(step.env).map(([name, value]) => [
       name,
       expand(value, context),
     ])
   );
+
   const result = spawnSync("bash", shellArgs, {
     encoding: "utf-8",
     env: {
@@ -169,6 +183,7 @@ function runScope(input: Case) {
       PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
     },
   });
+
   return {
     calls: fs.readFileSync(log, "utf-8").split("\n").filter(Boolean),
     output: fs.readFileSync(output, "utf-8"),
@@ -177,26 +192,36 @@ function runScope(input: Case) {
   };
 }
 
-const modified = (filename: string): ChangedFile => ({
-  filename,
-  status: "modified",
-});
-const renamed = (filename: string, previous: string): ChangedFile => ({
-  filename,
-  previous_filename: previous,
-  status: "renamed",
-});
+const modified = (filename: string) =>
+  ({
+    filename,
+    status: "modified",
+  }) satisfies ChangedFile;
+
+const renamed = (filename: string, previous: string) =>
+  ({
+    filename,
+    previous_filename: previous,
+    status: "renamed",
+  }) satisfies ChangedFile;
+
 const pullRequest = (
   files: ChangedFile[],
   changedFiles = files.length,
   status = "ahead"
-): Case => ({
-  changedFiles,
-  event: "pull_request",
-  response: { files, status },
-});
-const push = (response?: Compare): Case => ({ event: "push", response });
-const ahead = (files: ChangedFile[]): Compare => ({ files, status: "ahead" });
+) =>
+  ({
+    changedFiles,
+    event: "pull_request",
+    response: { files, status },
+  }) satisfies Case;
+
+const push = (response?: Compare) =>
+  ({ event: "push", response }) satisfies Case;
+
+const ahead = (files: ChangedFile[]) =>
+  ({ files, status: "ahead" }) satisfies Compare;
+
 const markdown = (count: number) =>
   Array.from({ length: count }, (_, n) => modified(`docs/${n}.md`));
 

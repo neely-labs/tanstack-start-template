@@ -7,12 +7,13 @@ import path from "node:path";
 
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
-import { fixtureEnv } from "./git-fixtures.ts";
+import { fixtureEnv } from "./git.test-utils.ts";
 import type { Checkout } from "./local.ts";
 
 const base = fs.realpathSync(
   fs.mkdtempSync(path.join(os.tmpdir(), "local-env-"))
 );
+
 const env = fixtureEnv(base);
 
 // The code under test builds its Git environment from `process.env` when it
@@ -23,6 +24,7 @@ for (const [key, value] of Object.entries(env)) {
     vi.stubEnv(key, value);
   }
 }
+
 const { checkoutOf, devServer, processStart, readOwner, retire, status, stop } =
   await import("./local.ts");
 
@@ -30,29 +32,37 @@ const temporary: string[] = [];
 const children: ChildProcess[] = [];
 
 /** A committed repository with a second worktree, ignoring local state. */
-function repositoryWithWorktree(): [Checkout, Checkout] {
+function repositoryWithWorktree() {
   const dir = fs.mkdtempSync(path.join(base, "repository-"));
   temporary.push(dir);
   const main = path.join(dir, "main");
+
   const run = (...args: string[]) =>
     execFileSync("git", ["-C", main, ...args], { env, stdio: "ignore" });
+
   fs.mkdirSync(main);
   run("init", "--quiet");
   fs.writeFileSync(path.join(main, ".gitignore"), ".local/\n.output/\n");
   run("add", ".gitignore");
   run("commit", "-qm", "init");
   run("worktree", "add", "--quiet", path.join(dir, "other"));
-  return [checkoutOf(main), checkoutOf(path.join(dir, "other"))];
+
+  return [checkoutOf(main), checkoutOf(path.join(dir, "other"))] satisfies [
+    Checkout,
+    Checkout,
+  ];
 }
 
 /** Starts an unrelated long-lived process and returns its id. */
-function startProcess(): number {
+function startProcess() {
   const child = spawn("sleep", ["30"], { env, stdio: "ignore" });
   children.push(child);
+
   return child.pid ?? 0;
 }
 
 const isAlive = (pid: number) => processStart(pid) !== undefined;
+
 const serverOf = (checkout: Checkout) =>
   status(checkout).resources["dev server"];
 
@@ -68,6 +78,7 @@ describe("local environment", () => {
     for (const child of children.splice(0)) {
       child.kill("SIGKILL");
     }
+
     for (const dir of temporary.splice(0)) {
       fs.rmSync(dir, { force: true, recursive: true });
     }
@@ -81,6 +92,7 @@ describe("local environment", () => {
   it("derives stable ports from each checkout path", () => {
     const [main, other] = repositoryWithWorktree();
     expect(checkoutOf(main.root)).toStrictEqual(main);
+
     for (const checkout of [main, other]) {
       expect(checkout.appPort).toBeGreaterThanOrEqual(20_000);
       expect(checkout.appPort).toBeLessThan(25_000);
@@ -128,6 +140,7 @@ describe("local environment", () => {
     own(main, mine);
     own(other, theirs);
     const kept = [".output/server.mjs", ".local/data.db", "notes.txt"];
+
     for (const file of kept) {
       fs.mkdirSync(path.dirname(path.join(main.root, file)), {
         recursive: true,
@@ -142,6 +155,7 @@ describe("local environment", () => {
     expect(isAlive(mine)).toBeFalsy();
     expect(serverOf(main)).toStrictEqual({ state: "stopped" });
     expect(serverOf(other)).toMatchObject({ pid: theirs, state: "running" });
+
     for (const file of kept) {
       expect(fs.readFileSync(path.join(main.root, file), "utf-8")).toBe("keep");
     }
@@ -214,6 +228,7 @@ describe("local environment", () => {
       fs.writeFileSync(main.ownerFile, malformed);
       expect(readOwner(main)).toBeUndefined();
     }
+
     expect(serverOf(main)).toStrictEqual({ state: "stopped" });
   });
 

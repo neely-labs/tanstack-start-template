@@ -8,6 +8,7 @@ The starter uses shadcn/ui on Base UI with the Rhea style, Mist neutral tokens, 
 - One accent, `--brand`, carries emphasis: focus rings, icon tiles, step numbers, and link underlines. Change its light and dark values to rebrand; keep it at 4.5:1 or better against the background so it stays readable as text.
 - Light and dark themes share every token name. The visitor's choice is stored in `localStorage` and applied before paint by `src/lib/theme.ts`; without a stored choice the system preference wins.
 - Shared UI primitives live in `src/components/ui` and remain compatible with the shadcn CLI.
+- `pnpm check` runs shadcn's design-system lint, which flags raw palette colors, off-scale arbitrary values and classes that restyle a component's color, spacing, shape or typography. When it flags a class, add the missing token or `@utility` to `src/styles.css`, or a variant to the component's `src/components/ui` file, rather than silencing it. The home page's `tracking-display` and `dot-grid` are examples.
 - Layout uses clear reading widths, restrained borders, and one elevation level for contained operational surfaces.
 - Focus states, keyboard navigation, reduced-motion behavior, and responsive composition are requirements.
 - Global not-found and error states preserve the shared shell and provide an obvious recovery action.

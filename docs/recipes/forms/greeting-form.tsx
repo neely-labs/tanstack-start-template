@@ -9,13 +9,16 @@ export function GreetingForm() {
   useEffect(() => {
     setName(field.current?.value ?? "");
   }, []);
+
   // Read the submitted data, not state: a submit made before hydration
   // replays with the data the form held then.
   const [greeting, greet] = useActionState((_: string, data: FormData) => {
     const submitted = data.get("name");
     const text = submitted instanceof File ? "" : (submitted ?? "").trim();
+
     return text === "" ? "Enter a name." : `Hello, ${text}.`;
   }, "");
+
   return (
     <form action={greet}>
       <label>

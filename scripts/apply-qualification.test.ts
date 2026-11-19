@@ -19,6 +19,7 @@ const byWorkflow = (body: string) => ({
   body,
   bot: true,
 });
+
 const byPerson = (body: string) => ({ author: "someone", body, bot: false });
 
 const original = `Ship the weekly digest.
@@ -32,7 +33,7 @@ const checks = [
   "An agent reads the send log after the first run.",
 ];
 
-function issue(overrides: Partial<Issue> = {}): Issue {
+function issue(overrides: Partial<Issue> = {}) {
   return {
     assignees: ["octo-agent"],
     body: original,
@@ -41,10 +42,10 @@ function issue(overrides: Partial<Issue> = {}): Issue {
     number: 12,
     state: "open",
     ...overrides,
-  };
+  } satisfies Issue;
 }
 
-function situation(overrides: Partial<Situation> = {}): Situation {
+function situation(overrides: Partial<Situation> = {}) {
   return {
     comments: [],
     declaration: { checks, issue: 12, line: 9 },
@@ -52,7 +53,7 @@ function situation(overrides: Partial<Situation> = {}): Situation {
     labelExists: true,
     pr: 57,
     ...overrides,
-  };
+  } satisfies Situation;
 }
 
 const applied = `${original}
@@ -97,6 +98,7 @@ describe(plan, () => {
         issue: issue({ body: "" }),
       })
     );
+
     expect(result.update?.body).toBe(
       "## Current acceptance\n\nStatus: delivered in #57; open for 1 later check.\n\n<!-- qualification: pr=57 -->\n\n- [ ] One check."
     );
@@ -121,6 +123,7 @@ describe(plan, () => {
 
   it("changes nothing on a re-run, even with boxes ticked, a new assignee and a new state since", () => {
     const later = applied.replace("- [ ] Owner", "- [x] Owner");
+
     const result = plan(
       situation({
         comments: [
@@ -136,6 +139,7 @@ describe(plan, () => {
         }),
       })
     );
+
     expect(result).toStrictEqual({
       failed: false,
       message: result.message,
@@ -150,6 +154,7 @@ describe(plan, () => {
         issue: issue({ body: applied, labels: ["ready-for-agent"] }),
       })
     );
+
     expect(result.outcome).toBe("moved");
     expect(result.update).toStrictEqual({
       assignees: [],
@@ -172,15 +177,18 @@ describe(plan, () => {
       expect(result.comment).toMatch(
         /^<!-- qualification:conflict pr=57 -->\n/u
       );
+
       for (const text of checks) {
         expect(result.comment).toContain(`- [ ] ${text}`);
       }
+
       const again = plan(
         situation({
           comments: [byWorkflow(result.comment ?? "")],
           issue: issue({ body }),
         })
       );
+
       expect(again).toMatchObject({ failed: true, outcome: "conflict" });
       expect(again.comment).toBeUndefined();
     }
@@ -195,6 +203,7 @@ describe(plan, () => {
         }),
       })
     );
+
     expect(result.outcome).toBe("unchanged");
     expect(result.update).toBeUndefined();
     expect(result.comment).toBeUndefined();
@@ -337,6 +346,7 @@ describe(plan, () => {
       const comment = byWorkflow(
         context.replace("M", "qualification:moved pr=57")
       );
+
       expect(plan(situation({ comments: [comment] })).outcome).toBe("moved");
     }
   );
@@ -358,9 +368,11 @@ describe(plan, () => {
     expect(result.update).toBeUndefined();
     expect(result.comment).toMatch(/^<!-- qualification:closed pr=57 -->\n/u);
     expect(result.comment).toContain(`- [ ] ${checks[0]}`);
+
     const again = plan(
       situation({ comments: [byWorkflow(result.comment ?? "")], issue: closed })
     );
+
     expect(again.comment).toBeUndefined();
   });
 
@@ -368,6 +380,7 @@ describe(plan, () => {
     const result = plan(
       situation({ issue: issue({ body: applied, state: "closed" }) })
     );
+
     expect(result).toStrictEqual({
       failed: false,
       message: result.message,
@@ -470,7 +483,9 @@ describe("the state-label list", () => {
       path.join(docs, "agents/triage-labels.md"),
       "utf-8"
     );
+
     const section = text.split(`## ${heading}\n`)[1]?.split("\n## ")[0] ?? "";
+
     return section
       .split("\n")
       .filter((line) => line.startsWith("| `"))
@@ -483,14 +498,18 @@ describe("the state-label list", () => {
 
   it("equals the state labels docs/tooling.md creates, which the triage guide lists", () => {
     const tooling = fs.readFileSync(path.join(docs, "tooling.md"), "utf-8");
+
     const created = [
       ...tooling.matchAll(/^gh label create (?<name>\S+)/gmu),
     ].map((match) => match.groups?.name);
+
     const categories = new Set(tableColumn("Category labels", 1));
     expect(categories).toStrictEqual(new Set(["bug", "flaky"]));
+
     const states = created.flatMap((name) =>
       name === undefined || categories.has(name) ? [] : name
     );
+
     expect(states.toSorted(byName)).toStrictEqual(
       [...STATE_LABELS].toSorted(byName)
     );

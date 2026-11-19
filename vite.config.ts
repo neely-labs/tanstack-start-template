@@ -20,17 +20,19 @@ import { generatedSiteFiles } from "./src/lib/site-files.ts";
  * in the array from mattering, since a build alone would not reveal the
  * difference.
  */
-function siteFiles(): Plugin {
+function siteFiles() {
   return {
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         const name = request.url?.split("?")[0]?.replace(/^\//u, "") ?? "";
+
         const match = Object.entries(generatedSiteFiles).find(
           ([fileName]) => fileName === name
         );
 
         if (match === undefined) {
           next();
+
           return;
         }
 
@@ -50,7 +52,7 @@ function siteFiles(): Plugin {
       }
     },
     name: "site-files",
-  };
+  } satisfies Plugin;
 }
 
 const config = defineConfig({

@@ -54,6 +54,7 @@ ${publicPaths
       "&",
       "&amp;"
     );
+
     return `  <url><loc>${location}</loc></url>`;
   })
   .join("\n")}
