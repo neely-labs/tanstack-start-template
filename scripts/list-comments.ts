@@ -206,7 +206,6 @@ const touches = (comment: FlaggedComment, ranges: LineRange[]) =>
     (range) => comment.line <= range.end && lastLine(comment) >= range.start
   );
 
-/** The comments on lines changed since the merge base with `base`. */
 export function listComments(options: {
   base?: string;
   cwd: string;
