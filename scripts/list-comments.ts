@@ -49,7 +49,7 @@ const reportSchema = z.object({
     z.object({
       code: z.string().optional(),
       message: z.string(),
-      filename: z.string(),
+      filename: z.string().optional(),
       labels: z.array(
         z.object({
           span: z.object({
@@ -176,14 +176,14 @@ function lintComments(root: string, files: string[]) {
 
   if (unparsed) {
     throw new Error(
-      `oxlint could not parse ${unparsed.filename}: ${unparsed.message}`
+      `oxlint could not parse ${unparsed.filename ?? "a file"}: ${unparsed.message}`
     );
   }
 
   const comments: FlaggedComment[] = [];
 
   for (const diagnostic of report.diagnostics) {
-    if (diagnostic.code !== RULE) {
+    if (diagnostic.code !== RULE || diagnostic.filename === undefined) {
       continue;
     }
 
