@@ -1,10 +1,10 @@
 # Authorization proofs: when the app first checks a permission
 
-**Trigger:** the first server function, loader, or route that acts only if the signed-in user may do so. Authentication comes first; this recipe makes skipping the check a compile error.
+**Trigger:** the first server function that acts only if the signed-in user may do so. Authentication comes first; this recipe makes skipping the check a compile error.
 
 ## Add
 
-[GDP-ts](https://github.com/rauchg/gdp-ts) ("Ghosts of Departed Proofs") turns a permission check into a value. A sensitive function takes a proof about its exact arguments, and only the module that runs the check can create one. Its type names the user and resource it was checked for, so a proof for project A does not compile where project B is passed. At runtime a proof is a frozen `{ kind }`.
+[GDP-ts](https://github.com/rauchg/gdp-ts) ("Ghosts of Departed Proofs") turns a permission check into a value. A sensitive function takes a proof about its exact arguments, and only the module that runs the check can create one. Its type names the user and resource it was checked for, so a proof for project A does not compile where project B is passed. At runtime a proof is a frozen `{ kind }`, so it guards only code paths on the server: loaders can run in the browser, so a loader calls the server function that checks, never the check itself.
 
 **The package and its lint preset.** Run `pnpm add @gdp-ts/core`, then add `gdp` from `ultracite/oxlint/gdp` to `extends` in `oxlint.config.ts`. Ultracite bundles the preset, but its plug-in loads from `@gdp-ts/core`, and without that dependency Oxlint fails to load it. The preset enforces four rules:
 
@@ -20,7 +20,8 @@ The last rule replaces anti-slop's `SAFETY:` comment rule everywhere else: an as
 **One module per proof in `src/proofs/`.** Keep the prover private. Give it a different name from the exported interface, because core's `no-redeclare` rejects the shared name that GDP-ts's README uses:
 
 ```ts
-import { defineProof, type Named, type Proof } from "@gdp-ts/core";
+import { defineProof } from "@gdp-ts/core";
+import type { Named, Proof } from "@gdp-ts/core";
 
 const prover = defineProof("UserIsProjectAdmin");
 
@@ -34,11 +35,12 @@ export async function userIsProjectAdmin<U, P>(
   project: Named<P, ProjectId>
 ) {
   const role = await db.roleInProject(user.value, project.value);
+
   return role === "owner" ? prover.prove(user, project) : null;
 }
 ```
 
-**Sensitive functions demand the proof.** Declare `_proof: UserIsProjectAdmin<U, P>` beside `project: Named<P, ProjectId>`. The underscore keeps the unused-variable rules quiet. A handler names its values with `name(user, project, async (u, p) => ...)`, runs the check, returns 403 on `null`, and passes the proof on.
+**Sensitive functions demand the proof.** Declare `_proof: UserIsProjectAdmin<U, P>` beside `project: Named<P, ProjectId>`. The underscore keeps the unused-variable rules quiet. Inside the server function's handler, take the user from the authenticated session, never from input, and parse the requested id. Then name both with `name(user, project, async (u, p) => ...)`, run the check, reject on `null`, and pass the proof on.
 
 ## Prove
 
