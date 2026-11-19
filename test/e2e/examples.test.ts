@@ -322,7 +322,19 @@ test("copies the home page command through the real clipboard", async ({
 test("announces a manual fallback when the clipboard refuses", async ({
   page,
 }) => {
-  // Without a granted permission, Chromium rejects the clipboard write.
+  // A Permissions-Policy that disallows clipboard writes makes the write
+  // reject in any browser state, so the test does not rely on defaults.
+  await page.route("/", async (route) => {
+    const response = await route.fetch();
+
+    await route.fulfill({
+      headers: {
+        ...response.headers(),
+        "permissions-policy": "clipboard-write=()",
+      },
+      response,
+    });
+  });
   await page.goto("/");
 
   await page.getByRole("button", { name: "Copy pnpm validate" }).click();
