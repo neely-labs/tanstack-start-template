@@ -5,6 +5,3 @@ export const agentToolingIgnorePatterns = [
   "**/.codex",
   "**/.cursor",
 ];
-
-/** Vendored Oxlint plug-in source, loaded by Oxlint but not authored here. */
-export const vendoredToolingIgnorePatterns = ["tools/oxlint/anti-slop/**"];

@@ -56,7 +56,7 @@ function RuntimePage() {
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28">
       <Badge variant="secondary">Execution model</Badge>
-      <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
+      <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-display text-balance sm:text-6xl">
         Code that knows where it runs.
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
@@ -91,7 +91,7 @@ function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <Card size="sm">
           <CardHeader>
-            <CardTitle className="text-base">Server branch</CardTitle>
+            <CardTitle>Server branch</CardTitle>
             <CardDescription>
               Returned by a server function, which runs wherever the loader
               does: at build time for the prerendered HTML, then again on the
@@ -110,7 +110,7 @@ function EnvironmentSection({ snapshot }: { snapshot: RenderSnapshot }) {
 
         <Card size="sm">
           <CardHeader>
-            <CardTitle className="text-base">Client branch</CardTitle>
+            <CardTitle>Client branch</CardTitle>
             <CardDescription>
               Read in the browser once hydration completes.
             </CardDescription>
@@ -151,31 +151,32 @@ const initialAnalyzerState: AnalyzerState = { status: "idle", text: "" };
 function AnalyzerSection() {
   const analyze = useServerFn(analyzeText);
 
-  const [state, submitAnalysis, isPending] = useActionState(
-    async (
-      _previous: AnalyzerState,
-      formData: FormData
-    ): Promise<AnalyzerState> => {
-      // A form field can also carry a File, which the server validator would
-      // reject anyway; treat anything that is not text as empty input.
-      const submitted = formData.get("text");
-      const text =
-        submitted === null || submitted instanceof File ? "" : submitted;
+  const [state, submitAnalysis, isPending] = useActionState<
+    AnalyzerState,
+    FormData
+  >(async (_previous, formData) => {
+    // A form field can also carry a File, which the server validator would
+    // reject anyway; treat anything that is not text as empty input.
+    const submitted = formData.get("text");
 
-      try {
-        const analysis = await analyze({ data: { text } });
-        return { analysis, status: "succeeded", text };
-      } catch (error) {
-        // Show only a known rejection; any other server text stays hidden.
-        const message =
-          error instanceof Error ? inputRejection(error) : undefined;
-        return message === undefined
-          ? { status: "failed", text }
-          : { message, status: "rejected", text };
-      }
-    },
-    initialAnalyzerState
-  );
+    const text =
+      submitted === null || submitted instanceof File ? "" : submitted;
+
+    try {
+      const analysis = await analyze({ data: { text } });
+
+      return { analysis, status: "succeeded", text };
+    } catch (error) {
+      // Show only a known rejection; any other server text stays hidden.
+      const message =
+        error instanceof Error ? inputRejection(error) : undefined;
+
+      return message === undefined
+        ? { status: "failed", text }
+        : { message, status: "rejected", text };
+    }
+  }, initialAnalyzerState);
+
   // A new attempt clears the last message, so a retry visibly runs.
   const rejected = !isPending && state.status === "rejected";
   const failed = !isPending && state.status === "failed";
@@ -214,12 +215,7 @@ function AnalyzerSection() {
             Up to {maxTextLength} characters. Validation runs on the server.
           </p>
           {/* Focus stays on the button, so Enter can try again after a failure. */}
-          <Button
-            className="aria-disabled:opacity-50"
-            disabled={isPending}
-            focusableWhenDisabled
-            type="submit"
-          >
+          <Button disabled={isPending} focusableWhenDisabled type="submit">
             {isPending ? "Analyzing…" : "Analyze on the server"}
           </Button>
         </div>

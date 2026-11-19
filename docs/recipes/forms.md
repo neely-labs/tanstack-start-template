@@ -7,7 +7,7 @@
 The code lives in [`forms/`](forms/), beside this file. Copy it, then rename the fields to yours:
 
 - **[`greeting-form.tsx`](forms/greeting-form.tsx)**, into `src/components/`, rendered on a route. It follows the rule with a controlled field for the live count.
-- **[`greeting.spec.ts`](forms/greeting.spec.ts)**, into `tests/e2e/`, with `/greeting` changed to that route. The first test holds the page's scripts, types and submits into the server HTML, releases the scripts, and expects the greeting, the count, the field, and a URL without the name. The second submits with JavaScript disabled and expects no request at all.
+- **[`greeting.test.ts`](forms/greeting.test.ts)**, into `test/e2e/`, with `/greeting` changed to that route. The first test holds the page's scripts, types and submits into the server HTML, releases the scripts, and expects the greeting, the count, the field, and a URL without the name. The second submits with JavaScript disabled and expects no request at all.
 
 ## Prove
 

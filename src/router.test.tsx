@@ -8,7 +8,7 @@ import {
   createRequestHandler,
   defaultStreamHandler,
 } from "@tanstack/react-router/ssr/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { pageTitle, recoveryMeta, recoveryTitles } from "@/lib/seo.ts";
 
@@ -37,6 +37,7 @@ async function serverRender(path: string) {
       </html>
     ),
   });
+
   const loaderFailure = createRoute({
     component: () => <h1>Loaded</h1>,
     getParentRoute: () => rootRoute,
@@ -46,6 +47,7 @@ async function serverRender(path: string) {
     },
     path: "/loader-failure",
   });
+
   const renderFailure = createRoute({
     component: () => {
       throw new Error("Render failed");
@@ -54,6 +56,7 @@ async function serverRender(path: string) {
     head: pageHead,
     path: "/render-failure",
   });
+
   const handle = createRequestHandler({
     createRouter: () =>
       createRouter({
@@ -63,6 +66,7 @@ async function serverRender(path: string) {
       }),
     request: new Request(`http://localhost${path}`),
   });
+
   const response = await handle(defaultStreamHandler);
   const html = await response.text();
 
@@ -77,15 +81,6 @@ async function serverRender(path: string) {
 }
 
 describe("server-rendered recovery pages", () => {
-  beforeEach(() => {
-    // The server logs the failures these routes cause on purpose.
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-  });
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("answers a missing URL with 404, a title, and noindex", async () => {
     await expect(serverRender("/missing")).resolves.toStrictEqual({
       heading: recoveryTitles.notFound,

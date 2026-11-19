@@ -27,25 +27,32 @@ const advice = `Move detail out of the always-read set rather than raising a lim
 Raise a limit in BUDGET, scripts/verify-doc-budget.ts, only for deliberate growth.`;
 
 /** A `## heading` section, up to the next level 1 or 2 heading outside a code fence. */
-function section(text: string, heading: string): string | null {
+function section(text: string, heading: string) {
   let fence = "";
   const lines = text.split(/(?<=\n)/u);
+
   const isHeading = lines.map((line) => {
     const marker = /^ {0,3}(?<m>`{3,}|~{3,})/u.exec(line)?.groups?.m ?? "";
+
     if (marker !== "" && fence === "") {
       fence = marker;
     } else if (marker.startsWith(fence) && line.trim() === marker) {
       fence = "";
     }
+
     return fence === "" && /^#{1,2} /u.test(line);
   });
+
   const start = lines.findIndex(
     (line, at) => isHeading[at] && line.trimEnd() === `## ${heading}`
   );
+
   if (start === -1) {
     return null;
   }
+
   const end = isHeading.findIndex((flag, at) => flag && at > start);
+
   return lines.slice(start, end === -1 ? undefined : end).join("");
 }
 
@@ -53,42 +60,54 @@ function section(text: string, heading: string): string | null {
 export function check(budget: typeof BUDGET, root: string) {
   const sizes = new Map<string, number>();
   const problems: string[] = [];
+
   for (const entry of budget.docs) {
     const [pattern, heading] = entry.split("#", 2);
     const files = fs.globSync(pattern, { cwd: root }).toSorted();
+
     if (files.length === 0) {
       problems.push(`${pattern} matches no file`);
     }
+
     for (const file of files) {
       const text = fs.readFileSync(path.join(root, file), "utf-8");
       const part = heading === undefined ? text : section(text, heading);
+
       if (part === null) {
         problems.push(`${file} has no "## ${heading}" section`);
       }
+
       sizes.set(file, (sizes.get(file) ?? 0) + Buffer.byteLength(part ?? ""));
     }
   }
+
   for (const [file, bytes] of sizes) {
     if (bytes > budget.fileBytes) {
       problems.push(`${file}: ${bytes} bytes, file cap ${budget.fileBytes}`);
     }
   }
+
   const total = [...sizes.values()].reduce((sum, bytes) => sum + bytes, 0);
+
   if (total > budget.totalBytes) {
     problems.push(`total: ${total} bytes, total cap ${budget.totalBytes}`);
   }
+
   return { problems, sizes, total };
 }
 
 if (import.meta.main) {
   const root = path.join(import.meta.dirname, "..");
   const { problems, sizes, total } = check(BUDGET, root);
+
   for (const [file, bytes] of sizes) {
     console.log(`${String(bytes).padStart(7)}  ${file}`);
   }
+
   console.log(
     `${String(total).padStart(7)}  total (caps: ${BUDGET.fileBytes} per file, ${BUDGET.totalBytes} in all)`
   );
+
   if (problems.length > 0) {
     console.error(
       `\nDoc budget exceeded:\n- ${problems.join("\n- ")}\n\n${advice}`

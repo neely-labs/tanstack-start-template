@@ -75,7 +75,7 @@ const steps = [
 function SetupPage() {
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-20 sm:px-8 sm:py-28">
-      <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
+      <h1 className="max-w-3xl text-5xl font-semibold tracking-display text-balance sm:text-6xl">
         Make it yours.
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">

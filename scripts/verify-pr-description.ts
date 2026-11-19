@@ -25,11 +25,14 @@ export const TEMPLATE_PATH = path.join(
  * section before it that the description has. Every other section is required.
  */
 const OPTIONAL_SECTIONS = new Set([QUALIFICATION_SECTION, "UI evidence"]);
+
 /** Sections that must keep the template's `<details>` block and the labels inside it. */
 const COLLAPSED_SECTIONS = new Set(["Verification"]);
+
 /** The section whose `- **Field:** value` lines are checked, and its optional fields. */
 const FIELDS_SECTION = "Merge danger";
 const OPTIONAL_FIELDS = new Set(["Rollback"]);
+
 /** The section that holds the evidence publisher's markers. */
 const MARKER_SECTION = "UI evidence";
 const MARKER = /^ui-evidence:(?<kind>start|end)$/u;
@@ -52,6 +55,7 @@ export const LIMITS = {
   /** The Verification `<summary>` line. */
   outcomeWords: 25,
 };
+
 /** Merge danger values with a fixed form, each as the template's comment lists it. */
 const FIELD_FORMS = new Map([
   [
@@ -79,20 +83,26 @@ const FIELD_FORMS = new Map([
     },
   ],
 ]);
+
 /** Merge danger values that are free phrases, held to `LIMITS.fieldWords`. */
 const PHRASE_FIELDS = new Set(["Blast radius", "Rollback"]);
+
 /** A visible Decisions item addressed to the owner, allowed `LIMITS.askWords`. */
 const ASK = /^\*\*(?:Owner decision|Needs your eye):\*\*/u;
+
 const ISSUE_LINE =
   /^\s*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs)\s+#\d+\s*$/iu;
+
 /** A list item's marker, bulleted or numbered. */
 const BULLET = /^(?<indent>\s*)(?:[-*+]|\d+[.)])\s+/u;
+
 /** Sections and the Verification label the limit checks read, beyond those named above. */
 const SUMMARY_SECTION = "Summary";
 const VERIFICATION_SECTION = "Verification";
 const DECISIONS_SECTION = "Decisions";
 const CHECKS_LABEL = "Checks";
 const COMMIT = /^[0-9a-f]{7,40}$/iu;
+
 interface Section {
   heading: string;
   /** `#` or `##`, as written. */
@@ -102,10 +112,12 @@ interface Section {
 }
 
 /** Level 1 and 2 headings and the lines under each; lines before the first are dropped. */
-function sections(all: Line[]): Section[] {
+function sections(all: Line[]) {
   const found: Section[] = [];
+
   for (const line of all) {
     const match = headingOf(line);
+
     if (match === undefined) {
       found.at(-1)?.body.push(line);
     } else {
@@ -117,19 +129,23 @@ function sections(all: Line[]): Section[] {
       });
     }
   }
+
   return found;
 }
 
 /** Each line paired with whether it sits inside a `<details>` block. */
 function collapsed(body: Line[]) {
   let depth = 0;
+
   const inside = body.map((line) => {
     const opens = line.text.match(/<details[\s>]/giu)?.length ?? 0;
     const closes = line.text.match(/<\/details>/giu)?.length ?? 0;
     const within = depth > 0 || opens > 0;
     depth = Math.max(0, depth + opens - closes);
+
     return within;
   });
+
   return { inside, unclosed: depth > 0 };
 }
 
@@ -141,6 +157,7 @@ function expectations(template: string) {
   const all = lines(template);
   const found = sections(all);
   const headings = found.map((section) => section.heading);
+
   for (const name of [
     ...OPTIONAL_SECTIONS,
     ...COLLAPSED_SECTIONS,
@@ -156,25 +173,31 @@ function expectations(template: string) {
       );
     }
   }
+
   const labels = new Map(
     found.map((section) => {
       const { inside } = collapsed(section.body);
+
       const names = section.body
         .filter((_, at) => inside[at])
         .flatMap((line) => BOLD_LABEL.exec(line.text)?.groups?.label ?? []);
+
       return [section.heading, names];
     })
   );
+
   if (labels.get(VERIFICATION_SECTION)?.includes(CHECKS_LABEL) !== true) {
     throw new Error(
       `The template's "## ${VERIFICATION_SECTION}" has no "**${CHECKS_LABEL}**" label, which scripts/verify-pr-description.ts names. Update the script to match.`
     );
   }
+
   const fields =
     found
       .find((section) => section.heading === FIELDS_SECTION)
       ?.body.flatMap((line) => FIELD.exec(line.text)?.groups?.label ?? []) ??
     [];
+
   for (const field of OPTIONAL_FIELDS) {
     if (!fields.includes(field)) {
       throw new Error(
@@ -182,9 +205,11 @@ function expectations(template: string) {
       );
     }
   }
+
   const comments = new Set(
     all.flatMap((line) => line.comments.map((comment) => comment.text))
   );
+
   return { comments, fields, headings, labels };
 }
 
@@ -198,6 +223,7 @@ function markersOn(line: Line) {
 /** Whether `close` ends the bot block `open` starts, in the closing styles bots use. */
 function endsBlock(open: string, close: string) {
   const endOf = "end of ";
+
   return (
     close === `/${open}` ||
     (open.includes("start") && close === open.replace("start", "end")) ||
@@ -219,26 +245,32 @@ function withoutBotBlocks(
   const last = all.findIndex(
     (line) => headingOf(line)?.heading === headings.at(-1)
   );
+
   const opened = all.flatMap((line, at) =>
     last !== -1 && at > last
       ? line.comments.map((comment) => ({ ...comment, at }))
       : []
   );
+
   const dropped = new Set<number>();
+
   for (const [index, open] of opened.entries()) {
     const close = opened
       .slice(index + 1)
       .find((candidate) => endsBlock(open.text, candidate.text));
+
     const isBot =
       !dropped.has(open.at) &&
       !templateComments.has(open.text) &&
       !MARKER.test(open.text);
+
     if (isBot && close !== undefined) {
       for (let { at } = open; at <= close.end; at += 1) {
         dropped.add(at);
       }
     }
   }
+
   return all.filter((_, at) => !dropped.has(at));
 }
 
@@ -249,16 +281,19 @@ function checkHeadings(found: Section[], expected: Expected) {
   const problems: string[] = [];
   const seen = new Map<string, Section>();
   let furthest: Section | undefined;
+
   for (const section of found) {
     const at = expected.headings.indexOf(section.heading);
     const name = `${section.marker} ${section.heading}`;
     const first = seen.get(section.heading);
+
     if (at === -1 || section.marker !== "##") {
       problems.push(
         `line ${section.line}: "${name}" is not a template section; use the template's sections only`
       );
     } else if (first === undefined) {
       seen.set(section.heading, section);
+
       if (
         furthest !== undefined &&
         at < expected.headings.indexOf(furthest.heading)
@@ -275,11 +310,13 @@ function checkHeadings(found: Section[], expected: Expected) {
       );
     }
   }
+
   for (const heading of expected.headings) {
     if (!seen.has(heading) && !OPTIONAL_SECTIONS.has(heading)) {
       problems.push(`missing section "## ${heading}"`);
     }
   }
+
   return { problems, seen };
 }
 
@@ -290,11 +327,14 @@ function checkPlacement(
   expected: Expected
 ) {
   const problems: string[] = [];
+
   for (const name of OPTIONAL_SECTIONS) {
     const section = seen.get(name);
+
     const before = expected.headings
       .slice(0, expected.headings.indexOf(name))
       .findLast((heading) => seen.has(heading));
+
     if (
       section !== undefined &&
       before !== undefined &&
@@ -305,6 +345,7 @@ function checkPlacement(
       );
     }
   }
+
   return problems;
 }
 
@@ -312,10 +353,13 @@ function checkPlacement(
 function checkEvidence(all: Line[], seen: Map<string, Section>) {
   const problems: string[] = [];
   const evidence = seen.get(MARKER_SECTION);
+
   const markers = all.flatMap((line) =>
     markersOn(line).map((kind) => ({ kind, line: line.number }))
   );
+
   const inEvidence = new Set(evidence?.body.map((line) => line.number));
+
   for (const marker of markers) {
     if (!inEvidence.has(marker.line)) {
       problems.push(
@@ -323,12 +367,15 @@ function checkEvidence(all: Line[], seen: Map<string, Section>) {
       );
     }
   }
+
   const order = markers.map((marker) => marker.kind).join(",");
+
   if (markers.length > 0 && order !== "start,end") {
     problems.push(
       `"## ${MARKER_SECTION}" needs one ui-evidence:start marker then one ui-evidence:end marker, found ${order}`
     );
   }
+
   return problems;
 }
 
@@ -336,37 +383,45 @@ function checkEvidence(all: Line[], seen: Map<string, Section>) {
 function checkCollapsed(section: Section, expected: Expected) {
   const problems: string[] = [];
   const { inside, unclosed } = collapsed(section.body);
+
   if (COLLAPSED_SECTIONS.has(section.heading) && !inside.some(Boolean)) {
     problems.push(
       `"## ${section.heading}" (line ${section.line}) lost its <details> block`
     );
   }
+
   if (unclosed) {
     problems.push(
       `"## ${section.heading}" (line ${section.line}) has a <details> block with no </details>`
     );
   }
+
   const labels = expected.labels.get(section.heading) ?? [];
+
   if (COLLAPSED_SECTIONS.has(section.heading) && inside.some(Boolean)) {
     const kept = new Set(
       section.body.flatMap((line, at) =>
         inside[at] ? (BOLD_LABEL.exec(line.text)?.groups?.label ?? []) : []
       )
     );
+
     for (const label of labels.filter((name) => !kept.has(name))) {
       problems.push(
         `"## ${section.heading}" (line ${section.line}) lost "**${label}**" from its <details> block`
       );
     }
   }
+
   for (const [at, line] of section.body.entries()) {
     const label = BOLD_LABEL.exec(line.text)?.groups?.label;
+
     if (label !== undefined && labels.includes(label) && !inside[at]) {
       problems.push(
         `line ${line.number}: "**${label}**" under "## ${section.heading}" belongs inside its collapsed <details> block`
       );
     }
   }
+
   return problems;
 }
 
@@ -375,18 +430,23 @@ function checkFields(section: Section | undefined, expected: Expected) {
   if (section === undefined) {
     return [];
   }
+
   const problems: string[] = [];
+
   const values = new Map(
     section.body.flatMap((line) => {
       const groups = FIELD.exec(line.text)?.groups;
+
       return groups === undefined
         ? []
         : [[groups.label, { line, value: groups.value }]];
     })
   );
+
   for (const field of expected.fields) {
     const entry = values.get(field);
     const optional = OPTIONAL_FIELDS.has(field);
+
     if (entry === undefined && !optional) {
       problems.push(`"## ${FIELDS_SECTION}" is missing "**${field}:**"`);
     } else if (entry !== undefined && entry.value.trim() === "") {
@@ -395,6 +455,7 @@ function checkFields(section: Section | undefined, expected: Expected) {
       );
     }
   }
+
   return problems;
 }
 
@@ -402,18 +463,23 @@ function checkFields(section: Section | undefined, expected: Expected) {
 function checkPlaceholders(line: Line) {
   const problems: string[] = [];
   const prose = line.text.replaceAll(/`[^`]*`/gu, "");
+
   if (
     /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs)\s+#(?!\d)/iu.test(prose)
   ) {
     problems.push(`line ${line.number}: an issue reference has no number`);
   }
+
   const row = /^\s*\|(?<cells>.*)\|\s*$/u.exec(line.text)?.groups?.cells;
+
   if (row?.split("|").every((cell) => cell.trim() === "") === true) {
     problems.push(`line ${line.number}: a table row is empty`);
   }
+
   if (/^\s*[-*+]\s*$/u.test(line.text)) {
     problems.push(`line ${line.number}: a list item is empty`);
   }
+
   return problems;
 }
 
@@ -447,12 +513,15 @@ function cellsOf(text: string) {
  */
 function tablesIn(body: Line[]) {
   const found: { header: number; rows: number[] }[] = [];
+
   for (const [at, line] of body.entries()) {
     const header = body[at - 1];
     const current = found.at(-1);
+
     if (line.fenced) {
       continue;
     }
+
     // A row right after a table's last line extends it, whatever it holds.
     if (
       current !== undefined &&
@@ -469,6 +538,7 @@ function tablesIn(body: Line[]) {
       found.push({ header: at - 1, rows: [] });
     }
   }
+
   return found;
 }
 
@@ -477,8 +547,10 @@ function fencesIn(body: Line[]) {
   const DELIMITER = /^ {0,3}(?<mark>`{3,}|~{3,})/u;
   let count = 0;
   let open = "";
+
   for (const line of body) {
     const mark = DELIMITER.exec(line.raw)?.groups?.mark ?? "";
+
     if (!line.fenced) {
       open = "";
     } else if (open === "") {
@@ -492,6 +564,7 @@ function fencesIn(body: Line[]) {
       open = "";
     }
   }
+
   return count;
 }
 
@@ -500,23 +573,30 @@ function checkSummary(section: Section | undefined) {
   if (section === undefined) {
     return [];
   }
+
   const problems: string[] = [];
   const name = `"## ${section.heading}"`;
   const tables = tablesIn(section.body);
+
   const tableLines = new Set(
     tables.flatMap((table) => [table.header, table.header + 1, ...table.rows])
   );
+
   const prose = section.body.filter(
     (line, at) =>
       !line.fenced && !tableLines.has(at) && !ISSUE_LINE.test(line.text)
   );
+
   const count = prose.reduce((sum, line) => sum + wordCount(line.text), 0);
+
   if (count > LIMITS.summaryWords) {
     problems.push(
       `line ${section.line}: ${name} has ${count} words of prose; keep it within ${LIMITS.summaryWords}, with proof under Verification and choices under Decisions`
     );
   }
+
   const sketches = fencesIn(section.body);
+
   if (sketches > 1) {
     problems.push(
       `line ${section.line}: ${name} has ${sketches} code sketches; keep at most one`
@@ -526,15 +606,18 @@ function checkSummary(section: Section | undefined) {
       `line ${section.line}: ${name} has ${sketches + tables.length} sketches and tables; keep at most one sketch and one before/after table`
     );
   }
+
   return problems;
 }
 
 /** Each Merge danger field's label and whole value, wrapped lines joined. */
 function fieldValues(section: Section | undefined) {
   const found: { label: string; line: Line; value: string }[] = [];
+
   for (const line of section?.body ?? []) {
     const groups = FIELD.exec(line.text)?.groups;
     const last = found.at(-1);
+
     if (groups !== undefined) {
       found.push({ label: groups.label, line, value: groups.value.trim() });
     } else if (
@@ -545,18 +628,22 @@ function fieldValues(section: Section | undefined) {
       last.value = `${last.value} ${line.text.trim()}`.trim();
     }
   }
+
   return found;
 }
 
 /** Merge danger values in their fixed form, or a short phrase. */
 function checkFieldForms(section: Section | undefined) {
   const problems: string[] = [];
+
   for (const { label, line, value } of fieldValues(section)) {
     if (value === "") {
       continue;
     }
+
     const form = FIELD_FORMS.get(label);
     const count = wordCount(value);
+
     if (form !== undefined && !form.matches(value)) {
       problems.push(`line ${line.number}: "**${label}:**" ${form.rule}`);
     } else if (PHRASE_FIELDS.has(label) && count > LIMITS.fieldWords) {
@@ -565,6 +652,7 @@ function checkFieldForms(section: Section | undefined) {
       );
     }
   }
+
   return problems;
 }
 
@@ -573,21 +661,27 @@ function checkDecisions(section: Section | undefined) {
   if (section === undefined) {
     return [];
   }
+
   const { inside } = collapsed(section.body);
+
   const visibleLines = section.body.filter(
     (line, at) => !inside[at] && !line.fenced
   );
+
   // The list's own indent: its first bullet's. Deeper by two or more is nested.
   const root =
     visibleLines
       .map((line) => BULLET.exec(line.text)?.groups?.indent.length)
       .find((length) => length !== undefined) ?? 0;
+
   const items: { line: Line; words: number; ask: boolean }[] = [];
   // Whether the line before continues an item, so a flush-left line joins it.
   let open = false;
+
   for (const line of visibleLines) {
     const indent = BULLET.exec(line.text)?.groups?.indent;
     const item = items.at(-1);
+
     if (line.text.trim() === "") {
       open = false;
     } else if (indent !== undefined && indent.length < root + 2) {
@@ -602,20 +696,25 @@ function checkDecisions(section: Section | undefined) {
       open = true;
     }
   }
+
   const problems: string[] = [];
+
   if (items.length > LIMITS.decisionsVisible) {
     problems.push(
       `line ${section.line}: "## ${section.heading}" shows ${items.length} bullets; keep at most ${LIMITS.decisionsVisible} visible and move the rest into the collapsed block`
     );
   }
+
   for (const item of items) {
     const limit = item.ask ? LIMITS.askWords : LIMITS.choiceWords;
+
     if (item.words > limit) {
       problems.push(
         `line ${item.line.number}: a Decisions ${item.ask ? "item for the owner" : "choice"} has ${item.words} words; keep it within ${limit}, with its reason in the collapsed block`
       );
     }
   }
+
   return problems;
 }
 
@@ -633,37 +732,47 @@ function namesHead(text: string, head: string) {
 function checkOutcome(section: Section, head?: string) {
   const at = section.body.findIndex((line) => /<summary>/iu.test(line.text));
   const outcome = section.body[at];
+
   if (outcome === undefined) {
     const { inside } = collapsed(section.body);
+
     return inside.some(Boolean)
       ? [
           `"## ${section.heading}" (line ${section.line}) has no <summary> outcome line naming the head commit`,
         ]
       : [];
   }
+
   const problems: string[] = [];
+
   const end = section.body.findIndex(
     (line, index) => index >= at && /<\/summary>/iu.test(line.text)
   );
+
   const joined = section.body
     .slice(at, end === -1 ? at + 1 : end + 1)
     .map((line) => line.text)
     .join(" ");
+
   const text =
     /<summary>(?<text>.*?)(?:<\/summary>|$)/isu.exec(joined)?.groups?.text ??
     "";
+
   const visibleText = text.replaceAll(/<\/?[a-z][^>]*>/giu, " ");
   const count = wordCount(visibleText);
+
   if (count > LIMITS.outcomeWords) {
     problems.push(
       `line ${outcome.number}: the Verification outcome line has ${count} words; keep it within ${LIMITS.outcomeWords}`
     );
   }
+
   if (head !== undefined && !namesHead(visibleText, head)) {
     problems.push(
       `line ${outcome.number}: the Verification outcome line does not name the head commit ${head.slice(0, 7)}; rewrite Verification for the final head`
     );
   }
+
   return problems;
 }
 
@@ -672,19 +781,24 @@ function checkRows(section: Section) {
   const labelAt = (from: number, test: (label: string) => boolean) =>
     section.body.findIndex((line, at) => {
       const label = BOLD_LABEL.exec(line.text)?.groups?.label;
+
       return at > from && label !== undefined && test(label);
     });
+
   const start = labelAt(-1, (label) => label === CHECKS_LABEL);
   const next = labelAt(start, () => true);
+
   if (start === -1) {
     return [];
   }
+
   return tablesIn(section.body)
     .filter(({ header }) => header > start && (next === -1 || header < next))
     .flatMap(({ rows }) => rows)
     .flatMap((at) => {
       const line = section.body[at];
       const cells = cellsOf(line?.text ?? "");
+
       // A row of empty cells is the placeholder check's to report.
       return line === undefined || cells.every((cell) => cell === "")
         ? []
@@ -700,7 +814,9 @@ function checkVerification(section: Section | undefined, head?: string) {
   if (section === undefined) {
     return [];
   }
+
   const problems = checkOutcome(section, head);
+
   if (head !== undefined) {
     for (const row of checkRows(section)) {
       if (!namesHead(row.commit, head)) {
@@ -710,17 +826,21 @@ function checkVerification(section: Section | undefined, head?: string) {
       }
     }
   }
+
   return problems;
 }
 
 /** The declarations under Qualification, and each way they break its rules. */
 function checkQualification(seen: Map<string, Section>, body: string) {
   const section = seen.get(QUALIFICATION_SECTION);
+
   if (section === undefined) {
     return { declarations: [], present: false, problems: [] };
   }
+
   const { declarations, problems } = parseQualification(section.body);
   const summary = seen.get("Summary")?.body ?? [];
+
   return {
     declarations,
     present: true,
@@ -730,12 +850,15 @@ function checkQualification(seen: Map<string, Section>, body: string) {
 
 function parse(body: string, template: string) {
   const expected = expectations(template);
+
   const all = withoutBotBlocks(
     lines(body),
     expected.headings,
     expected.comments
   );
+
   const found = sections(all);
+
   return { all, expected, found, ...checkHeadings(found, expected) };
 }
 
@@ -755,8 +878,9 @@ export function check(
   body: string,
   template: string,
   { head }: { head?: string } = {}
-): string[] {
+) {
   const { all, expected, found, problems, seen } = parse(body, template);
+
   return [
     ...problems,
     ...checkPlacement(found, seen, expected),
@@ -776,6 +900,7 @@ export function check(
 
 if (import.meta.main) {
   const [source, flag, head, ...rest] = process.argv.slice(2);
+
   if (
     source === undefined ||
     rest.length > 0 ||
@@ -784,10 +909,13 @@ if (import.meta.main) {
     console.error("Usage: pnpm pr:verify <body-file | -> [--head <sha>]");
     process.exit(2);
   }
+
   const body = fs.readFileSync(source === "-" ? 0 : source, "utf-8");
+
   const problems = check(body, fs.readFileSync(TEMPLATE_PATH, "utf-8"), {
     head,
   });
+
   if (problems.length === 0) {
     console.log("The description matches .github/pull_request_template.md.");
   } else {

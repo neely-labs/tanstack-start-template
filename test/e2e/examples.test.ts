@@ -16,6 +16,7 @@ function measure(page: Page, label: string) {
     .filter({ has: page.getByText(label, { exact: true }) })
     .getByRole("definition");
 }
+
 test("navigates the examples and validates real server functions", async ({
   page,
   request,
@@ -24,9 +25,11 @@ test("navigates the examples and validates real server functions", async ({
   const browserErrors: string[] = [];
   page.on("pageerror", (failure) => browserErrors.push(failure.message));
   await page.goto("/");
+
   const navigation = page.getByRole("navigation", {
     name: "Primary navigation",
   });
+
   await navigation.getByRole("link", { exact: true, name: "Setup" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Make it yours."
@@ -61,10 +64,12 @@ test("navigates the examples and validates real server functions", async ({
 
   const submittedText = "TanStack stable upgrade works.";
   await input.fill(submittedText);
+
   const serverRequest = page.waitForRequest(
     (candidate) =>
       candidate.method() === "POST" && candidate.url().includes("/_serverFn/")
   );
+
   await submit.click();
   const rpcRequest = await serverRequest;
   await expect(measure(page, "Words")).toHaveText("4");
@@ -90,9 +95,11 @@ test("navigates the examples and validates real server functions", async ({
   await expect(input).toHaveValue(oversizedText);
 
   const requestBody = rpcRequest.postData();
+
   if (requestBody === null) {
     throw new Error("The server-function request must include its input.");
   }
+
   expect(requestBody).toContain(submittedText);
   const headers = new Headers(await rpcRequest.allHeaders());
   headers.delete("content-length");
@@ -102,11 +109,14 @@ test("navigates the examples and validates real server functions", async ({
     `"k":["text"],"v":[{"t":1,"s":"${submittedText}"}]`,
     '"k":[],"v":[]'
   );
+
   expect(fieldWithoutText).not.toBe(requestBody);
+
   const malformed = await request.post(rpcRequest.url(), {
     data: fieldWithoutText,
     headers: Object.fromEntries(headers),
   });
+
   const malformedBody = await malformed.text();
   expect(malformedBody).toContain('"error"');
   expect(malformedBody).toContain("invalid_type");
@@ -115,10 +125,12 @@ test("navigates the examples and validates real server functions", async ({
 
   headers.set("origin", "https://attacker.example");
   headers.set("sec-fetch-site", "cross-site");
+
   const crossSite = await request.post(rpcRequest.url(), {
     data: requestBody,
     headers: Object.fromEntries(headers),
   });
+
   expect(crossSite.status()).toBe(403);
 
   expect(
@@ -250,10 +262,18 @@ test("keeps the submitted text read-only while the analysis is pending", async (
 }) => {
   // A route left unanswered holds its request until the test continues it.
   let holdAnalysis = false;
-  const heldRequests: Route[] = [];
+  let release: ((route: Route) => void) | undefined;
+
+  // A deferred: Promise.withResolvers is ES2024, above the ES2023 lib that
+  // tsconfig.json sets for the browser floor.
+  // oxlint-disable-next-line promise/avoid-new
+  const held = new Promise<Route>((resolve) => {
+    release = resolve;
+  });
+
   await page.route("**/_serverFn/**", async (route) => {
     if (holdAnalysis && route.request().method() === "POST") {
-      heldRequests.push(route);
+      release?.(route);
     } else {
       await route.continue();
     }
@@ -277,9 +297,37 @@ test("keeps the submitted text read-only while the analysis is pending", async (
   await page.keyboard.type(" and more");
   await expect(input).toHaveValue(submittedText);
 
-  await expect.poll(() => heldRequests.length).toBe(1);
-  await heldRequests[0]?.continue();
+  const heldRequest = await held;
+  await heldRequest.continue();
   await expect(measure(page, "Words")).toHaveText("3");
   await expect(input).toHaveValue(submittedText);
   await expect(input).toBeEditable();
+});
+
+test("copies the home page command through the real clipboard", async ({
+  context,
+  page,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Copy pnpm validate" }).click();
+
+  await expect(page.getByText("Copied to clipboard")).toBeAttached();
+  // The announcement follows the finished write, so the text is there now.
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toBe("pnpm validate");
+});
+
+test("announces a manual fallback when the clipboard refuses", async ({
+  page,
+}) => {
+  // Without a granted permission, Chromium rejects the clipboard write.
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Copy pnpm validate" }).click();
+
+  await expect(
+    page.getByText("Could not copy. Select the command to copy it manually.")
+  ).toBeAttached();
 });

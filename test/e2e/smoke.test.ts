@@ -15,9 +15,11 @@ test("serves prerendered pages, identity files, and secured API responses", asyn
     publicPaths.map(async (routePath) => {
       const response = await request.get(routePath);
       expect(response.status()).toBe(200);
+
       for (const [name, value] of Object.entries(securityHeaders)) {
         expect(response.headers()[name.toLowerCase()]).toBe(value);
       }
+
       const html = await response.text();
       // The served page must pass the same checks as the built file.
       checkPageHtml(html, routePath);
@@ -59,13 +61,16 @@ test("serves prerendered pages, identity files, and secured API responses", asyn
 
   const missing = await request.get("/missing-smoke-route");
   expect(missing.status()).toBe(404);
+
   for (const [name, value] of Object.entries(securityHeaders)) {
     expect(missing.headers()[name.toLowerCase()]).toBe(value);
   }
+
   // Nitro answers a URL it cannot decode itself, without the app's headers.
   const malformed = await request.get("/%E0%A4%A");
   expect(malformed.status()).toBe(400);
   expect(malformed.headers()["content-type"]).toContain("application/json");
+
   for (const name of Object.keys(securityHeaders)) {
     expect(malformed.headers()[name.toLowerCase()]).toBeUndefined();
   }
@@ -74,9 +79,11 @@ test("serves prerendered pages, identity files, and secured API responses", asyn
   expect(image.status()).toBe(200);
   const { etag } = image.headers();
   expect(etag).toBeDefined();
+
   const conditional = await request.get(siteConfig.socialImage.path, {
     headers: { "if-none-match": etag ?? "" },
   });
+
   expect(conditional.status()).toBe(304);
   const head = await request.head(siteConfig.socialImage.path);
   expect(head.status()).toBe(200);
@@ -126,9 +133,11 @@ test("supports keyboard skip, navigation, and not-found recovery", async ({
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
+
   const home = page
     .getByRole("navigation", { name: "Primary navigation" })
     .getByRole("link", { name: "Home", exact: true });
+
   await expect(home).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(`${baseURL}/`);

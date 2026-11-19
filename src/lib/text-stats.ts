@@ -31,13 +31,14 @@ export interface TextStats {
   words: number;
 }
 
-export function summarizeText(text: string): TextStats {
+export function summarizeText(text: string) {
   const trimmed = text.trim();
   graphemeSegmenter ??= new Intl.Segmenter(undefined, {
     granularity: "grapheme",
   });
   wordSegmenter ??= new Intl.Segmenter(undefined, { granularity: "word" });
   let words = 0;
+
   for (const segment of wordSegmenter.segment(trimmed)) {
     if (segment.isWordLike === true) {
       words += 1;
@@ -49,7 +50,7 @@ export function summarizeText(text: string): TextStats {
     readingMinutes:
       words === 0 ? 0 : Math.max(1, Math.round(words / wordsPerMinute)),
     words,
-  };
+  } satisfies TextStats;
 }
 
 /**

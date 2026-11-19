@@ -9,4 +9,3 @@ src/routeTree.gen.ts linguist-generated=true
 .claude/skills/** linguist-vendored=true
 .cursor/agents/** linguist-vendored=true
 .cursor/skills/** linguist-vendored=true
-tools/oxlint/anti-slop/** linguist-vendored=true

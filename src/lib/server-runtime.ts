@@ -34,10 +34,11 @@ export const describeEnvironment = createIsomorphicFn()
  * revalidates the loader.
  */
 export const getRenderSnapshot = createServerFn().handler(
-  (): RenderSnapshot => ({
-    environment: describeEnvironment(),
-    renderedAt: new Date().toISOString(),
-  })
+  () =>
+    ({
+      environment: describeEnvironment(),
+      renderedAt: new Date().toISOString(),
+    }) satisfies RenderSnapshot
 );
 
 /**
@@ -47,11 +48,14 @@ export const getRenderSnapshot = createServerFn().handler(
  */
 export const analyzeText = createServerFn({ method: "POST" })
   .validator(textInputSchema)
-  .handler(({ data }): TextAnalysis => ({
-    computedAt: new Date().toISOString(),
-    environment: describeEnvironment(),
-    stats: summarizeText(data.text),
-  }));
+  .handler(
+    ({ data }) =>
+      ({
+        computedAt: new Date().toISOString(),
+        environment: describeEnvironment(),
+        stats: summarizeText(data.text),
+      }) satisfies TextAnalysis
+  );
 
 const rejectionMessages = new Set<string>(Object.values(textInputErrors));
 
@@ -65,14 +69,17 @@ const issueListSchema = z.array(z.object({ message: z.string() }));
  * JSON list of the schema's issues. Only messages from `textInputErrors` come
  * back, so other server text, such as a driver error, never reaches the page.
  */
-export function inputRejection(error: Error): string | undefined {
+export function inputRejection(error: Error) {
   let issues: unknown;
+
   try {
     issues = JSON.parse(error.message);
   } catch {
-    return undefined;
+    // A message that is not JSON carries no validation issues.
   }
+
   const parsed = issueListSchema.safeParse(issues);
+
   return parsed.success
     ? parsed.data
         .map((issue) => issue.message)

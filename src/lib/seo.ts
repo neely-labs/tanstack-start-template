@@ -32,7 +32,7 @@ interface WebPageSchemaOptions {
   type?: (typeof webPageTypes)[number];
 }
 
-export function absoluteUrl(path: string): string {
+export function absoluteUrl(path: string) {
   return new URL(path, `${siteConfig.origin}/`).toString();
 }
 
@@ -41,7 +41,7 @@ export function absoluteUrl(path: string): string {
  * project in `site-config.ts` renames every page with it. Called without a page
  * name it returns the site name alone, which is what the home route wants.
  */
-export function pageTitle(page?: string): string {
+export function pageTitle(page?: string) {
   return page === undefined ? siteConfig.name : `${page} | ${siteConfig.name}`;
 }
 
@@ -72,6 +72,7 @@ export function recoveryMeta(matches: readonly MatchState[]) {
   if (matches.some((match) => match.status === "error")) {
     return [{ title: pageTitle(recoveryTitles.error) }];
   }
+
   if (
     matches.some(
       (match) => match.status === "notFound" || match._notFound === true
@@ -79,6 +80,7 @@ export function recoveryMeta(matches: readonly MatchState[]) {
   ) {
     return [{ title: pageTitle(recoveryTitles.notFound) }];
   }
+
   return [];
 }
 

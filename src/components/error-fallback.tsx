@@ -39,7 +39,7 @@ export function ErrorFallback({
         tabIndex={-1}
       >
         <h1
-          className="text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl"
+          className="text-4xl font-semibold tracking-display text-balance sm:text-5xl"
           id="error-heading"
         >
           This page couldn&apos;t finish loading.

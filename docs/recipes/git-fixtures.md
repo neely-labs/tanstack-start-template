@@ -33,7 +33,7 @@ export const fixtureEnv = (base: string): NodeJS.ProcessEnv => ({
 });
 ```
 
-- The template's own Git tests import this helper from `scripts/git-fixtures.ts`.
+- The template's own Git tests import this helper from `scripts/git.test-utils.ts`.
 - `--local-env-vars` lists the repository variables to drop, so the list stays right as Git adds more. `gitEnv` in `scripts/local.ts` strips the same list for production code.
 - `GIT_CEILING_DIRECTORIES` stops discovery at `base`, so a fixture without `.git` fails instead of finding another repository.
 - Empty global and system config keep a developer's signing, hooks path, or default branch from changing results; set what the test needs with `-c` or in the fixture's own config.

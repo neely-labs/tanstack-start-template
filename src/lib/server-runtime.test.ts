@@ -6,9 +6,11 @@ import { textInputErrors, textInputSchema } from "./text-stats.ts";
 /** The error TanStack Start throws when the schema rejects `{ text }`. */
 async function schemaFailure(text: string | number) {
   const result = await textInputSchema["~standard"].validate({ text });
+
   if (result.issues === undefined) {
     throw new Error("Expected the schema to reject the input.");
   }
+
   return new Error(JSON.stringify(result.issues, undefined, 2));
 }
 

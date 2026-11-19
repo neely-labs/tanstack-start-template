@@ -57,19 +57,22 @@ const hookPayloadSchema = z.object({
 });
 
 /** The edited file named by a hook payload, or undefined when it names none. */
-export function editedFilePath(raw: string): string | undefined {
+export function editedFilePath(raw: string) {
   let value: unknown;
+
   try {
     value = JSON.parse(raw);
   } catch {
     // An empty or malformed payload names no file.
   }
-  const payload = hookPayloadSchema.safeParse(value);
-  if (!payload.success) {
-    return undefined;
-  }
-  const { file_path: rootPath, tool_input: toolInput } = payload.data;
-  return rootPath ?? toolInput?.file_path ?? toolInput?.notebook_path;
+
+  const payload = hookPayloadSchema.safeParse(value).data;
+
+  return (
+    payload?.file_path ??
+    payload?.tool_input?.file_path ??
+    payload?.tool_input?.notebook_path
+  );
 }
 
 /** Runs a locally installed binary against a single file. */
@@ -85,6 +88,7 @@ function readStdin() {
   if (process.stdin.isTTY) {
     return "";
   }
+
   try {
     return readFileSync(0, "utf-8");
   } catch {
@@ -94,12 +98,14 @@ function readStdin() {
 
 function main() {
   const candidate = editedFilePath(readStdin());
+
   if (candidate === undefined) {
     return;
   }
 
   const absolutePath = path.resolve(PROJECT_ROOT, candidate);
   const relativePath = path.relative(PROJECT_ROOT, absolutePath);
+
   const isOutsideProject =
     relativePath.startsWith("..") || path.isAbsolute(relativePath);
 

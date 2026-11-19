@@ -41,7 +41,7 @@ For page or server changes, check the production build in the browser too. Insta
 pnpm exec playwright install chromium
 ```
 
-After `pnpm validate` has built the current app, run `pnpm test:e2e`. The browser suite exercises served files, hydration, keyboard behavior, server requests, and recovery. `tests/e2e/smoke.spec.ts` covers shared infrastructure; `tests/e2e/examples.spec.ts` goes with the optional example pages. Missing expected behavior fails a check.
+After `pnpm validate` has built the current app, run `pnpm test:e2e`. The browser suite exercises served files, hydration, keyboard behavior, server requests, and recovery. `test/e2e/smoke.test.ts` covers shared infrastructure; `test/e2e/examples.test.ts` goes with the optional example pages. Missing expected behavior fails a check.
 
 Before handoff, inspect the changed route or action and report what you actually checked, with useful evidence and any remaining uncertainty.
 

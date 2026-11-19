@@ -10,6 +10,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
 
 export type Checkout = ReturnType<typeof checkoutOf>;
+
 /** What `dev` started, so status, stop and retire act only on that process. */
 export type Owner = Pick<Checkout, "appPort" | "e2ePort" | "root"> & {
   commit: string;
@@ -41,6 +42,7 @@ export function checkoutOf(dir = path.join(import.meta.dirname, "..")) {
   const hash = createHash("sha256").update(root).digest();
   const appPort = 20_000 + (hash.readUInt32BE(0) % 5000);
   const ownerFile = path.join(root, ".local", "owner.json");
+
   return { appPort, e2ePort: appPort + 5000, ownerFile, root };
 }
 
@@ -54,12 +56,14 @@ const localGitVars = new Set(
     .split("\n")
     .filter(Boolean)
 );
+
 export const gitEnv = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !localGitVars.has(key))
 );
 
 function git(root: string, ...args: string[]) {
   const options = { encoding: "utf-8", env: gitEnv } as const;
+
   return execFileSync("git", ["-C", root, ...args], options).trim();
 }
 
@@ -83,13 +87,16 @@ function readOrEmpty(read: () => string) {
  */
 export function processStart(pid: number) {
   const stat = readOrEmpty(() => fs.readFileSync(`/proc/${pid}/stat`, "utf-8"));
+
   if (stat) {
     // Fields after the parenthesized command name start at field 3.
     return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[22 - 3];
   }
+
   const env = { ...process.env, LC_ALL: "C" };
   const options = { encoding: "utf-8", env, stdio: "pipe" } as const;
   const args = ["-o", "lstart=", "-p", String(pid)];
+
   return readOrEmpty(() => execFileSync("ps", args, options)) || undefined;
 }
 
@@ -106,14 +113,17 @@ const ownerSchema: z.ZodType<Owner> = z.object({
  * Parses the ownership file. A missing or malformed one, or one copied from
  * another checkout, owns nothing.
  */
-export function readOwner(checkout: Checkout): Owner | undefined {
+export function readOwner(checkout: Checkout) {
   let value: unknown;
+
   try {
     value = JSON.parse(fs.readFileSync(checkout.ownerFile, "utf-8"));
   } catch {
     // No ownership file yet, or one that cannot be read.
   }
+
   const owner = ownerSchema.safeParse(value);
+
   return owner.success && owner.data.root === checkout.root
     ? owner.data
     : undefined;
@@ -122,19 +132,24 @@ export function readOwner(checkout: Checkout): Owner | undefined {
 /** `stale` means the recorded process id now belongs to another process. */
 export function serverState(owner?: Owner) {
   const started = owner && processStart(owner.pid);
+
   if (started === undefined) {
     return "stopped";
   }
+
   return started === owner?.startedAt ? "running" : "stale";
 }
 
 /** A live server from another worktree of this repository on the same port. */
 function claimant(checkout: Checkout) {
   const list = git(checkout.root, "worktree", "list", "--porcelain");
+
   return [...list.matchAll(/^worktree (?<root>.+)$/gmu)]
-    .map((match) => match.groups?.root ?? "")
-    .filter((root) => fs.existsSync(root))
-    .map((root) => readOwner(checkoutOf(root)))
+    .flatMap((match) => {
+      const root = match.groups?.root ?? "";
+
+      return fs.existsSync(root) ? [readOwner(checkoutOf(root))] : [];
+    })
     .find(
       (owner) =>
         owner?.root !== checkout.root &&
@@ -158,6 +173,7 @@ const appUrl = (checkout: Checkout) => `http://localhost:${checkout.appPort}`;
 async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
   const lock = path.join(path.dirname(checkout.ownerFile), "lock");
   fs.mkdirSync(path.dirname(lock), { recursive: true });
+
   try {
     fs.mkdirSync(lock);
   } catch {
@@ -165,6 +181,7 @@ async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
       `Another start, stop or retire holds ${lock}; remove it if none does.`
     );
   }
+
   try {
     return await task();
   } finally {
@@ -175,26 +192,33 @@ async function withLock<T>(checkout: Checkout, task: () => T | Promise<T>) {
 /** Checks ownership, starts Vite, and records it; callers hold the lock. */
 function startVite(checkout: Checkout) {
   const own = readOwner(checkout);
+
   if (own && serverState(own) === "running") {
     throw new Error(`Already serving ${appUrl(checkout)} (pid ${own.pid}).`);
   }
+
   const other = claimant(checkout);
+
   if (other) {
     const fix = "Retire it or start Vite with an explicit --port.";
     throw new Error(`Port ${other.appPort} belongs to ${other.root}. ${fix}`);
   }
+
   const vite = path.join(checkout.root, "node_modules/vite/bin/vite.js");
   const args = [vite, "dev", "--port", String(checkout.appPort)];
+
   const child = spawn(process.execPath, [...args, "--strictPort"], {
     cwd: checkout.root,
     stdio: "inherit",
   });
+
   const pid = child.pid ?? 0;
   const commit = git(checkout.root, "rev-parse", "HEAD");
   const startedAt = processStart(pid) ?? "";
   const { appPort, e2ePort, root } = checkout;
   const owner: Owner = { appPort, commit, e2ePort, pid, root, startedAt };
   fs.writeFileSync(checkout.ownerFile, `${JSON.stringify(owner, null, 2)}\n`);
+
   return child;
 }
 
@@ -202,52 +226,71 @@ export const devServer: Resource = {
   name: "dev server",
   async setup(checkout) {
     const child = await withLock(checkout, () => startVite(checkout));
+
     for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
       process.on(signal, () => {
         child.kill(signal);
       });
     }
+
     await once(child, "exit");
+
     if (readOwner(checkout)?.pid === child.pid) {
       fs.rmSync(checkout.ownerFile, { force: true });
     }
+
     process.exitCode = child.exitCode ?? 0;
   },
-  status(checkout): ResourceStatus {
+  status(checkout) {
     const owner = readOwner(checkout);
     const state = serverState(owner);
+
     if (!owner || state === "stopped") {
       return { state };
     }
-    return state === "running"
-      ? { pid: owner.pid, state, url: appUrl(checkout) }
-      : { pid: owner.pid, state };
+
+    const detail: ResourceStatus = { pid: owner.pid, state };
+
+    if (state === "running") {
+      detail.url = appUrl(checkout);
+    }
+
+    return detail;
   },
   async teardown(checkout) {
     const owner = readOwner(checkout);
+
     if (!owner) {
       return [];
     }
+
     const state = serverState(owner);
     const report = [];
+
     if (state === "running") {
       sendSignal(owner.pid, "SIGTERM");
+
       for (let i = 0; i < 50 && serverState(owner) === "running"; i += 1) {
         // oxlint-disable-next-line no-await-in-loop -- polls for the exit.
         await sleep(100);
       }
+
       if (serverState(owner) === "running") {
         sendSignal(owner.pid, "SIGKILL");
         await sleep(200);
       }
+
       if (serverState(owner) === "running") {
         throw new Error(`Could not stop the dev server (pid ${owner.pid}).`);
       }
+
       report.push(`stopped dev server (pid ${owner.pid})`);
     } else if (state === "stale") {
       report.push(`left pid ${owner.pid} alone: it is now another process`);
     }
+
     fs.rmSync(checkout.ownerFile, { force: true });
+
     return [...report, "removed .local/owner.json"];
   },
 };
@@ -262,6 +305,7 @@ export function status(checkout: Checkout) {
   const states = new Map(
     resources.map((item) => [item.name, item.status(checkout)])
   );
+
   return {
     appUrl: appUrl(checkout),
     branch: git(checkout.root, "branch", "--show-current") || "(detached)",
@@ -284,50 +328,63 @@ export function stop(checkout: Checkout) {
 /** Refuses on uncommitted or untracked work; otherwise removes local state. */
 export async function retire(checkout: Checkout) {
   const work = workIn(checkout.root);
+
   if (work) {
     const reason = "commit or remove this work first";
     throw new Error(`Refusing to retire ${checkout.root}; ${reason}:\n${work}`);
   }
+
   const report = await withLock(checkout, async () => {
     const done: string[] = [];
+
     for (let index = resources.length - 1; index >= 0; index -= 1) {
       // oxlint-disable-next-line no-await-in-loop -- reverse dependency order.
       done.push(...((await resources[index]?.teardown(checkout)) ?? []));
     }
+
     for (const dir of [".output", ".tanstack"]) {
       if (fs.existsSync(path.join(checkout.root, dir))) {
         fs.rmSync(path.join(checkout.root, dir), { recursive: true });
         done.push(`removed ${dir}/`);
       }
     }
+
     return done;
   });
+
   try {
     fs.rmdirSync(path.dirname(checkout.ownerFile));
   } catch {
     // Not empty: a later start already wrote its record.
   }
+
   return report;
 }
 
 async function main(command: string | undefined, args: string[]) {
   const at = args.indexOf("--checkout");
   const dir = at === -1 ? import.meta.dirname : args.at(at + 1);
+
   if (dir === undefined || dir.startsWith("-")) {
     throw new Error("--checkout needs a path.");
   }
+
   const checkout = checkoutOf(git(dir, "rev-parse", "--show-toplevel"));
+
   if (command === "dev") {
     console.log(`${checkout.root} serves ${appUrl(checkout)}`);
+
     for (const resource of resources) {
       // oxlint-disable-next-line no-await-in-loop -- dependency order.
       await resource.setup(checkout);
     }
   } else if (command === "status") {
     const report = status(checkout);
+
     const lines = Object.entries(report).map(
       ([key, value]) => `${key}: ${JSON.stringify(value)}`
     );
+
     console.log(
       args.includes("--json") ? JSON.stringify(report) : lines.join("\n")
     );

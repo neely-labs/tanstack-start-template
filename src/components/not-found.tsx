@@ -10,7 +10,7 @@ export function NotFound() {
       {/* React moves this tag into the document head. */}
       <meta content="noindex" name="robots" />
       <p className="font-mono text-sm font-medium text-brand">404</p>
-      <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl">
+      <h1 className="mt-3 text-4xl font-semibold tracking-display text-balance sm:text-5xl">
         {recoveryTitles.notFound}
       </h1>
       <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">

@@ -88,11 +88,11 @@ To remove both example pages, delete their routes, supporting modules, and examp
 
 - `/setup`: `src/routes/setup.tsx`
 - `/runtime`: `src/routes/runtime.tsx`, `src/lib/server-runtime.ts`, `src/lib/text-stats.ts`, `src/lib/text-stats.test.ts`
-- Example journeys: `tests/e2e/examples.spec.ts`
+- Example journeys: `test/e2e/examples.test.ts`
 
-Drop `/setup` and `/runtime` from `routeVisibility` in `src/lib/public-routes.ts` and from `navigation` in `src/lib/site-config.ts`. Replace the home page's links to those routes with the product's destinations, including the setup badge and runtime call to action. When the product's first feature comes after setup, the home page holds only the name and description until that feature lands; it claims nothing that is not built yet. Once the home page no longer uses it, delete `src/components/copy-command.tsx` and its test too. Search for remaining inbound links with `rg '/setup|/runtime' src --glob '!routeTree.gen.ts'`. If retaining one example page, retain and adapt the journeys that exercise it instead of deleting their coverage indiscriminately.
+Drop `/setup` and `/runtime` from `routeVisibility` in `src/lib/public-routes.ts` and from `navigation` in `src/lib/site-config.ts`. Replace the home page's links to those routes with the product's destinations, including the setup badge and runtime call to action. When the product's first feature comes after setup, the home page holds only the name and description until that feature lands; it claims nothing that is not built yet. Once the home page no longer uses it, delete `src/components/copy-command.tsx` and its clipboard tests in `test/e2e/examples.test.ts` too. Search for remaining inbound links with `rg '/setup|/runtime' src --glob '!routeTree.gen.ts'`. If retaining one example page, retain and adapt the journeys that exercise it instead of deleting their coverage indiscriminately.
 
-Keep `/api/health`, `tests/e2e/smoke.spec.ts`, `src/start.ts`, and `src/server.ts`: they provide readiness, reusable browser coverage, security headers, CSRF protection, and the server entry.
+Keep `/api/health`, `test/e2e/smoke.test.ts`, `src/start.ts`, and `src/server.ts`: they provide readiness, reusable browser coverage, security headers, CSRF protection, and the server entry.
 
 With route sources, inventory, and links reconciled, run `pnpm build` to regenerate `src/routeTree.gen.ts` before `pnpm validate`. A running development server for this checkout also regenerates routes. The generator owns that file; editing it by hand only hides a stale-tree failure until the next generation.
 

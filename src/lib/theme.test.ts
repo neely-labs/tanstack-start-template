@@ -30,6 +30,7 @@ function resolveTheme({
     localStorage: { getItem: readStored },
     matchMedia: () => ({ matches: prefersDark }),
   });
+
   return classes.has("dark");
 }
 

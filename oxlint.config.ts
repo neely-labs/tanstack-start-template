@@ -1,32 +1,22 @@
 import { defineConfig } from "oxlint";
+import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import jsPlugins from "ultracite/oxlint/js-plugins";
+import landmines from "ultracite/oxlint/landmines";
 import react from "ultracite/oxlint/react";
+import shadcn from "ultracite/oxlint/shadcn";
 import tanstack from "ultracite/oxlint/tanstack";
 import tanstackJsPlugins from "ultracite/oxlint/tanstack/js-plugins";
 import vitest from "ultracite/oxlint/vitest";
 
-import {
-  agentToolingIgnorePatterns,
-  vendoredToolingIgnorePatterns,
-} from "./agent-tooling.ts";
+import { agentToolingIgnorePatterns } from "./agent-tooling.ts";
 
 const selectedPluginNames = new Set(["react-doctor"]);
-
-type PluginEntry = NonNullable<typeof jsPlugins.jsPlugins>[number];
-
-function isBarePluginName(plugin: PluginEntry): plugin is string {
-  return typeof plugin === "string";
-}
-
-function pluginName(plugin: PluginEntry): string {
-  return isBarePluginName(plugin) ? plugin : plugin.name;
-}
 
 const selectedJsPlugins = {
   ...jsPlugins,
   jsPlugins: jsPlugins.jsPlugins?.filter((plugin) =>
-    selectedPluginNames.has(pluginName(plugin))
+    selectedPluginNames.has(plugin.name)
   ),
   overrides: jsPlugins.overrides?.map((override) => ({
     ...override,
@@ -60,14 +50,13 @@ export default defineConfig({
     unitTestRules,
     tanstackJsPlugins,
     selectedJsPlugins,
+    antiSlop,
+    shadcn,
+    landmines,
   ],
   ignorePatterns: [
     ...(core.ignorePatterns ?? []),
     ...agentToolingIgnorePatterns,
-    ...vendoredToolingIgnorePatterns,
-  ],
-  jsPlugins: [
-    { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
   ],
   options: { typeAware: true },
   overrides: [
@@ -77,6 +66,11 @@ export default defineConfig({
         "no-use-before-define": "off",
         "react-doctor/only-export-components": "off",
       },
+    },
+    {
+      // Browser tests exercise the whole app, so no one module owns them.
+      files: ["test/e2e/**"],
+      rules: { "landmines-structure/colocated-tests": "off" },
     },
     {
       files: ["src/components/ui/**/*.tsx"],
@@ -91,21 +85,9 @@ export default defineConfig({
     },
   ],
   rules: {
-    "anti-slop/no-chained-type-assertions": "error",
-    "anti-slop/no-conditional-empty-object-spread": "error",
-    "anti-slop/no-known-value-widening": "error",
-    "anti-slop/no-module-mocking": "error",
-    "anti-slop/no-object-parameters": "error",
-    "anti-slop/no-reflect-apply": "error",
-    "anti-slop/no-reflect-get": "error",
-    "anti-slop/no-runtime-typeof": ["error", { allowInTypeGuards: true }],
-    "anti-slop/no-shape-in-symbol-names": "error",
-    "anti-slop/no-unknown-parameters": "error",
-    "anti-slop/no-unknown-returns": "error",
-    "anti-slop/no-unknown-type-aliases": "error",
-    "anti-slop/no-unsafe-dictionary-type": "error",
-    "anti-slop/no-widen-then-assert": "error",
-    "anti-slop/require-safety-comment-for-type-assertion": "error",
+    // Agents lean on comments to explain away shortcuts, but this rule also
+    // bans the SAFETY comments anti-slop requires on type assertions.
+    "landmines-style/no-comments": "off",
     "func-style": "off",
     "react/function-component-definition": "off",
     // Its autofix adds `async` to any function that returns a promise. The
