@@ -7,7 +7,7 @@ import fs from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { z } from "zod";
 
@@ -507,77 +507,83 @@ describe("the qualification workflow's apply step", () => {
     expect(after.trim()).toBe("");
   });
 
-  it("changes nothing on a re-run, keeping ticked boxes, a new assignee and comments", () => {
-    const state = baseState(description(declared, [12, 14, 15, 16, 17]));
-    runApply(state);
-    const ticked = state.issues["12"];
+  describe("after qualification has been applied", () => {
+    let state: FakeState;
 
-    if (ticked === undefined) {
-      throw new Error("issue 12 is missing");
-    }
+    beforeEach(() => {
+      state = baseState(description(declared, [12, 14, 15, 16, 17]));
+      runApply(state);
+    });
 
-    ticked.body = ticked.body?.replace("- [ ] Owner", "- [x] Owner") ?? null;
-    ticked.assignees = [{ login: "someone" }];
-    const issues = structuredClone(state.issues);
-    const comments = structuredClone(state.comments);
-    const patches = state.patches.length;
-    const run = runApply(state);
-    expect(run.status).toBe(1);
-    expect(run.stdout).toMatch(/OK: #12: already applied by #57/u);
-    expect(state.issues).toStrictEqual(issues);
-    expect(state.comments).toStrictEqual(comments);
-    expect(state.patches).toHaveLength(patches);
-  });
+    it("changes nothing on a re-run, keeping ticked boxes, a new assignee and comments", () => {
+      const ticked = state.issues["12"];
 
-  it("writes the Current acceptance when the label is missing, then fails", () => {
-    const state = baseState(
-      description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
-    );
+      if (ticked === undefined) {
+        throw new Error("issue 12 is missing");
+      }
 
-    state.labels = state.labels.filter(
-      (name) => name !== "awaiting-qualification"
-    );
-    const run = runApply(state);
-    expect(run.status).toBe(1);
-    expect(run.stdout).toContain("docs/tooling.md#create-the-labels");
-    expect({
-      assignees: state.issues["12"]?.assignees,
-      labels: labelsOf(state.issues["12"]),
-      marker: state.issues["12"]?.body?.includes(
-        "<!-- qualification: pr=57 -->"
-      ),
-      moved: marked(state, "12", "moved").length,
-      repositoryLabel: state.labels.includes("awaiting-qualification"),
-    }).toStrictEqual({
-      assignees: [],
-      labels: ["ready-for-agent", "flaky"],
-      marker: true,
-      moved: 0,
-      repositoryLabel: false,
+      ticked.body = ticked.body?.replace("- [ ] Owner", "- [x] Owner") ?? null;
+      ticked.assignees = [{ login: "someone" }];
+      const issues = structuredClone(state.issues);
+      const comments = structuredClone(state.comments);
+      const patches = state.patches.length;
+      const run = runApply(state);
+      expect(run.status).toBe(1);
+      expect(run.stdout).toMatch(/OK: #12: already applied by #57/u);
+      expect(state.issues).toStrictEqual(issues);
+      expect(state.comments).toStrictEqual(comments);
+      expect(state.patches).toHaveLength(patches);
     });
   });
 
-  it("finishes the move on a re-run once the label exists, keeping the body it wrote", () => {
-    const state = baseState(
-      description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
-    );
+  describe("when the qualification label is missing", () => {
+    let state: FakeState;
+    let firstRun: ReturnType<typeof runApply>;
 
-    state.labels = state.labels.filter(
-      (name) => name !== "awaiting-qualification"
-    );
-    runApply(state);
-    state.labels.push("awaiting-qualification");
-    const body = state.issues["12"]?.body;
-    const run = runApply(state);
-    expect(run.status).toBe(0);
-    expect({
-      body: state.issues["12"]?.body,
-      labels: labelsOf(state.issues["12"]),
-      moved: marked(state, "12", "moved").length,
-    }).toStrictEqual({
-      body,
-      labels: ["flaky", "awaiting-qualification"],
-      moved: 1,
+    beforeEach(() => {
+      state = baseState(
+        description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
+      );
+      state.labels = state.labels.filter(
+        (name) => name !== "awaiting-qualification"
+      );
+      firstRun = runApply(state);
+    });
+
+    it("writes the Current acceptance, then fails", () => {
+      expect(firstRun.status).toBe(1);
+      expect(firstRun.stdout).toContain("docs/tooling.md#create-the-labels");
+      expect({
+        assignees: state.issues["12"]?.assignees,
+        labels: labelsOf(state.issues["12"]),
+        marker: state.issues["12"]?.body?.includes(
+          "<!-- qualification: pr=57 -->"
+        ),
+        moved: marked(state, "12", "moved").length,
+        repositoryLabel: state.labels.includes("awaiting-qualification"),
+      }).toStrictEqual({
+        assignees: [],
+        labels: ["ready-for-agent", "flaky"],
+        marker: true,
+        moved: 0,
+        repositoryLabel: false,
+      });
+    });
+
+    it("finishes the move on a re-run once the label exists, keeping the body it wrote", () => {
+      state.labels.push("awaiting-qualification");
+      const body = state.issues["12"]?.body;
+      const run = runApply(state);
+      expect(run.status).toBe(0);
+      expect({
+        body: state.issues["12"]?.body,
+        labels: labelsOf(state.issues["12"]),
+        moved: marked(state, "12", "moved").length,
+      }).toStrictEqual({
+        body,
+        labels: ["flaky", "awaiting-qualification"],
+        moved: 1,
+      });
     });
   });
 

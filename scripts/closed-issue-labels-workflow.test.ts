@@ -7,7 +7,7 @@ import fs from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { z } from "zod";
 
@@ -326,18 +326,26 @@ describe("the closed issue labels workflow's step", () => {
     expect(state.calls).toStrictEqual(["GET repos/owner/repo/issues/21"]);
   });
 
-  it("passes when someone removes a label first, and changes nothing on a re-run", () => {
-    const state = closedIssue(["needs-triage", "bug"], {
-      removedFirst: "needs-triage",
+  describe("when someone removes the label first", () => {
+    let state: FakeState;
+    let firstRun: ReturnType<typeof runClear>;
+
+    beforeEach(() => {
+      state = closedIssue(["needs-triage", "bug"], {
+        removedFirst: "needs-triage",
+      });
+      firstRun = runClear(state);
     });
 
-    expect(runClear(state).status).toBe(0);
-    expect(labelsOf(state)).toStrictEqual(["bug"]);
-    const calls = state.calls.length;
-    const rerun = runClear(state);
-    expect(rerun.status).toBe(0);
-    expect(rerun.stdout).toContain("#21 has no label to remove.");
-    expect(state.calls).toHaveLength(calls + 1);
+    it("passes on the first run and changes nothing on a re-run", () => {
+      expect(firstRun.status).toBe(0);
+      expect(labelsOf(state)).toStrictEqual(["bug"]);
+      const calls = state.calls.length;
+      const rerun = runClear(state);
+      expect(rerun.status).toBe(0);
+      expect(rerun.stdout).toContain("#21 has no label to remove.");
+      expect(state.calls).toHaveLength(calls + 1);
+    });
   });
 
   it("refuses a pull request number without removing anything", () => {
