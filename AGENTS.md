@@ -12,6 +12,7 @@ This file points to where each rule lives. A rule is stated once, in the doc tha
 | --- | --- |
 | Choose, claim, or link work to an issue, or change its state label | [Issue tracker](docs/agents/issue-tracker.md) and [triage labels](docs/agents/triage-labels.md) |
 | Review a change, write PR evidence, or decide it is ready to merge | [Delivery](docs/agents/delivery.md) |
+| Review changed code with `pnpm fallow:review` or inspect project-wide totals with `pnpm fallow:summary` | [Local Fallow reports](docs/tooling.md#local-fallow-reports) |
 | Walk a changed user flow, as builder or tester | [Flow-walk notes](docs/agents/flow-walk.md) |
 | Need the file that owns a change and the check that proves it, or change a route | [Code map](docs/code-map.md) |
 | Handle an `awaiting-qualification` issue, or declare checks that run after merge | [Qualification](docs/qualification.md) |

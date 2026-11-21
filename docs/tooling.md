@@ -16,6 +16,24 @@ Landmines' `no-comments` rule is off as a gate: it matches comment syntax, not t
 
 Agent tooling is excluded from application quality gates. `agent-tooling.ts` lists it; `tsconfig.json` and `lefthook.yml` restate that list, which `scripts/agent-tooling.test.ts` checks. Review content, accessibility, architecture, and edge cases by hand as well.
 
+## Local Fallow reports
+
+After `pnpm install`, run these advisory reports from the repository root:
+
+- **Review a change.** Run `git fetch origin main`, then `pnpm fallow:review` for a local Markdown brief against `origin/main`. Investigate introduced findings against the diff. Inherited findings already existed on the base. A completed brief exits 0 even when it flags new findings. Check the changed-file count before interpreting an empty report.
+- **Plan maintenance.** Run `pnpm fallow:summary` for whole-project dead code, duplication and health totals, including development files. These totals can include long-standing findings. Exit 1 can mean the analysis completed with findings. Read the report even on exit 0 because clones alone can produce a successful exit. Investigate tool errors separately.
+
+For a finding that warrants a closer look, use the pinned CLI directly. The optional globally installed `fallow` skill can guide deeper investigations. Use `--no-production` for the full scope or `--production` to drop recognized tests and development entries. Each analysis applies its own filters.
+
+```sh
+pnpm exec fallow health --no-production --format json --quiet --explain
+pnpm exec fallow dupes --no-production --format json --quiet --explain
+pnpm exec fallow dead-code --no-production --format json --quiet --explain
+pnpm exec fallow list --entry-points --production
+```
+
+- **Health and clones.** The router imports `src/routeTree.gen.ts`. Keep it in the import graph and exclude it from health and clone reports. Clone detection skips common test paths by default, even in full scope. These commands use estimated coverage for complexity risk. Compare findings within the same scope and coverage model.
+
 ## Skills
 
 The template commits the [`flow-walk`](https://github.com/nick-neely/agent-skills/tree/main/skills/flow-walk) skill for [flow walks](agents/delivery.md#flow-walk). The skills CLI owns `.agents/skills/flow-walk/`, its copy for Claude Code in `.claude/skills/`, and `skills-lock.json`, which records the source. `npx skills update flow-walk -p` rewrites both copies; review and commit the diff. `scripts/skills.test.ts` checks that both folders hold exactly the locked skills and that the copies match. Remove it with `npx skills remove flow-walk`.

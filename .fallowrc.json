@@ -1,0 +1,4 @@
+{
+  "health": { "ignore": ["src/routeTree.gen.ts"] },
+  "duplicates": { "ignore": ["src/routeTree.gen.ts"] }
+}
