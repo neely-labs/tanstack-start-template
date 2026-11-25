@@ -195,7 +195,7 @@ function wroteBody(body: string, pr: number) {
       node.type === "html" &&
       // As the workflow writes it: one line, with no indent.
       node.value.startsWith("<!--") &&
-      !node.value.trimEnd().includes("\n") &&
+      !/[\r\n]/u.test(node.value.trimEnd()) &&
       Number(MARKER_BLOCK.exec(node.value.trimEnd())?.groups?.pr) === pr
     );
   });

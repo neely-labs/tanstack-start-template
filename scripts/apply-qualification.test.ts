@@ -321,12 +321,18 @@ describe(plan, () => {
     }
   );
 
-  it("does not take a Current acceptance marker split across lines as its own", () => {
-    const body = "## Current acceptance\n\n<!--\nqualification: pr=57 -->";
-    const result = plan(situation({ issue: issue({ body }) }));
-    expect(result.outcome).toBe("conflict");
-    expect(result.update).toBeUndefined();
-  });
+  it.each([
+    ["a line feed", "\n"],
+    ["a bare carriage return", "\r"],
+  ])(
+    "does not take a Current acceptance marker split by %s as its own",
+    (_, ending) => {
+      const body = `## Current acceptance\n\n<!--${ending}qualification: pr=57 -->`;
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result.outcome).toBe("conflict");
+      expect(result.update).toBeUndefined();
+    }
+  );
 
   it("still knows its own marker with trailing whitespace or a carriage return", () => {
     const body = applied.replace("pr=57 -->", "pr=57 -->  \r");
