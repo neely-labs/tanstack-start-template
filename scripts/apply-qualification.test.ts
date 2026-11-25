@@ -517,6 +517,22 @@ describe("a Current acceptance that triage wrote", () => {
   /** Bodies left unchanged with a conflict comment, and the reason it gives. */
   const refused: [string, string, RegExp][] = [
     [
+      "an HTML comment before it",
+      triaged.replace(
+        "## Current acceptance",
+        "<!-- a note -->\n\n## Current acceptance"
+      ),
+      /holds HTML/u,
+    ],
+    [
+      "a closed details block before it",
+      triaged.replace(
+        "## Current acceptance",
+        "<details>\n<summary>Superseded</summary>\n\nOld criteria.\n\n</details>\n\n## Current acceptance"
+      ),
+      /holds HTML/u,
+    ],
+    [
       "another delivery's marker",
       `${triaged}\n\n<!-- qualification: pr=40 -->`,
       /holds HTML/u,
