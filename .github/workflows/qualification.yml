@@ -40,13 +40,21 @@ jobs:
         with:
           persist-credentials: false
 
-      # Only Node is needed: the script uses no dependencies.
-      - name: Set up Node.js
+      # No cache: a cache another run saved could hold packages the lockfile
+      # does not pin, and this job holds a token that can write issues.
+      - name: Set up pnpm and Node.js
         uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           node-version-file: .nvmrc
           cache: false
           install: false
+
+      # The script parses issue bodies with the Markdown parser the lockfile
+      # pins. It installs the default branch's lockfile, never a pull request's,
+      # and runs no install scripts, so the only package code that runs is what
+      # the script imports.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Apply the Qualification section
         id: apply

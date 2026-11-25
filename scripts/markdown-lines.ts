@@ -51,7 +51,9 @@ function fencedLines(raws: string[]) {
     }
 
     if (fence !== "") {
-      if (delimiter.startsWith(fence) && raw.trim() === delimiter) {
+      // Only spaces or tabs may follow a closing fence; `trim` would also
+      // drop a nonbreaking space, which leaves the fence open on GitHub.
+      if (delimiter.startsWith(fence) && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(raw)) {
         fence = "";
       }
 

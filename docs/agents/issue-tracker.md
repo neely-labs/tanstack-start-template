@@ -17,7 +17,7 @@ State labels and their transitions are in [triage labels](triage-labels.md).
 ## Issue shape
 
 - A task starts as an issue with checkbox acceptance criteria that a reviewer can verify.
-- When a decision changes the criteria, add a **Current acceptance** section that supersedes them; the originals stay as history.
+- When a decision changes the criteria, add one `## Current acceptance` section that supersedes them, as the body's last section; the originals stay as history. Keeping it last lets [the qualification workflow](../tooling.md#qualification-workflow) add its later checks to it on merge.
 - A user-visible change names the user's goal, the state they are in, and where they start.
 - A change to stored state names each pause between reading that state and applying a result, so the work covers what can change in between.
 - A `bug` issue is for merged work; fix a defect in unmerged work within its task. It carries exactly one line, `Introduced by: #N`, `Introduced by: before #N`, or `Introduced by: unknown`, where #N is a merged pull request.

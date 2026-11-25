@@ -135,6 +135,28 @@ describe("the qualification workflow's shape", () => {
     }
   });
 
+  it("checks out, sets up Node without a cache or install, installs the lockfile without scripts, then applies", () => {
+    const { steps } = onlyJob();
+
+    const at = (found: (step: (typeof steps)[number]) => boolean) =>
+      steps.findIndex(found);
+
+    const setup = steps.find(
+      (step) => step.uses?.startsWith("pnpm/setup@") === true
+    );
+
+    expect([
+      at((step) => step.uses?.startsWith("actions/checkout@") === true),
+      at((step) => step === setup),
+      at(
+        (step) =>
+          step.run?.trim() === "pnpm install --frozen-lockfile --ignore-scripts"
+      ),
+      at((step) => step.id === "apply"),
+    ]).toStrictEqual([0, 1, 2, 3]);
+    expect(setup?.with).toMatchObject({ cache: false, install: false });
+  });
+
   it("reads the description from the merge event's payload, not the live pull request", () => {
     const scripts = onlyJob()
       .steps.map((step) => step.run ?? "")
@@ -479,7 +501,7 @@ describe("the qualification workflow's apply step", () => {
       /OK: #12: moved to awaiting-qualification with 2 checks/u,
       /OK: #14: closed/u,
       /Failed: #15 is a pull request/u,
-      /Failed: #16: left unchanged because the issue already has a Current acceptance/u,
+      /Failed: #16: left unchanged because the issue holds HTML/u,
       /Failed: #17: GET repos\/owner\/repo\/issues\/17 failed: .*HTTP 404/u,
     ];
 
@@ -611,7 +633,7 @@ describe("the qualification workflow's apply step", () => {
     const run = runApply(state);
     expect(run.status).toBe(1);
     expect(run.stdout).toMatch(
-      /#12: left unchanged because the issue already has a Current acceptance/u
+      /#12: left unchanged because the issue holds HTML/u
     );
     expect(state.issues["12"]?.body).toBe(other);
     expect(state.patches).toStrictEqual([]);
