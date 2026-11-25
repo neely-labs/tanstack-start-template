@@ -501,7 +501,7 @@ describe("the qualification workflow's apply step", () => {
       /OK: #12: moved to awaiting-qualification with 2 checks/u,
       /OK: #14: closed/u,
       /Failed: #15 is a pull request/u,
-      /Failed: #16: left unchanged because the issue holds HTML/u,
+      /Failed: #16: left unchanged because the issue holds an HTML comment/u,
       /Failed: #17: GET repos\/owner\/repo\/issues\/17 failed: .*HTTP 404/u,
     ];
 
@@ -633,7 +633,7 @@ describe("the qualification workflow's apply step", () => {
     const run = runApply(state);
     expect(run.status).toBe(1);
     expect(run.stdout).toMatch(
-      /#12: left unchanged because the issue holds HTML/u
+      /#12: left unchanged because the issue holds an HTML comment/u
     );
     expect(state.issues["12"]?.body).toBe(other);
     expect(state.patches).toStrictEqual([]);
@@ -657,6 +657,37 @@ describe("the qualification workflow's apply step", () => {
     );
     expect(state.patches).toStrictEqual([]);
     expect(state.issues["12"]?.assignees).toStrictEqual([{ login: "second" }]);
+  });
+
+  it("moves an issue that keeps its superseded criteria in a closed details block, then a re-run changes nothing", () => {
+    const state = baseState(
+      description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
+    );
+
+    const triaged = `<details>\n<summary>Original criteria, superseded</summary>\n\n## Acceptance criteria\n\n- [ ] Old.\n\n</details>\n\n## Current acceptance\n\n- [x] New.`;
+    const issue = state.issues["12"];
+
+    if (issue !== undefined) {
+      issue.body = triaged;
+    }
+
+    const run = runApply(state);
+    expect(run.status).toBe(0);
+    expect(state.issues["12"]?.body).toBe(
+      `${triaged}\n\nStatus: delivered in #57; open for 1 later check.\n\n<!-- qualification: pr=57 -->\n\n- [ ] One check.`
+    );
+    expect([
+      labelsOf(state.issues["12"]),
+      marked(state, "12", "moved").length,
+    ]).toStrictEqual([["flaky", "awaiting-qualification"], 1]);
+
+    const patches = state.patches.length;
+    const again = runApply(state);
+    expect([
+      again.status,
+      state.patches.length - patches,
+      marked(state, "12", "moved").length,
+    ]).toStrictEqual([0, 0, 1]);
   });
 
   it("does not take a person's quoted moved marker as the move", () => {

@@ -4,7 +4,7 @@ Use this guide for an `awaiting-qualification` issue, or when a delivery leaves 
 
 ## When to use it
 
-Use the label when the change is merged but a check can only run later, such as observing production, running a rehearsal, or waiting for a scheduled job. The issue's Current acceptance holds a status line and a marker naming the delivering PR, then one checkbox per remaining check that names who runs it and when it is due. When triage already wrote that section, the status line, marker and checks follow triage's text:
+Use the label when the change is merged but a check can only run later, such as observing production, running a rehearsal, or waiting for a scheduled job. The issue's Current acceptance holds a status line and a marker naming the delivering PR, then one checkbox per remaining check that names who runs it and when it is due. When triage already wrote that section, the status line, marker and checks follow triage's text, provided the body's HTML passes [the workflow's rule](tooling.md#qualification-workflow), as a collapsed `<details>` block closed above that section does:
 
 ```markdown
 ## Current acceptance
