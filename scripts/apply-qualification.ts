@@ -23,7 +23,7 @@
 // NUMBER (the pull request) set.
 import fs from "node:fs";
 
-import type { Nodes } from "mdast";
+import type { Html, Nodes } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { toString } from "mdast-util-to-string";
@@ -244,21 +244,138 @@ const linesOf = (node: Nodes) =>
     })
     .join("");
 
+/** Elements that never take a closing tag. */
+const VOID = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "source",
+  "track",
+  "wbr",
+]);
+
 /**
- * HTML around a triage-written Current acceptance that rules out appending:
- * any at all, but the appended block's own `marker`. Raw HTML is where the
- * parser and GitHub may read a body differently, and a comment could be or
- * hide another delivery's marker.
+ * Elements whose content HTML reads as text, or that never end, so tags inside
+ * them do not pair as they look and text after them can vanish.
  */
-const unsafeHtml = (nodes: Nodes[], marker?: Nodes) =>
-  nodes.some((node) => node.type === "html" && node !== marker);
+const RAW_TEXT = new Set([
+  "iframe",
+  "noembed",
+  "noframes",
+  "noscript",
+  "plaintext",
+  "script",
+  "style",
+  "textarea",
+  "title",
+  "xmp",
+]);
+
+/** A start or end tag as CommonMark defines one, matched at `lastIndex`. */
+const TAG =
+  /<(?<close>\/)?(?<name>[A-Za-z][A-Za-z\d-]*)(?<attributes>(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*)\s*(?<self>\/)?>/uy;
+
+/**
+ * Each tag in an HTML node's text, in order, and whether every `<` that starts
+ * markup starts a whole tag, so none is cut off before its `>`. A `<` that
+ * starts no markup, as in `a < b`, is text.
+ */
+function tagsOf(value: string) {
+  const tags: { close: boolean; name: string }[] = [];
+
+  for (let at = value.indexOf("<"); at !== -1;) {
+    TAG.lastIndex = at;
+    const groups = TAG.exec(value)?.groups;
+
+    if (groups === undefined) {
+      if (/[A-Za-z/!?]/u.test(value.charAt(at + 1))) {
+        return { tags, whole: false };
+      }
+
+      at = value.indexOf("<", at + 1);
+    } else {
+      const close = groups.close !== undefined;
+
+      if (close && (groups.attributes !== "" || groups.self !== undefined)) {
+        return { tags, whole: false };
+      }
+
+      tags.push({ close, name: (groups.name ?? "").toLowerCase() });
+      at = value.indexOf("<", TAG.lastIndex);
+    }
+  }
+
+  return { tags, whole: true };
+}
+
+/**
+ * Why the HTML in a body whose one Current acceptance is `section` rules out
+ * appending, or undefined when it does not; the appended block's own `marker`
+ * is exempt. Raw HTML is where the parser and GitHub may read a body
+ * differently, so only one shape passes: whole tags before the heading that
+ * pair up in order, so no element is still open where the checks go, such as
+ * a collapsed block of superseded criteria. The parser gives a block's opening
+ * and closing tags as separate nodes with Markdown between them, so tags pair
+ * across nodes. A comment anywhere could be or hide another delivery's
+ * marker, and HTML at or after the heading could hide the checks.
+ */
+function htmlProblem(nodes: Nodes[], section: Nodes, marker?: Nodes) {
+  const html = nodes.filter(
+    (node): node is Html => node.type === "html" && node !== marker
+  );
+
+  if (html.some((node) => /<[!?]/u.test(node.value))) {
+    return "the issue holds an HTML comment or other `<!` or `<?` markup, which could be or hide another delivery's marker";
+  }
+
+  const heading = nodes.indexOf(section);
+
+  if (html.some((node) => nodes.indexOf(node) > heading)) {
+    return "the issue holds HTML at or after its Current acceptance heading, which could hide checks added at the end";
+  }
+
+  const open: string[] = [];
+
+  for (const node of html) {
+    const { tags, whole } = tagsOf(node.value);
+
+    if (!whole || tags.some((tag) => RAW_TEXT.has(tag.name))) {
+      return "the issue holds HTML before its Current acceptance that is not whole, paired tags, such as a broken tag or a `<textarea>`, so the workflow cannot tell where it ends";
+    }
+
+    for (const { close, name } of tags) {
+      if (close && open.at(-1) !== name) {
+        return `the issue holds an HTML \`</${name}>\` tag that does not close the last tag opened before it, which GitHub may read differently from the workflow's parser`;
+      }
+
+      if (close) {
+        open.pop();
+      } else if (!VOID.has(name)) {
+        open.push(name);
+      }
+    }
+  }
+
+  const unclosed = open.at(-1);
+
+  return unclosed === undefined
+    ? undefined
+    : `the issue opens an HTML \`<${unclosed}>\` tag before its Current acceptance and does not close it there, so it could hide checks added at the end`;
+}
 
 /**
  * Whether `body`, with pull request `pr`'s block appended, reads as GitHub
  * would show it: the body's one Current acceptance is its last heading, at the
  * top level, and the status line, marker and checks follow it there, with no
- * other HTML anywhere. The splitter must also find the marker under that
- * heading, so a re-run knows its own block and never adds it twice.
+ * other HTML but what `htmlProblem` allows. The marker must also read as its
+ * own under that heading, so a re-run knows its block and never adds it twice.
  */
 function holdsBlock(body: string, pr: number, checks: string[]) {
   const tree = parse(body);
@@ -277,7 +394,7 @@ function holdsBlock(body: string, pr: number, checks: string[]) {
     titleOf(status) === statusLine(pr, checks) &&
     marker?.type === "html" &&
     marker.value === markerLine(pr) &&
-    !unsafeHtml(nodes, marker) &&
+    htmlProblem(nodes, section, marker) === undefined &&
     list?.type === "list" &&
     list.children.length === checks.length &&
     wroteBody(body, pr)
@@ -304,8 +421,8 @@ const conflict = (reason: string) =>
  * acceptance, the block goes under a new heading at the end. With one that
  * triage wrote, it goes at the end of the body, only when that section is the
  * last and the parsed result shows the block inside it; a section that already
- * records a delivery, or HTML anywhere, refuses. Refusing only leaves the
- * checks for a person to add.
+ * records a delivery, or HTML other than closed tags before it, refuses.
+ * Refusing only leaves the checks for a person to add.
  */
 function placement(body: string, pr: number, checks: string[]) {
   const { unclosed } = split(body);
@@ -354,13 +471,14 @@ function placement(body: string, pr: number, checks: string[]) {
     );
   }
 
-  if (unsafeHtml(nodes)) {
-    return conflict(
-      "the issue holds HTML, such as a comment or another delivery's marker, which could record another delivery or hide checks added at the end"
-    );
+  const [section] = sections;
+  const html = htmlProblem(nodes, section);
+
+  if (html !== undefined) {
+    return conflict(html);
   }
 
-  const after = nodes.slice(nodes.indexOf(sections[0]) + 1);
+  const after = nodes.slice(nodes.indexOf(section) + 1);
 
   if (
     after.some(

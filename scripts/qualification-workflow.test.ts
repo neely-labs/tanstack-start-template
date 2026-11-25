@@ -501,7 +501,7 @@ describe("the qualification workflow's apply step", () => {
       /OK: #12: moved to awaiting-qualification with 2 checks/u,
       /OK: #14: closed/u,
       /Failed: #15 is a pull request/u,
-      /Failed: #16: left unchanged because the issue holds HTML/u,
+      /Failed: #16: left unchanged because the issue holds an HTML comment/u,
       /Failed: #17: GET repos\/owner\/repo\/issues\/17 failed: .*HTTP 404/u,
     ];
 
@@ -633,7 +633,7 @@ describe("the qualification workflow's apply step", () => {
     const run = runApply(state);
     expect(run.status).toBe(1);
     expect(run.stdout).toMatch(
-      /#12: left unchanged because the issue holds HTML/u
+      /#12: left unchanged because the issue holds an HTML comment/u
     );
     expect(state.issues["12"]?.body).toBe(other);
     expect(state.patches).toStrictEqual([]);

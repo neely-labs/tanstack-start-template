@@ -64,6 +64,20 @@ Supersedes the criteria above. Triage narrowed the digest to weekdays.
 
 - [x] The digest job runs on weekdays.`;
 
+/** `triaged` with `html` between the original criteria and its Current acceptance. */
+const before = (html: string) =>
+  triaged.replace("## Current acceptance", `${html}\n\n## Current acceptance`);
+
+/** Superseded criteria kept the way the issue-tracker doc says, in a closed collapsed block. */
+const collapsed = `<details>
+<summary>Original criteria, superseded</summary>
+
+## Acceptance criteria
+
+- [ ] The digest job runs weekly.
+
+</details>`;
+
 const applied = `${original}
 
 ## Current acceptance
@@ -497,6 +511,32 @@ describe("a Current acceptance that triage wrote", () => {
     });
   });
 
+  it("gets the checks once after a closed details block, and a re-run changes nothing and posts nothing", () => {
+    const body = before(collapsed);
+    const first = plan(situation({ issue: issue({ body }) }));
+
+    expect(first).toMatchObject({ failed: false, outcome: "moved" });
+    expect(first.update?.body).toBe(`${body}\n\n${block}`);
+
+    const written = first.update?.body ?? "";
+    const unconfirmed = plan(situation({ issue: issue({ body: written }) }));
+
+    expect(unconfirmed).toMatchObject({ failed: false, outcome: "moved" });
+    expect(unconfirmed.update?.body).toBeUndefined();
+    expect(
+      plan(
+        situation({
+          comments: [byWorkflow(first.comment ?? "")],
+          issue: issue({ body: written }),
+        })
+      )
+    ).toStrictEqual({
+      failed: false,
+      message: "#12: already applied by #57; left unchanged",
+      outcome: "unchanged",
+    });
+  });
+
   /** Bodies whose Current acceptance gets the checks, as GitHub would show them. */
   const accepted: [string, string][] = [
     [
@@ -521,6 +561,30 @@ describe("a Current acceptance that triage wrote", () => {
       `${original}\n\nCurrent acceptance\n---\n\nText.`,
     ],
     ["a final code line with trailing spaces", `${triaged}\n\n    code  `],
+    ["a closed details block before it", before(collapsed)],
+    [
+      "a one-line details block before it",
+      before("<details><summary>Old</summary>Old criteria.</details>"),
+    ],
+    [
+      "nested details blocks before it",
+      before(
+        "<details>\n<summary>Old</summary>\n\n<details>\n\nOlder.\n\n</details>\n\n</details>"
+      ),
+    ],
+    [
+      "a details block closed inside a list before it",
+      before("<details>\n\n- Old criteria.\n  </details>"),
+    ],
+    [
+      "quoted attributes holding angle brackets before it",
+      before(`<details open title="a > b <c>">\n\nOld.\n\n</details>`),
+    ],
+    [
+      "inline and void tags before it",
+      before('Press <kbd>Ctrl</kbd>.<br>\n\n<img src="a.png" alt="A" />'),
+    ],
+    ["a less-than sign in an HTML block before it", before("<div>a < b</div>")],
   ];
 
   it.each(accepted)("gets the checks after %s", (_, body) => {
@@ -531,26 +595,69 @@ describe("a Current acceptance that triage wrote", () => {
 
   /** Bodies left unchanged with a conflict comment, and the reason it gives. */
   const refused: [string, string, RegExp][] = [
+    ["an HTML comment before it", before("<!-- a note -->"), /HTML comment/u],
     [
-      "an HTML comment before it",
-      triaged.replace(
-        "## Current acceptance",
-        "<!-- a note -->\n\n## Current acceptance"
+      "an HTML comment inside a closed details block before it",
+      before(
+        `<details>\n<!-- a note -->\n<summary>Old</summary>\n\n</details>`
       ),
-      /holds HTML/u,
+      /HTML comment/u,
     ],
+    ["a declaration before it", before("<!DOCTYPE html>"), /HTML comment/u],
     [
-      "a closed details block before it",
-      triaged.replace(
-        "## Current acceptance",
-        "<details>\n<summary>Superseded</summary>\n\nOld criteria.\n\n</details>\n\n## Current acceptance"
-      ),
-      /holds HTML/u,
+      "a processing instruction before it",
+      before('<?xml version="1.0"?>'),
+      /HTML comment/u,
     ],
     [
       "another delivery's marker",
       `${triaged}\n\n<!-- qualification: pr=40 -->`,
-      /holds HTML/u,
+      /HTML comment/u,
+    ],
+    [
+      "a details block opened before it and never closed",
+      before("<details>\n<summary>Superseded</summary>\n\nOld criteria."),
+      /opens an HTML `<details>` tag/u,
+    ],
+    [
+      "a details block closed after it",
+      `<details>\n\n${triaged}\n\n</details>`,
+      /at or after its Current acceptance/u,
+    ],
+    [
+      "an inline tag opened before it and never closed",
+      before("Old <b>criteria."),
+      /opens an HTML `<b>` tag/u,
+    ],
+    [
+      "a self-closed details tag before it",
+      before("<details/>\n\nOld criteria."),
+      /opens an HTML `<details>` tag/u,
+    ],
+    [
+      "a closing tag with no opener before it",
+      before("</details>"),
+      /`<\/details>` tag that does not close/u,
+    ],
+    [
+      "tags closed out of order before it",
+      before("<details><summary>Old</details></summary>"),
+      /`<\/details>` tag that does not close/u,
+    ],
+    [
+      "a closing void tag before it",
+      before("Old.</br>"),
+      /`<\/br>` tag that does not close/u,
+    ],
+    [
+      "a broken tag before it",
+      before(`<details title="open>\n\nOld criteria.\n\n</details>`),
+      /not whole, paired tags/u,
+    ],
+    [
+      "a textarea before it",
+      before("<textarea>\n</details>\n</textarea>"),
+      /not whole, paired tags/u,
     ],
     [
       "a status line with two spaces between words",
@@ -636,18 +743,18 @@ describe("a Current acceptance that triage wrote", () => {
     [
       "an inline HTML heading after it",
       `${triaged}\n\nNotes <h2>Notes</h2>`,
-      /holds HTML/u,
+      /at or after its Current acceptance/u,
     ],
     [
       "a details block after it",
       `${triaged}\n\n<details>\n\nHidden.`,
-      /holds HTML/u,
+      /at or after its Current acceptance/u,
     ],
     ["a pre block before it", `<pre>\n${triaged}`, /cannot tell where/u],
     [
       "a backtick in a link before HTML",
       `${triaged}\n\n[N](https://e.org/\`x) <h2>N</h2> \``,
-      /holds HTML/u,
+      /at or after its Current acceptance/u,
     ],
     [
       "a comment opened between backticks before it",
