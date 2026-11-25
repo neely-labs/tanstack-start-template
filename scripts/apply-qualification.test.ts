@@ -64,7 +64,6 @@ Supersedes the criteria above. Triage narrowed the digest to weekdays.
 
 - [x] The digest job runs on weekdays.`;
 
-/** `triaged` with `html` between the original criteria and its Current acceptance. */
 const before = (html: string) =>
   triaged.replace("## Current acceptance", `${html}\n\n## Current acceptance`);
 
@@ -573,8 +572,12 @@ describe("a Current acceptance that triage wrote", () => {
       ),
     ],
     [
-      "a details block closed inside a list before it",
-      before("<details>\n\n- Old criteria.\n  </details>"),
+      "a details block inside a list item before it",
+      before("- <details>\n\n  Old criteria.\n\n  </details>"),
+    ],
+    [
+      "a details block inside a table cell before it",
+      before("| Old |\n| - |\n| <details><summary>A</summary>B</details> |"),
     ],
     [
       "quoted attributes holding angle brackets before it",
@@ -643,6 +646,23 @@ describe("a Current acceptance that triage wrote", () => {
       "tags closed out of order before it",
       before("<details><summary>Old</details></summary>"),
       /`<\/details>` tag that does not close/u,
+    ],
+    [
+      "a details block closed inside a list item before it",
+      before("<details>\n\n- Old criteria.\n  </details>"),
+      /`<\/details>` tag that does not close/u,
+    ],
+    [
+      "a details block closed inside a table cell before it",
+      before(
+        "<details>\n<summary>Old</summary>\n\n| a |\n| - |\n| </details> |"
+      ),
+      /`<\/details>` tag that does not close/u,
+    ],
+    [
+      "a details block opened in a list item and closed after the list",
+      before("- <details>\n\n</details>"),
+      /opens an HTML `<details>` tag/u,
     ],
     [
       "a closing void tag before it",

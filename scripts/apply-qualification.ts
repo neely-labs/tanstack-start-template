@@ -23,7 +23,7 @@
 // NUMBER (the pull request) set.
 import fs from "node:fs";
 
-import type { Html, Nodes } from "mdast";
+import type { Html, Nodes, Root } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { toString } from "mdast-util-to-string";
@@ -245,7 +245,7 @@ const linesOf = (node: Nodes) =>
     .join("");
 
 /** Elements that never take a closing tag. */
-const VOID = new Set([
+const VOID_ELEMENTS = new Set([
   "area",
   "base",
   "br",
@@ -265,7 +265,7 @@ const VOID = new Set([
  * Elements whose content HTML reads as text, or that never end, so tags inside
  * them do not pair as they look and text after them can vanish.
  */
-const RAW_TEXT = new Set([
+const RAW_TEXT_ELEMENTS = new Set([
   "iframe",
   "noembed",
   "noframes",
@@ -278,8 +278,8 @@ const RAW_TEXT = new Set([
   "xmp",
 ]);
 
-/** A start or end tag as CommonMark defines one, matched at `lastIndex`. */
-const TAG =
+/** A start or end tag as CommonMark defines one, matched at `lastIndex`: https://spec.commonmark.org/0.31.2/#raw-html */
+const TAG_AT =
   /<(?<close>\/)?(?<name>[A-Za-z][A-Za-z\d-]*)(?<attributes>(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*)\s*(?<self>\/)?>/uy;
 
 /**
@@ -291,8 +291,8 @@ function tagsOf(value: string) {
   const tags: { close: boolean; name: string }[] = [];
 
   for (let at = value.indexOf("<"); at !== -1;) {
-    TAG.lastIndex = at;
-    const groups = TAG.exec(value)?.groups;
+    TAG_AT.lastIndex = at;
+    const groups = TAG_AT.exec(value)?.groups;
 
     if (groups === undefined) {
       if (/[A-Za-z/!?]/u.test(value.charAt(at + 1))) {
@@ -308,7 +308,7 @@ function tagsOf(value: string) {
       }
 
       tags.push({ close, name: (groups.name ?? "").toLowerCase() });
-      at = value.indexOf("<", TAG.lastIndex);
+      at = value.indexOf("<", TAG_AT.lastIndex);
     }
   }
 
@@ -316,17 +316,71 @@ function tagsOf(value: string) {
 }
 
 /**
- * Why the HTML in a body whose one Current acceptance is `section` rules out
- * appending, or undefined when it does not; the appended block's own `marker`
- * is exempt. Raw HTML is where the parser and GitHub may read a body
- * differently, so only one shape passes: whole tags before the heading that
- * pair up in order, so no element is still open where the checks go, such as
- * a collapsed block of superseded criteria. The parser gives a block's opening
- * and closing tags as separate nodes with Markdown between them, so tags pair
- * across nodes. A comment anywhere could be or hide another delivery's
- * marker, and HTML at or after the heading could hide the checks.
+ * Why the tags in `parent`'s own HTML children do not pair in order, or why
+ * those in a block inside it do not; `marker` is exempt. Each Markdown block,
+ * such as a list item or table cell, pairs its own tags, since HTML ignores an
+ * end tag in a table cell that would close an element opened outside it.
  */
-function htmlProblem(nodes: Nodes[], section: Nodes, marker?: Nodes) {
+const pairingProblems: (parent: Nodes, marker?: Nodes) => string[] = (
+  parent,
+  marker
+) => {
+  if (!("children" in parent)) {
+    return [];
+  }
+
+  const open: string[] = [];
+
+  for (const child of parent.children) {
+    if (child.type === "html" && child !== marker) {
+      const { tags, whole } = tagsOf(child.value);
+
+      if (!whole || tags.some((tag) => RAW_TEXT_ELEMENTS.has(tag.name))) {
+        return [
+          "the issue holds HTML before its Current acceptance that is not whole, paired tags, such as a broken tag or a `<textarea>`, so the workflow cannot tell where it ends",
+        ];
+      }
+
+      for (const { close, name } of tags) {
+        if (close && open.at(-1) !== name) {
+          return [
+            `the issue holds an HTML \`</${name}>\` tag that does not close the last tag opened before it in the same block, which GitHub may read differently from the workflow's parser`,
+          ];
+        }
+
+        if (close) {
+          open.pop();
+        } else if (!VOID_ELEMENTS.has(name)) {
+          open.push(name);
+        }
+      }
+    }
+
+    const inner = pairingProblems(child, marker);
+
+    if (inner.length > 0) {
+      return inner;
+    }
+  }
+
+  const unclosed = open.at(-1);
+
+  return unclosed === undefined
+    ? []
+    : [
+        `the issue opens an HTML \`<${unclosed}>\` tag before its Current acceptance and does not close it in the same block, so it could hide checks added at the end`,
+      ];
+};
+
+/**
+ * Why the HTML in `tree`, whose one Current acceptance is `section`, rules out
+ * appending, or undefined when it does not; the appended block's own `marker`
+ * is exempt. The parser gives a block's opening and closing tags as separate
+ * nodes with Markdown between them, so tags pair across nodes.
+ */
+function htmlProblem(tree: Root, section: Nodes, marker?: Nodes) {
+  const nodes = nodesOf(tree);
+
   const html = nodes.filter(
     (node): node is Html => node.type === "html" && node !== marker
   );
@@ -341,33 +395,7 @@ function htmlProblem(nodes: Nodes[], section: Nodes, marker?: Nodes) {
     return "the issue holds HTML at or after its Current acceptance heading, which could hide checks added at the end";
   }
 
-  const open: string[] = [];
-
-  for (const node of html) {
-    const { tags, whole } = tagsOf(node.value);
-
-    if (!whole || tags.some((tag) => RAW_TEXT.has(tag.name))) {
-      return "the issue holds HTML before its Current acceptance that is not whole, paired tags, such as a broken tag or a `<textarea>`, so the workflow cannot tell where it ends";
-    }
-
-    for (const { close, name } of tags) {
-      if (close && open.at(-1) !== name) {
-        return `the issue holds an HTML \`</${name}>\` tag that does not close the last tag opened before it, which GitHub may read differently from the workflow's parser`;
-      }
-
-      if (close) {
-        open.pop();
-      } else if (!VOID.has(name)) {
-        open.push(name);
-      }
-    }
-  }
-
-  const unclosed = open.at(-1);
-
-  return unclosed === undefined
-    ? undefined
-    : `the issue opens an HTML \`<${unclosed}>\` tag before its Current acceptance and does not close it there, so it could hide checks added at the end`;
+  return pairingProblems(tree, marker).at(0);
 }
 
 /**
@@ -394,7 +422,7 @@ function holdsBlock(body: string, pr: number, checks: string[]) {
     titleOf(status) === statusLine(pr, checks) &&
     marker?.type === "html" &&
     marker.value === markerLine(pr) &&
-    htmlProblem(nodes, section, marker) === undefined &&
+    htmlProblem(tree, section, marker) === undefined &&
     list?.type === "list" &&
     list.children.length === checks.length &&
     wroteBody(body, pr)
@@ -441,7 +469,8 @@ function placement(body: string, pr: number, checks: string[]) {
   // nonbreaking space, which can turn a paragraph above `---` into a heading.
   const kept = body.replace(/[ \t\r\n]+$/u, "");
   const block = qualificationBlock(pr, checks);
-  const nodes = nodesOf(parse(body));
+  const tree = parse(body);
+  const nodes = nodesOf(tree);
   const sections = nodes.filter(isSection);
 
   if (sections.length === 0 && !headingTexts(body).some(isCurrentAcceptance)) {
@@ -472,10 +501,10 @@ function placement(body: string, pr: number, checks: string[]) {
   }
 
   const [section] = sections;
-  const html = htmlProblem(nodes, section);
+  const htmlReason = htmlProblem(tree, section);
 
-  if (html !== undefined) {
-    return conflict(html);
+  if (htmlReason !== undefined) {
+    return conflict(htmlReason);
   }
 
   const after = nodes.slice(nodes.indexOf(section) + 1);
