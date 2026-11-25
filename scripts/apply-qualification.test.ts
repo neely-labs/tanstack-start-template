@@ -307,6 +307,8 @@ describe(plan, () => {
     ["four spaces, as code", "    ", "moved"],
     ["a tab, as code", "\t", "moved"],
     ["a blockquote, as HTML", "> ", "conflict"],
+    ["one space, as HTML", " ", "conflict"],
+    ["two spaces, as HTML", "  ", "conflict"],
   ])(
     "does not take a Current acceptance marker indented by %s as its own",
     (_, prefix, outcome) => {
@@ -318,6 +320,13 @@ describe(plan, () => {
       );
     }
   );
+
+  it("does not take a Current acceptance marker split across lines as its own", () => {
+    const body = "## Current acceptance\n\n<!--\nqualification: pr=57 -->";
+    const result = plan(situation({ issue: issue({ body }) }));
+    expect(result.outcome).toBe("conflict");
+    expect(result.update).toBeUndefined();
+  });
 
   it("still knows its own marker with trailing whitespace or a carriage return", () => {
     const body = applied.replace("pr=57 -->", "pr=57 -->  \r");
@@ -536,6 +545,16 @@ describe("a Current acceptance that triage wrote", () => {
       "another delivery's marker",
       `${triaged}\n\n<!-- qualification: pr=40 -->`,
       /holds HTML/u,
+    ],
+    [
+      "a status line with two spaces between words",
+      `${triaged}\n\nStatus: delivered  in #40; open for 1 later check.`,
+      /status line/u,
+    ],
+    [
+      "a status line broken across lines",
+      `${triaged}\n\nStatus: delivered\nin #40; open for 1 later check.`,
+      /status line/u,
     ],
     [
       "a bold status line",

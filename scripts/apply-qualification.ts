@@ -193,7 +193,10 @@ function wroteBody(body: string, pr: number) {
     return (
       section &&
       node.type === "html" &&
-      Number(MARKER_BLOCK.exec(node.value.trim())?.groups?.pr) === pr
+      // As the workflow writes it: one line, with no indent.
+      node.value.startsWith("<!--") &&
+      !node.value.trimEnd().includes("\n") &&
+      Number(MARKER_BLOCK.exec(node.value.trimEnd())?.groups?.pr) === pr
     );
   });
 }
@@ -227,7 +230,7 @@ function qualificationBlock(pr: number, checks: string[]) {
  * line of a paragraph, so formatting such as `**Status:**` or text before it on
  * an earlier line does not hide it.
  */
-const STATUS_LINE = /^\s*Status:\s*delivered in #\d+/imu;
+const STATUS_LINE = /^\s*Status:\s*delivered\s+in\s+#\d+/imu;
 
 /** A node's rendered text, with each soft or hard line break as a newline. */
 const linesOf = (node: Nodes) =>
@@ -240,6 +243,15 @@ const linesOf = (node: Nodes) =>
       return "value" in part && !("children" in part) ? part.value : "";
     })
     .join("");
+
+/**
+ * HTML around a triage-written Current acceptance that rules out appending:
+ * any at all, but the appended block's own `marker`. Raw HTML is where the
+ * parser and GitHub may read a body differently, and a comment could be or
+ * hide another delivery's marker.
+ */
+const unsafeHtml = (nodes: Nodes[], marker?: Nodes) =>
+  nodes.some((node) => node.type === "html" && node !== marker);
 
 /**
  * Whether `body`, with pull request `pr`'s block appended, reads as GitHub
@@ -265,7 +277,7 @@ function holdsBlock(body: string, pr: number, checks: string[]) {
     titleOf(status) === statusLine(pr, checks) &&
     marker?.type === "html" &&
     marker.value === markerLine(pr) &&
-    nodes.filter((node) => node.type === "html").length === 1 &&
+    !unsafeHtml(nodes, marker) &&
     list?.type === "list" &&
     list.children.length === checks.length &&
     wroteBody(body, pr)
@@ -342,7 +354,7 @@ function placement(body: string, pr: number, checks: string[]) {
     );
   }
 
-  if (nodes.some((node) => node.type === "html")) {
+  if (unsafeHtml(nodes)) {
     return conflict(
       "the issue holds HTML, such as a comment or another delivery's marker, which could record another delivery or hide checks added at the end"
     );
