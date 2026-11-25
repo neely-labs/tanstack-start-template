@@ -47,6 +47,23 @@ function situation(overrides: Partial<Situation> = {}) {
   } satisfies Situation;
 }
 
+/** The block #57 writes for `checks`, under a Current acceptance heading. */
+const block = `Status: delivered in #57; open for 2 later checks.
+
+<!-- qualification: pr=57 -->
+
+- [ ] Owner confirms the weekly digest sends on 2026-12-01.
+- [ ] An agent reads the send log after the first run.`;
+
+/** A Current acceptance that triage wrote, with no delivery in it yet. */
+const triaged = `${original}
+
+## Current acceptance
+
+Supersedes the criteria above. Triage narrowed the digest to weekdays.
+
+- [x] The digest job runs on weekdays.`;
+
 const applied = `${original}
 
 ## Current acceptance
@@ -200,23 +217,13 @@ describe(plan, () => {
     expect(result.comment).toBeUndefined();
   });
 
-  it.each(["#", "###", "######"])(
-    "sees a %s Current acceptance heading as existing",
-    (marker) => {
-      const body = `${original}\n\n${marker} Current acceptance\n\n- [ ] Owner checks.`;
-      const result = plan(situation({ issue: issue({ body }) }));
-      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
-      expect(result.update).toBeUndefined();
-    }
-  );
-
   it.each(["===", "---"])(
-    "sees a Current acceptance heading underlined with %s as existing",
+    "adds to a Current acceptance heading underlined with %s, as GitHub reads it",
     (underline) => {
       const body = `${original}\n\nCurrent acceptance\n${underline}\n\n- [ ] Owner checks.`;
       const result = plan(situation({ issue: issue({ body }) }));
-      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
-      expect(result.update).toBeUndefined();
+      expect(result.outcome).toBe("moved");
+      expect(result.update?.body).toBe(`${body}\n\n${block}`);
     }
   );
 
@@ -297,15 +304,32 @@ describe(plan, () => {
   });
 
   it.each([
-    ["four spaces", "    "],
-    ["a tab", "\t"],
-    ["a blockquote", "> "],
+    ["four spaces, as code", "    ", "moved"],
+    ["a tab, as code", "\t", "moved"],
+    ["a blockquote, as HTML", "> ", "conflict"],
+    ["one space, as HTML", " ", "conflict"],
+    ["two spaces, as HTML", "  ", "conflict"],
   ])(
-    "treats a Current acceptance whose marker is indented by %s as someone else's",
-    (_, prefix) => {
+    "does not take a Current acceptance marker indented by %s as its own",
+    (_, prefix, outcome) => {
       const body = `## Current acceptance\n\n${prefix}<!-- qualification: pr=57 -->`;
       const result = plan(situation({ issue: issue({ body }) }));
-      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
+      expect(result.outcome).toBe(outcome);
+      expect(result.update?.body).toBe(
+        outcome === "moved" ? `${body}\n\n${block}` : undefined
+      );
+    }
+  );
+
+  it.each([
+    ["a line feed", "\n"],
+    ["a bare carriage return", "\r"],
+  ])(
+    "does not take a Current acceptance marker split by %s as its own",
+    (_, ending) => {
+      const body = `## Current acceptance\n\n<!--${ending}qualification: pr=57 -->`;
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result.outcome).toBe("conflict");
       expect(result.update).toBeUndefined();
     }
   );
@@ -342,15 +366,51 @@ describe(plan, () => {
     }
   );
 
+  /**
+   * How GitHub reads each place in `literal` under Current acceptance. An HTML
+   * block can interrupt a paragraph, so no code span spans the marker line and
+   * the marker stands alone, as its own: the body is not written again. In a
+   * quote, a list or an open comment it is HTML that is not a top-level marker.
+   */
+  const readAs = new Map<string, "code" | "own" | "html">([
+    ["a backtick fence", "code"],
+    ["a blockquote", "html"],
+    ["a list continuation", "html"],
+    ["a multi-line code span", "own"],
+    ["a multi-line double-backtick span", "own"],
+    ["a one-line code span", "code"],
+    ["a one-line double-backtick span", "code"],
+    ["a tilde fence", "code"],
+    ["an HTML comment already open", "html"],
+    ["code indented by a tab", "code"],
+    ["code indented by spaces", "code"],
+  ]);
+
   it.each(literal)(
-    "treats a Current acceptance whose body marker sits in %s as someone else's",
-    (_, context) => {
+    "reads a Current acceptance body marker in %s as GitHub does",
+    (name, context) => {
       const body = `## Current acceptance\n\n${context.replace("M", "qualification: pr=57")}`;
       const result = plan(situation({ issue: issue({ body }) }));
-      expect(result.outcome).toBe("conflict");
-      expect(result.update).toBeUndefined();
+
+      const expected = {
+        code: { body: `${body}\n\n${block}`, outcome: "moved" },
+        html: { body: undefined, outcome: "conflict" },
+        own: { body: undefined, outcome: "moved" },
+      }[readAs.get(name) ?? "html"];
+
+      expect([result.outcome, result.update?.body]).toStrictEqual([
+        expected.outcome,
+        expected.body,
+      ]);
     }
   );
+
+  it("does not take its marker under a later underlined heading as its own", () => {
+    const body = `## Current acceptance\n\nNotes\n---\n\n<!-- qualification: pr=57 -->`;
+    const result = plan(situation({ issue: issue({ body }) }));
+    expect(result).toMatchObject({ failed: true, outcome: "conflict" });
+    expect(result.update).toBeUndefined();
+  });
 
   it("never reopens a closed issue: comments once and reports it", () => {
     const closed = issue({ state: "closed" });
@@ -396,6 +456,263 @@ describe(plan, () => {
     expect(result.update).toStrictEqual({ assignees: [], body: applied });
     expect(result.comment).toBeUndefined();
     expect(result.message).toContain("docs/tooling.md#create-the-labels");
+  });
+});
+
+describe("a Current acceptance that triage wrote", () => {
+  it("gets the checks at its end, and the issue moves", () => {
+    const result = plan(situation({ issue: issue({ body: triaged }) }));
+    expect(result).toMatchObject({ failed: false, outcome: "moved" });
+    expect(result.update).toStrictEqual({
+      assignees: [],
+      body: `${triaged}\n\n${block}`,
+      labels: ["bug", TARGET_LABEL],
+    });
+    expect(result.comment).toMatch(/^<!-- qualification:moved pr=57 -->\n/u);
+  });
+
+  it("never gets the checks twice on a re-run after a failed first run", () => {
+    const first = plan(
+      situation({ issue: issue({ body: triaged }), labelExists: false })
+    );
+
+    expect(first).toMatchObject({ failed: true, outcome: "missing-label" });
+
+    const body = first.update?.body ?? "";
+    const again = plan(situation({ issue: issue({ body }) }));
+
+    expect(again).toMatchObject({ failed: false, outcome: "moved" });
+    expect(again.update?.body).toBeUndefined();
+    expect(
+      plan(
+        situation({
+          comments: [byWorkflow(again.comment ?? "")],
+          issue: issue({ body }),
+        })
+      )
+    ).toStrictEqual({
+      failed: false,
+      message: "#12: already applied by #57; left unchanged",
+      outcome: "unchanged",
+    });
+  });
+
+  /** Bodies whose Current acceptance gets the checks, as GitHub would show them. */
+  const accepted: [string, string][] = [
+    [
+      "a # heading",
+      `${original}\n\n# Current acceptance\n\n- [ ] Owner checks.`,
+    ],
+    ["a ###### heading", `${original}\n\n###### Current acceptance\n\nText.`],
+    ["a closed heading", `${original}\n\n## Current Acceptance ##\n\nText.`],
+    ["trailing blank lines and spaces", `${triaged}  \n\n`],
+    ["an autolink", `${triaged}\n\n<https://example.org/notes>`],
+    ["a less-than sign in prose", `${triaged}\n\nKeep runs < 5 minutes.`],
+    [
+      "HTML in code spans",
+      `${triaged}\n\nRender \`<Button>\` and \`\`<head>\`\`.`,
+    ],
+    ["a closed code fence", `${triaged}\n\n\`\`\`ts\nconst a = "<b>";\n\`\`\``],
+    ["a rule after a checklist", `${triaged}\n---`],
+    ["a nonbreaking space under a paragraph", `${triaged}\n\nNotes.\n--- `],
+    ["CRLF line endings", triaged.replaceAll("\n", "\r\n")],
+    [
+      "an underlined Current acceptance",
+      `${original}\n\nCurrent acceptance\n---\n\nText.`,
+    ],
+    ["a final code line with trailing spaces", `${triaged}\n\n    code  `],
+  ];
+
+  it.each(accepted)("gets the checks after %s", (_, body) => {
+    const result = plan(situation({ issue: issue({ body }) }));
+    expect(result.outcome).toBe("moved");
+    expect(result.update?.body).toBe(`${body}\n\n${block}`);
+  });
+
+  /** Bodies left unchanged with a conflict comment, and the reason it gives. */
+  const refused: [string, string, RegExp][] = [
+    [
+      "an HTML comment before it",
+      triaged.replace(
+        "## Current acceptance",
+        "<!-- a note -->\n\n## Current acceptance"
+      ),
+      /holds HTML/u,
+    ],
+    [
+      "a closed details block before it",
+      triaged.replace(
+        "## Current acceptance",
+        "<details>\n<summary>Superseded</summary>\n\nOld criteria.\n\n</details>\n\n## Current acceptance"
+      ),
+      /holds HTML/u,
+    ],
+    [
+      "another delivery's marker",
+      `${triaged}\n\n<!-- qualification: pr=40 -->`,
+      /holds HTML/u,
+    ],
+    [
+      "a status line with two spaces between words",
+      `${triaged}\n\nStatus: delivered  in #40; open for 1 later check.`,
+      /status line/u,
+    ],
+    [
+      "a status line broken across lines",
+      `${triaged}\n\nStatus: delivered\nin #40; open for 1 later check.`,
+      /status line/u,
+    ],
+    [
+      "a bold status line",
+      `${triaged}\n\n**Status: delivered in #40; open for 1 later check.**`,
+      /status line/u,
+    ],
+    [
+      "a status line with a bold label",
+      `${triaged}\n\nNote.\\\n**Status:** delivered in [#40](https://example.org/40).`,
+      /status line/u,
+    ],
+    [
+      "a status line continuing a paragraph",
+      `${triaged}\n\nTriage note.  \nStatus: delivered in #40.`,
+      /status line/u,
+    ],
+    [
+      "a status line continuing a list item",
+      `${triaged}\n\n- Note.\n  Status: delivered in #40.`,
+      /status line/u,
+    ],
+    [
+      "a status line written by hand",
+      `${triaged}\n\nStatus: delivered in #40.`,
+      /status line/u,
+    ],
+    [
+      "a second Current acceptance",
+      `${triaged}\n\n## Current acceptance\n\nMore.`,
+      /2 Current acceptance headings/u,
+    ],
+    [
+      "a quoted Current acceptance before it",
+      `> ## Current acceptance\n\n${triaged}`,
+      /2 Current acceptance/u,
+    ],
+    [
+      "a bold Current acceptance before it",
+      `## **Current acceptance**\n\n${triaged}`,
+      /2 Current acceptance/u,
+    ],
+    [
+      "a split-formatted Current acceptance before it",
+      `## Current **acceptance**\n\n${triaged}`,
+      /2 Current acceptance/u,
+    ],
+    [
+      "an entity in a Current acceptance before it",
+      `## Current&#32;acceptance\n\n${triaged}`,
+      /2 Current acceptance/u,
+    ],
+    [
+      "a heading after it",
+      `${triaged}\n\n### Notes\n\nKeep me.`,
+      /could not confirm/u,
+    ],
+    ["an empty heading after it", `${triaged}\n\n##`, /could not confirm/u],
+    [
+      "a setext heading after it",
+      `${triaged}\n\nOther\n2. still its heading\n---`,
+      /could not confirm/u,
+    ],
+    [
+      "a quoted heading after it",
+      `${triaged}\n\n> ## Notes`,
+      /could not confirm/u,
+    ],
+    [
+      "a heading in a list item after it",
+      `${triaged}\n\n- ## Notes`,
+      /could not confirm/u,
+    ],
+    [
+      "an inline HTML heading after it",
+      `${triaged}\n\nNotes <h2>Notes</h2>`,
+      /holds HTML/u,
+    ],
+    [
+      "a details block after it",
+      `${triaged}\n\n<details>\n\nHidden.`,
+      /holds HTML/u,
+    ],
+    ["a pre block before it", `<pre>\n${triaged}`, /cannot tell where/u],
+    [
+      "a backtick in a link before HTML",
+      `${triaged}\n\n[N](https://e.org/\`x) <h2>N</h2> \``,
+      /holds HTML/u,
+    ],
+    [
+      "a comment opened between backticks before it",
+      `Use \`a\n<!-- note\n\` here.\n\n${triaged}`,
+      /cannot tell where/u,
+    ],
+    [
+      "a fence whose info string holds a backtick",
+      `${triaged}\n\n\`\`\`a\`b\n\n## Notes\n\n\`\`\``,
+      /could not confirm/u,
+    ],
+    [
+      "a list item's fence ended by a heading",
+      `${triaged}\n\n- Example:\n  ~~~\n  example\n## Notes\n~~~`,
+      /could not confirm/u,
+    ],
+    [
+      "bare carriage returns",
+      `${triaged}\n\nNotes.\r## Notes\r~~~`,
+      /could not confirm/u,
+    ],
+    [
+      "a link definition before two rules",
+      `${triaged}\n\n[x]: /\n---\n---`,
+      /definition/u,
+    ],
+    [
+      "a form feed in an HTML tag",
+      `${triaged}\n\n<pre\f>`,
+      /control character/u,
+    ],
+    ["a footnote definition", `${triaged}\n\n[^1]: Note.`, /definition/u],
+    [
+      "a Current acceptance inside a list item",
+      `1. Item\n\n   ## Current acceptance\n\n   Text.`,
+      /could not confirm/u,
+    ],
+  ];
+
+  it.each(refused)(
+    "leaves a body with %s unchanged and comments the checks once",
+    (_, body, reason) => {
+      const result = plan(situation({ issue: issue({ body }) }));
+      expect(result).toMatchObject({ failed: true, outcome: "conflict" });
+      expect(result.message).toMatch(reason);
+      expect(result.comment).toMatch(
+        /^<!-- qualification:conflict pr=57 -->\n/u
+      );
+      expect([
+        result.update,
+        plan(
+          situation({
+            comments: [byWorkflow(result.comment ?? "")],
+            issue: issue({ body }),
+          })
+        ).comment,
+      ]).toStrictEqual([undefined, undefined]);
+    }
+  );
+
+  it("reports a closing fence with a nonbreaking space as unclosed", () => {
+    const body = `${triaged}\n\n\`\`\`\ncode\n\`\`\` \n\nMore.`;
+    expect(plan(situation({ issue: issue({ body }) })).outcome).toBe(
+      "unclosed"
+    );
   });
 });
 

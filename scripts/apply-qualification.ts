@@ -10,9 +10,10 @@
 // records the finished move, after which the issue is never touched again. The
 // marker `<!-- qualification: pr=N -->` in the body records that pull request N
 // wrote its Current acceptance, so a re-run after a failed run only finishes the
-// labels and assignees. Each marker counts only as its own line outside code
-// fences: a comment's only from the workflow's token (github-actions[bot]), and
-// the body's only under a Current acceptance heading.
+// labels and assignees. A comment's marker counts only as its own line outside
+// code fences, and only from the workflow's token (github-actions[bot]); the
+// body's counts only as a top-level HTML block under the Current acceptance
+// heading, as a GFM parse of the body reads it.
 //
 // GitHub has no conditional issue update, so the script reads the issue again
 // just before writing and re-plans once if it changed. A write that lands
@@ -22,8 +23,14 @@
 // NUMBER (the pull request) set.
 import fs from "node:fs";
 
+import type { Nodes } from "mdast";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmFromMarkdown } from "mdast-util-gfm";
+import { toString } from "mdast-util-to-string";
+import { gfm } from "micromark-extension-gfm";
+
 import { ApiError, api } from "./gh-api.ts";
-import { anyHeadingOf, headingTexts, lines, split } from "./markdown-lines.ts";
+import { headingTexts, lines, split } from "./markdown-lines.ts";
 import type { MarkdownLine } from "./markdown-lines.ts";
 import type { Declaration } from "./qualification.ts";
 import { STATE_LABELS } from "./state-labels.ts";
@@ -34,8 +41,8 @@ export const TARGET_LABEL = "awaiting-qualification";
 const LABELS_DOC = "docs/tooling.md#create-the-labels";
 const CURRENT_ACCEPTANCE = "Current acceptance";
 
-/** A body marker's comment text. */
-const BODY_MARKER = /^qualification:\s*pr=(?<pr>\d+)$/u;
+const isCurrentAcceptance = (text: string) =>
+  text.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase();
 
 /** The identity of the workflow's GITHUB_TOKEN, which writes its comments. */
 const WORKFLOW_AUTHOR = "github-actions[bot]";
@@ -137,16 +144,59 @@ const posted = (comments: Comment[], kind: CommentKind, pr: number) =>
       )
   );
 
-/** Whether pull request `pr` wrote a Current acceptance into `body`: its marker line under that heading. */
-function wroteBody(body: string, pr: number) {
-  let heading: string | undefined;
+/** `markdown` parsed as GitHub reads it: CommonMark with its GFM extensions. */
+const parse = (markdown: string) =>
+  fromMarkdown(markdown, {
+    extensions: [gfm()],
+    mdastExtensions: [gfmFromMarkdown()],
+  });
 
-  return lines(body).some((line) => {
-    heading = anyHeadingOf(line) ?? heading;
+/** Every node of `tree`, in document order. */
+function nodesOf(tree: Nodes) {
+  const found: Nodes[] = [];
+  const stack: Nodes[] = [tree];
+
+  for (let node = stack.pop(); node !== undefined; node = stack.pop()) {
+    found.push(node);
+
+    if ("children" in node) {
+      stack.push(...node.children.toReversed());
+    }
+  }
+
+  return found;
+}
+
+/** A node's rendered text with runs of whitespace as one space. */
+const titleOf = (node: Nodes) => toString(node).replaceAll(/\s+/gu, " ").trim();
+
+const isSection = (node: Nodes) =>
+  node.type === "heading" && isCurrentAcceptance(titleOf(node));
+
+/** A Current acceptance marker as a whole HTML block, and the pull request it names. */
+const MARKER_BLOCK = /^<!--\s*qualification:\s*pr=(?<pr>\d+)\s*-->$/u;
+
+/**
+ * Whether pull request `pr` wrote its block into `body`: its marker stands
+ * alone as a top-level HTML block whose nearest heading above is the Current
+ * acceptance, as the parse shows it, so a marker under a later heading of any
+ * kind, or in a quote, list or code, is not its own.
+ */
+function wroteBody(body: string, pr: number) {
+  let section = false;
+
+  return parse(body).children.some((node) => {
+    if (node.type === "heading") {
+      section = isSection(node);
+    }
 
     return (
-      heading?.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase() &&
-      Number(BODY_MARKER.exec(asMarker(line) ?? "")?.groups?.pr) === pr
+      section &&
+      node.type === "html" &&
+      // As the workflow writes it: one line, with no indent.
+      node.value.startsWith("<!--") &&
+      !/[\r\n]/u.test(node.value.trimEnd()) &&
+      Number(MARKER_BLOCK.exec(node.value.trimEnd())?.groups?.pr) === pr
     );
   });
 }
@@ -163,54 +213,190 @@ function commentToPost(
     : `${commentMarker(kind, pr)}\n${text}`;
 }
 
-function currentAcceptance(pr: number, checks: string[]) {
-  return [
-    `## ${CURRENT_ACCEPTANCE}`,
-    `Status: delivered in #${pr}; open for ${plural(checks.length, "later check")}.`,
-    `<!-- qualification: pr=${pr} -->`,
-    checklist(checks),
-  ].join("\n\n");
+/** The status line, marker and checks pull request `pr` writes under Current acceptance. */
+const statusLine = (pr: number, checks: string[]) =>
+  `Status: delivered in #${pr}; open for ${plural(checks.length, "later check")}.`;
+
+const markerLine = (pr: number) => `<!-- qualification: pr=${pr} -->`;
+
+function qualificationBlock(pr: number, checks: string[]) {
+  return [statusLine(pr, checks), markerLine(pr), checklist(checks)].join(
+    "\n\n"
+  );
 }
 
-/** Why a new Current acceptance cannot go into `body`, or undefined when it can. */
-function blocker(body: string, pr: number) {
+/**
+ * A status line a delivery wrote, by the workflow or by hand, on any rendered
+ * line of a paragraph, so formatting such as `**Status:**` or text before it on
+ * an earlier line does not hide it.
+ */
+const STATUS_LINE = /^\s*Status:\s*delivered\s+in\s+#\d+/imu;
+
+/** A node's rendered text, with each soft or hard line break as a newline. */
+const linesOf = (node: Nodes) =>
+  nodesOf(node)
+    .map((part) => {
+      if (part.type === "break") {
+        return "\n";
+      }
+
+      return "value" in part && !("children" in part) ? part.value : "";
+    })
+    .join("");
+
+/**
+ * HTML around a triage-written Current acceptance that rules out appending:
+ * any at all, but the appended block's own `marker`. Raw HTML is where the
+ * parser and GitHub may read a body differently, and a comment could be or
+ * hide another delivery's marker.
+ */
+const unsafeHtml = (nodes: Nodes[], marker?: Nodes) =>
+  nodes.some((node) => node.type === "html" && node !== marker);
+
+/**
+ * Whether `body`, with pull request `pr`'s block appended, reads as GitHub
+ * would show it: the body's one Current acceptance is its last heading, at the
+ * top level, and the status line, marker and checks follow it there, with no
+ * other HTML anywhere. The splitter must also find the marker under that
+ * heading, so a re-run knows its own block and never adds it twice.
+ */
+function holdsBlock(body: string, pr: number, checks: string[]) {
+  const tree = parse(body);
+  const nodes = nodesOf(tree);
+  const headingNodes = nodes.filter((node) => node.type === "heading");
+  const section = headingNodes.at(-1);
+  const [status, marker, list] = tree.children.slice(-3);
+
+  return (
+    section !== undefined &&
+    isSection(section) &&
+    headingNodes.filter(isSection).length === 1 &&
+    tree.children.includes(section) &&
+    tree.children.indexOf(section) < tree.children.length - 3 &&
+    status?.type === "paragraph" &&
+    titleOf(status) === statusLine(pr, checks) &&
+    marker?.type === "html" &&
+    marker.value === markerLine(pr) &&
+    !unsafeHtml(nodes, marker) &&
+    list?.type === "list" &&
+    list.children.length === checks.length &&
+    wroteBody(body, pr)
+  );
+}
+
+/** Where the qualification block goes in an issue's body, or why it cannot. */
+type Placement =
+  | { kind: "write"; body: string }
+  | {
+      kind: "blocked";
+      blocked: { kind: "conflict" | "unclosed"; reason: string };
+    };
+
+/** A placement that refuses with a conflict comment giving `reason`. */
+const conflict = (reason: string) =>
+  ({
+    blocked: { kind: "conflict", reason },
+    kind: "blocked",
+  }) satisfies Placement;
+
+/**
+ * The body pull request `pr` writes, or why it writes none. With no Current
+ * acceptance, the block goes under a new heading at the end. With one that
+ * triage wrote, it goes at the end of the body, only when that section is the
+ * last and the parsed result shows the block inside it; a section that already
+ * records a delivery, or HTML anywhere, refuses. Refusing only leaves the
+ * checks for a person to add.
+ */
+function placement(body: string, pr: number, checks: string[]) {
   const { unclosed } = split(body);
 
   if (unclosed !== undefined) {
     return {
-      kind: "unclosed" as const,
-      reason: `the issue body ends inside an unclosed ${unclosed}, which would hide an appended Current acceptance`,
-    };
+      blocked: {
+        kind: "unclosed",
+        reason: `the issue body ends inside an unclosed ${unclosed}, which would hide an appended Current acceptance`,
+      },
+      kind: "blocked",
+    } satisfies Placement;
   }
 
-  const exists = headingTexts(body).some(
-    (heading) => heading.toLowerCase() === CURRENT_ACCEPTANCE.toLowerCase()
-  );
+  // Only ASCII whitespace goes: `trimEnd` would also drop a trailing
+  // nonbreaking space, which can turn a paragraph above `---` into a heading.
+  const kept = body.replace(/[ \t\r\n]+$/u, "");
+  const block = qualificationBlock(pr, checks);
+  const nodes = nodesOf(parse(body));
+  const sections = nodes.filter(isSection);
 
-  return exists
-    ? {
-        kind: "conflict" as const,
-        reason: `the issue already has a Current acceptance that #${pr} did not write`,
-      }
-    : undefined;
+  if (sections.length === 0 && !headingTexts(body).some(isCurrentAcceptance)) {
+    return {
+      body: [kept, `## ${CURRENT_ACCEPTANCE}`, block]
+        .filter(Boolean)
+        .join("\n\n"),
+      kind: "write",
+    } satisfies Placement;
+  }
+
+  if (sections.length !== 1) {
+    return conflict(
+      `the issue has ${sections.length === 0 ? "text that may read as a" : sections.length} Current acceptance heading${sections.length > 1 ? "s" : ""}, so #${pr} cannot tell where to add its checks`
+    );
+  }
+
+  // Two places the parser and GitHub's are known to read differently.
+  if (
+    /(?![\t\n\r])\p{Cc}/u.test(body) ||
+    nodes.some(
+      (node) => node.type === "definition" || node.type === "footnoteDefinition"
+    )
+  ) {
+    return conflict(
+      "the issue holds a link or footnote definition, or a control character, which GitHub may read differently from the workflow's parser"
+    );
+  }
+
+  if (unsafeHtml(nodes)) {
+    return conflict(
+      "the issue holds HTML, such as a comment or another delivery's marker, which could record another delivery or hide checks added at the end"
+    );
+  }
+
+  const after = nodes.slice(nodes.indexOf(sections[0]) + 1);
+
+  if (
+    after.some(
+      (node) => node.type === "paragraph" && STATUS_LINE.test(linesOf(node))
+    )
+  ) {
+    return conflict(
+      "the issue's Current acceptance already holds a delivery's status line"
+    );
+  }
+
+  const appended = `${body}\n\n${block}`;
+
+  return holdsBlock(appended, pr, checks)
+    ? ({ body: appended, kind: "write" } satisfies Placement)
+    : conflict(
+        `#${pr} could not confirm that checks added at the end would sit under the issue's Current acceptance, which must be its last heading, written with #`
+      );
 }
 
-/** The plan for an open issue this pull request has not finished moving. */
-const move: (situation: Situation, ours: boolean) => Plan = (
+/**
+ * The plan for an open issue this pull request has not finished moving.
+ * `body` is the body to write, or undefined when an earlier run already wrote
+ * its block, so only the labels and assignees remain.
+ */
+const move: (situation: Situation, body: string | undefined) => Plan = (
   situation,
-  ours
+  body
 ) => {
   const { comments, declaration, issue, labelExists, pr } = situation;
   const { checks } = declaration;
   const name = `#${issue.number}`;
   const update: Update = { assignees: [] };
 
-  // Our marker without the moved comment: an earlier run wrote the body but did
-  // not finish, so only the labels and assignees remain.
-  if (!ours) {
-    update.body = [issue.body.trimEnd(), currentAcceptance(pr, checks)]
-      .filter(Boolean)
-      .join("\n\n");
+  if (body !== undefined) {
+    update.body = body;
   }
 
   if (!labelExists) {
@@ -281,9 +467,11 @@ export const plan: (situation: Situation) => Plan = (situation) => {
     };
   }
 
-  const blocked = ours ? undefined : blocker(issue.body, pr);
+  const placed = ours ? undefined : placement(issue.body, pr, checks);
 
-  if (blocked !== undefined) {
+  if (placed?.kind === "blocked") {
+    const { blocked } = placed;
+
     return {
       comment: commentToPost(
         comments,
@@ -297,7 +485,7 @@ export const plan: (situation: Situation) => Plan = (situation) => {
     };
   }
 
-  return move(situation, ours);
+  return move(situation, placed?.body);
 };
 
 const byName = (left: string, right: string) => left.localeCompare(right);
