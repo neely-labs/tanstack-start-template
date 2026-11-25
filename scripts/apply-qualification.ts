@@ -278,9 +278,14 @@ const RAW_TEXT_ELEMENTS = new Set([
   "xmp",
 ]);
 
-/** A start or end tag as CommonMark defines one, matched at `lastIndex`: https://spec.commonmark.org/0.31.2/#raw-html */
+/**
+ * A start or end tag as CommonMark defines one, matched at `lastIndex`:
+ * https://spec.commonmark.org/0.31.2/#raw-html. Only HTML's ASCII whitespace
+ * separates its parts; `\s` would also take a nonbreaking space, which turns
+ * `</details\u00A0>` into text that closes nothing.
+ */
 const TAG_AT =
-  /<(?<close>\/)?(?<name>[A-Za-z][A-Za-z\d-]*)(?<attributes>(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*)\s*(?<self>\/)?>/uy;
+  /<(?<close>\/)?(?<name>[A-Za-z][A-Za-z\d-]*)(?<attributes>(?:[\t\n\f\r ]+[A-Za-z_:][\w.:-]*(?:[\t\n\f\r ]*=[\t\n\f\r ]*(?:[^\t\n\f\r "'=<>`]+|'[^']*'|"[^"]*"))?)*)[\t\n\f\r ]*(?<self>\/)?>/uy;
 
 /**
  * Each tag in an HTML node's text, in order, and whether every `<` that starts
@@ -334,6 +339,12 @@ const pairingProblems: (parent: Nodes, marker?: Nodes) => string[] = (
   for (const child of parent.children) {
     if (child.type === "html" && child !== marker) {
       const { tags, whole } = tagsOf(child.value);
+
+      if (tags.some((tag) => /^h[1-6]$/u.test(tag.name))) {
+        return [
+          "the issue holds an HTML heading, which GitHub shows as a heading the workflow does not count, such as a second Current acceptance",
+        ];
+      }
 
       if (!whole || tags.some((tag) => RAW_TEXT_ELEMENTS.has(tag.name))) {
         return [

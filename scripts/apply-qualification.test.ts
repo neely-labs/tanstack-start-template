@@ -665,6 +665,16 @@ describe("a Current acceptance that triage wrote", () => {
       /opens an HTML `<details>` tag/u,
     ],
     [
+      "a closing tag ended after a nonbreaking space before it",
+      before("<details>\n<summary>Old\n\n</summary>\n</details\u00A0>"),
+      /not whole, paired tags/u,
+    ],
+    [
+      "an HTML Current acceptance heading before it",
+      before("<h2>Current acceptance</h2>"),
+      /HTML heading/u,
+    ],
+    [
       "a closing void tag before it",
       before("Old.</br>"),
       /`<\/br>` tag that does not close/u,
