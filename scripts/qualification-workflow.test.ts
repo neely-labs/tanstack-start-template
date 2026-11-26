@@ -558,6 +558,37 @@ describe("the qualification workflow's apply step", () => {
     });
   });
 
+  it.each(["pre", "textarea"])(
+    "leaves the issue unchanged and comments once when an open <%s> would hide a new section",
+    (tag) => {
+      const state = baseState(
+        description("## Qualification\n\nFor #12:\n\n- [ ] One check.", [12])
+      );
+
+      state.issues["12"] = openIssue(12, { body: `Ship it.\n\n<${tag}>\nx` });
+      const before = structuredClone(state.issues);
+
+      const first = runApply(state);
+      expect([first.status, state.issues, state.patches]).toStrictEqual([
+        1,
+        before,
+        [],
+      ]);
+      expect(first.stdout).toContain("could not confirm");
+      const comments = marked(state, "12", "conflict");
+      expect(comments).toHaveLength(1);
+      expect(comments[0]?.body).toContain("- [ ] One check.");
+
+      const retry = runApply(state);
+      expect([
+        retry.status,
+        state.issues,
+        state.patches,
+        marked(state, "12", "conflict"),
+      ]).toStrictEqual([1, before, [], comments]);
+    }
+  );
+
   describe("when the qualification label is missing", () => {
     let state: FakeState;
     let firstRun: ReturnType<typeof runApply>;
