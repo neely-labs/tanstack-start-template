@@ -409,34 +409,41 @@ function htmlProblem(tree: Root, section: Nodes, marker?: Nodes) {
   return pairingProblems(tree, marker).at(0);
 }
 
-/**
- * Whether `body`, with pull request `pr`'s block appended, reads as GitHub
- * would show it: the body's one Current acceptance is its last heading, at the
- * top level, and the status line, marker and checks follow it there, with no
- * other HTML but what `htmlProblem` allows. The marker must also read as its
- * own under that heading, so a re-run knows its block and never adds it twice.
- */
+/** Finds the complete qualification block at the end of the parsed body. */
+function readAppendedQualificationBlock(
+  tree: Root,
+  pr: number,
+  checks: string[]
+) {
+  const start = tree.children.length - 3;
+  const [status, marker, list] = tree.children.slice(start);
+
+  return status?.type === "paragraph" &&
+    titleOf(status) === statusLine(pr, checks) &&
+    marker?.type === "html" &&
+    marker.value === markerLine(pr) &&
+    list?.type === "list" &&
+    list.children.length === checks.length &&
+    list.children.every((item) => item.checked === false)
+    ? { marker, start }
+    : undefined;
+}
+
+/** Whether the block follows the body's one, final Current acceptance heading. */
 function holdsBlock(body: string, pr: number, checks: string[]) {
   const tree = parse(body);
-  const nodes = nodesOf(tree);
-  const headingNodes = nodes.filter((node) => node.type === "heading");
+  const headingNodes = nodesOf(tree).filter((node) => node.type === "heading");
   const section = headingNodes.at(-1);
-  const [status, marker, list] = tree.children.slice(-3);
+  const block = readAppendedQualificationBlock(tree, pr, checks);
 
   return (
+    block !== undefined &&
     section !== undefined &&
     isSection(section) &&
     headingNodes.filter(isSection).length === 1 &&
     tree.children.includes(section) &&
-    tree.children.indexOf(section) < tree.children.length - 3 &&
-    status?.type === "paragraph" &&
-    titleOf(status) === statusLine(pr, checks) &&
-    marker?.type === "html" &&
-    marker.value === markerLine(pr) &&
-    htmlProblem(tree, section, marker) === undefined &&
-    list?.type === "list" &&
-    list.children.length === checks.length &&
-    wroteBody(body, pr)
+    tree.children.indexOf(section) < block.start &&
+    htmlProblem(tree, section, block.marker) === undefined
   );
 }
 
@@ -457,11 +464,9 @@ const conflict = (reason: string) =>
 
 /**
  * The body pull request `pr` writes, or why it writes none. With no Current
- * acceptance, the block goes under a new heading at the end. With one that
- * triage wrote, it goes at the end of the body, only when that section is the
- * last and the parsed result shows the block inside it; a section that already
- * records a delivery, or HTML other than closed tags before it, refuses.
- * Refusing only leaves the checks for a person to add.
+ * acceptance, the parse must show the new section at the end. For a section
+ * that triage wrote, the parse must show the block under its final heading,
+ * and the existing content must satisfy that path's placement rules.
  */
 function placement(body: string, pr: number, checks: string[]) {
   const { unclosed } = split(body);
@@ -485,12 +490,19 @@ function placement(body: string, pr: number, checks: string[]) {
   const sections = nodes.filter(isSection);
 
   if (sections.length === 0 && !headingTexts(body).some(isCurrentAcceptance)) {
-    return {
-      body: [kept, `## ${CURRENT_ACCEPTANCE}`, block]
-        .filter(Boolean)
-        .join("\n\n"),
-      kind: "write",
-    } satisfies Placement;
+    const appended = [kept, `## ${CURRENT_ACCEPTANCE}`, block]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const parsed = parse(appended);
+    const rendered = readAppendedQualificationBlock(parsed, pr, checks);
+    const heading = rendered && parsed.children[rendered.start - 1];
+
+    return heading !== undefined && isSection(heading)
+      ? ({ body: appended, kind: "write" } satisfies Placement)
+      : conflict(
+          "the workflow could not confirm that a new Current acceptance would render at the end of the issue body"
+        );
   }
 
   if (sections.length !== 1) {
